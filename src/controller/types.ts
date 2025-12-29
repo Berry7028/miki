@@ -1,5 +1,26 @@
 import { z } from "zod";
 
+// UI要素の型定義
+export interface UIElement {
+  role: string;
+  roleDescription: string;
+  name: string;
+  description: string;
+  value: any;
+  position: [number, number];
+  size: [number, number];
+  enabled: boolean;
+  focused: boolean;
+  selected: boolean;
+  actions: string[];  // "AXPress", "AXFocus"等
+  subrole: string;
+  children: UIElement[];
+}
+
+export interface UIElementsResponse {
+  windows: UIElement[];
+}
+
 // アクションの定義（Geminiの構造化出力に使用）
 export const ActionSchemaBase = z.discriminatedUnion("action", [
   z.object({ action: z.literal("screenshot") }),
@@ -9,8 +30,15 @@ export const ActionSchemaBase = z.discriminatedUnion("action", [
   z.object({ action: z.literal("hotkey"), params: z.object({ keys: z.array(z.string()) }) }),
   z.object({ action: z.literal("move"), params: z.object({ x: z.number(), y: z.number() }) }),
   z.object({ action: z.literal("scroll"), params: z.object({ amount: z.number() }) }),
+  z.object({ action: z.literal("drag"), params: z.object({ from_x: z.number(), from_y: z.number(), to_x: z.number(), to_y: z.number() }) }),
   z.object({ action: z.literal("osa"), params: z.object({ script: z.string() }) }),
   z.object({ action: z.literal("elements"), params: z.object({ app_name: z.string() }) }),
+  z.object({ action: z.literal("elementsJson"), params: z.object({ app_name: z.string(), max_depth: z.number().optional().default(3) }) }),
+  z.object({ action: z.literal("clickElement"), params: z.object({ app_name: z.string(), role: z.string(), name: z.string() }) }),
+  z.object({ action: z.literal("typeToElement"), params: z.object({ app_name: z.string(), role: z.string(), name: z.string(), text: z.string() }) }),
+  z.object({ action: z.literal("focusElement"), params: z.object({ app_name: z.string(), role: z.string(), name: z.string() }) }),
+  z.object({ action: z.literal("webElements"), params: z.object({ app_name: z.string() }) }),
+  z.object({ action: z.literal("clickWebElement"), params: z.object({ app_name: z.string(), role: z.string(), name: z.string() }) }),
   z.object({ action: z.literal("wait"), params: z.object({ seconds: z.number() }) }),
   z.object({ action: z.literal("search"), params: z.object({ query: z.string() }) }),
   z.object({ action: z.literal("done"), params: z.object({ message: z.string() }) }),
@@ -26,8 +54,15 @@ export const ActionSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("hotkey"), params: z.object({ keys: z.array(z.string()) }) }),
   z.object({ action: z.literal("move"), params: z.object({ x: z.number(), y: z.number() }) }),
   z.object({ action: z.literal("scroll"), params: z.object({ amount: z.number() }) }),
+  z.object({ action: z.literal("drag"), params: z.object({ from_x: z.number(), from_y: z.number(), to_x: z.number(), to_y: z.number() }) }),
   z.object({ action: z.literal("osa"), params: z.object({ script: z.string() }) }),
   z.object({ action: z.literal("elements"), params: z.object({ app_name: z.string() }) }),
+  z.object({ action: z.literal("elementsJson"), params: z.object({ app_name: z.string(), max_depth: z.number().optional().default(3) }) }),
+  z.object({ action: z.literal("clickElement"), params: z.object({ app_name: z.string(), role: z.string(), name: z.string() }) }),
+  z.object({ action: z.literal("typeToElement"), params: z.object({ app_name: z.string(), role: z.string(), name: z.string(), text: z.string() }) }),
+  z.object({ action: z.literal("focusElement"), params: z.object({ app_name: z.string(), role: z.string(), name: z.string() }) }),
+  z.object({ action: z.literal("webElements"), params: z.object({ app_name: z.string() }) }),
+  z.object({ action: z.literal("clickWebElement"), params: z.object({ app_name: z.string(), role: z.string(), name: z.string() }) }),
   z.object({ action: z.literal("wait"), params: z.object({ seconds: z.number() }) }),
   z.object({ action: z.literal("search"), params: z.object({ query: z.string() }) }),
   z.object({ action: z.literal("done"), params: z.object({ message: z.string() }) }),
@@ -43,6 +78,7 @@ export interface PythonResponse {
   height?: number;
   mouse_position?: { x: number; y: number };
   elements?: string[];
+  ui_data?: UIElementsResponse;  // JSON形式のUI要素データ
   message?: string;
   execution_time_ms?: number;
 }
