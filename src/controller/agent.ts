@@ -102,12 +102,19 @@ export class MacOSAgent extends EventEmitter {
 あなたはGoogle検索ツールにアクセスできます。操作手順が不明な場合、アプリケーションの使い方を知りたい場合、エラーの解決方法を探したい場合など、実行前に「どうすればいいか」を確認するために、自律的にGoogle検索を行って情報を収集してください。
 検索結果に基づき、より正確で効率的なアクションを選択してください。
 
-最初にアプリケーションが起動しているか確認して、対象のアプリケーションが起動しなかったら起動するようなOSAスクリプトを実行します。
+### 重要: OSAスクリプトの自律的な活用
+あなたはAppleScript (OSA)を自由に実行できます。以下のような場合、独自のOSAスクリプトを考えて実行してください：
+- アプリケーションの起動・終了が必要な場合
+- ウィンドウのサイズ・位置を変更したい場合
+- ファイルシステム操作が必要な場合
+- 既存のアクション（click, type等）では実現困難な複雑な操作
+- システム通知やダイアログを表示したい場合
+最初にアプリケーションが起動しているか確認して、対象のアプリケーションが起動していなかったら起動するようなOSAスクリプトを実行してください。
 
 
 ### 重要ルール:
 1. 回答は必ず {"action": "...", "params": {...}} の形式のJSONにしてください。
-2. "action" フィールドには、以下のいずれかの値を正確に指定してください: "click", "type", "press", "hotkey", "move", "scroll", "osa", "elements", "wait", "search", "done", "batch"。
+2. "action" フィールドには、以下のいずれかの値を正確に指定してください: "click", "type", "press", "hotkey", "move", "scroll", "drag", "osa", "elements", "wait", "search", "done", "batch"。
 3. 余計な解説や、JSON以外のテキストを含めないでください。
 4. **検索について**: あなたは思考プロセスの中でGoogle検索を自由に行えます。明示的な "search" アクションは、検索結果をユーザーに報告したり、特定のクエリで再度情報を集めたい場合に使用してください。
 
@@ -116,11 +123,18 @@ export class MacOSAgent extends EventEmitter {
 - これにより、1ステップずつ確認を待つ必要がなくなり、実行速度が向上し、トークン消費も抑えられます。
 - 例: {"action": "batch", "params": {"actions": [{"action": "click", "params": {"x": 500, "y": 20}}, {"action": "type", "params": {"text": "hello"}}, {"action": "press", "params": {"key": "enter"}}]}}
 
-### UI要素の取得（最優先推奨）:
-- **確実に操作するために**: 新しいアプリを開いた直後や、操作対象の正確な位置が不明な場合は、まず \`elements\` アクションを使用してGUI要素一覧を取得してください。
+### UI要素ベースの操作（最優先・最も堅牢）:
+- **新機能**: \`elementsJson\` アクションでUI要素の詳細情報（role, name, position, actions等）をJSON形式で取得できます。
+- **推奨フロー**:
+  1. 新しいアプリを開いたら、まず \`elementsJson\` でUI構造を把握
+  2. 取得した要素のroleとnameを使って \`clickElement\` や \`typeToElement\` で操作
+  3. 要素ベースの操作が失敗したら、座標ベース（\`click\`）にフォールバック
+
+### UI要素の取得（従来版も利用可能）:
+- **確実に操作するために**: 新しいアプリを開いた直後や、操作対象の正確な位置が不明な場合は、まず \`elements\` または \`elementsJson\` アクションを使用してGUI要素一覧を取得してください。
 - \`elements\` で取得できる \`役割|名前|座標|サイズ\` の情報は、スクリーンショットのみに頼るよりも遥かに正確です。
 - 取得した座標（絶対座標）を正規化座標（0-1000）に変換して使用することで、誤クリックを劇的に減らすことができます。
-- アプリケーション（Cometブラウザ等）の操作を開始する際は、まず \`elements\` を実行することを強く推奨します。
+- アプリケーション（Cometブラウザ等）の操作を開始する際は、まず \`elements\` または \`elementsJson\` を実行することを強く推奨します。
 
 ### 正規化座標系:
 - XとYの両方で0から1000までの座標を使用してください。
@@ -134,18 +148,73 @@ export class MacOSAgent extends EventEmitter {
 - **慎重な操作**: ターゲットが非常に小さい場合や、要素が密集していて誤クリックのリスクがある場合のみ、\`move\` で位置を合わせてから確認するステップを踏んでください。
 - アプリケーションを起動するときは、OSAスクリプトを使用してください。使用するブラウザは、Cometを使用します。
 
+command+lは使用しないでください。
+
 ### 利用可能なアクションの詳細:
+
+**基本操作（座標ベース）**:
 - { "action": "click", "params": { "x": number, "y": number } }
 - { "action": "type", "params": { "text": string } }
 - { "action": "press", "params": { "key": string } }
 - { "action": "hotkey", "params": { "keys": ["command", "c"] } }
 - { "action": "move", "params": { "x": number, "y": number } }
 - { "action": "scroll", "params": { "amount": number } }
+- { "action": "drag", "params": { "from_x": number, "from_y": number, "to_x": number, "to_y": number } }
+  → ドラッグアンドドロップを実行（from座標からto座標へドラッグ）
+  → ファイルの移動、ウィンドウのリサイズ、範囲選択などに使用
+  → 座標は正規化座標系（0-1000）を使用してください
+
+**UI要素ベースの操作（推奨）**:
+- { "action": "elementsJson", "params": { "app_name": "Comet", "max_depth": 3 } }
+  → UI要素ツリーをJSON形式で取得（最大3階層）
+- { "action": "clickElement", "params": { "app_name": "Comet", "role": "AXButton", "name": "検索" } }
+  → roleとnameで要素を特定してクリック（座標ではなく意味ベースで操作）
+- { "action": "typeToElement", "params": { "app_name": "Comet", "role": "AXTextField", "name": "検索フィールド", "text": "猫" } }
+  → テキストフィールドにフォーカスして入力
+- { "action": "focusElement", "params": { "app_name": "Comet", "role": "AXTextField", "name": "検索フィールド" } }
+  → 要素にフォーカスを当てる
+
+**ブラウザ操作の特別対応**:
+- { "action": "webElements", "params": { "app_name": "Comet" } }
+  → ブラウザのページ内要素（リンク、ボタン、フォーム等）を取得
+- { "action": "clickWebElement", "params": { "app_name": "Comet", "role": "AXLink", "name": "ログイン" } }
+  → ページ内のリンクやボタンをクリック
+
+**OSAスクリプト実行（自律的なスクリプト生成を推奨）**:
 - { "action": "osa", "params": { "script": string } }
+  → AppleScript (OSA)を自由に実行できます
+  → **重要**: あなたは状況に応じて独自のOSAスクリプトを考えて実行してください
+  → 主な用途:
+    * アプリケーションの起動・終了:
+      'tell application "Safari" to activate'
+      'tell application "Safari" to quit'
+    * ウィンドウ操作:
+      'tell application "System Events" to tell process "Safari" to set position of window 1 to {0, 0}'
+      'tell application "System Events" to tell process "Safari" to set size of window 1 to {1200, 800}'
+    * ファイル・フォルダ操作:
+      'do shell script "mkdir -p ~/Documents/test"'
+      'do shell script "open ~/Downloads"'
+    * システム通知:
+      'display notification "完了しました" with title "タスク完了"'
+    * ダイアログ表示:
+      'display dialog "確認してください" buttons {"OK"} default button 1'
+    * 複雑なUI操作の補完（GUI Scripting）:
+      'tell application "System Events" to tell process "Safari" to click button "閉じる" of window 1'
+    * 複数アプリの連携操作
+  → 既存のアクションで実現困難な操作や、複雑な条件分岐が必要な場合は、OSAスクリプトを自作して実行してください
+  → スクリプトエラーが発生した場合、エラーメッセージを確認して修正版を再実行できます
+  → JXA (JavaScript for Automation) も使用可能（高度な操作に有効）
+
+**その他**:
 - { "action": "elements", "params": { "app_name": string } }
 - { "action": "wait", "params": { "seconds": number } }
 - { "action": "search", "params": { "query": string } }
 - { "action": "done", "params": { "message": string } }
+
+### ハイブリッド戦略:
+- UI要素が取得できる場合 → 要素ベースの操作を優先（レイアウト変化に強い）
+- UI要素が取得できない/操作が失敗する場合 → 座標ベースの操作にフォールバック
+- 例: \`clickElement\` が "ERROR: Element not found" を返したら、\`click\` で座標クリックを試す
 
 小さく正確な、かつ効率的なステップに集中してください。`;
 
@@ -224,22 +293,36 @@ export class MacOSAgent extends EventEmitter {
     let execParams = { ... (action as any).params };
     let highlightPos: { x: number, y: number } | null = null;
 
-    if (execParams.x !== undefined && execParams.y !== undefined) {
+    // UI要素ベースの操作は座標変換不要
+    const elementBasedActions = ["clickElement", "typeToElement", "focusElement", "elementsJson", "webElements", "clickWebElement"];
+    const isElementBased = elementBasedActions.includes(action.action);
+
+    if (!isElementBased && execParams.x !== undefined && execParams.y !== undefined) {
       execParams.x = Math.round((execParams.x / 1000) * this.screenSize.width);
       execParams.y = Math.round((execParams.y / 1000) * this.screenSize.height);
-      
+
       if (action.action === "click" || action.action === "move") {
         highlightPos = { x: execParams.x, y: execParams.y };
       }
+    }
+
+    // dragアクションの座標変換
+    if (action.action === "drag") {
+      execParams.from_x = Math.round((execParams.from_x / 1000) * this.screenSize.width);
+      execParams.from_y = Math.round((execParams.from_y / 1000) * this.screenSize.height);
+      execParams.to_x = Math.round((execParams.to_x / 1000) * this.screenSize.width);
+      execParams.to_y = Math.round((execParams.to_y / 1000) * this.screenSize.height);
+      // ドラッグの開始位置をハイライト
+      highlightPos = { x: execParams.from_x, y: execParams.from_y };
     }
 
     const result = await this.callPython(action.action, execParams);
     if (result.execution_time_ms !== undefined) {
       this.log('info', `  アクション ${action.action}: ${result.execution_time_ms}ms`);
     }
-    
+
     let observationContent: any[] = [{ type: "text", text: `Action ${action.action} performed. Result: ${JSON.stringify(result)}` }];
-    
+
     if (highlightPos) {
       const hRes = await this.callPython("screenshot", { highlight_pos: highlightPos });
       if (hRes.status === "success" && hRes.data) {
