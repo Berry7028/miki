@@ -11,6 +11,8 @@ export class MacOSAgent {
   private model: any;
   private screenSize: { width: number; height: number } = { width: 0, height: 0 };
   private pendingResolvers: ((value: any) => void)[] = [];
+  private userPromptQueue: string[] = [];
+  private userInterface: readline.Interface;
 
   constructor() {
     this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
@@ -23,13 +25,26 @@ export class MacOSAgent {
 
     // Pythonプロセスの起動 (プロジェクトルートにあるvenvとsrc/executor/main.pyを使用)
     const pythonPath = path.join(process.cwd(), "venv", "bin", "python");
-    const executorPath = path.join(process.cwd(), "src", "executor", "main.py");
+    const executorPath = path.join(process.cwd(), "src/executor/main.py");
     
     this.pythonProcess = spawn(pythonPath, [executorPath]);
     
     this.pythonReader = readline.createInterface({
       input: this.pythonProcess.stdout,
       terminal: false,
+    });
+
+    this.userInterface = readline.createInterface({
+      input: process.stdin,
+      terminal: false,
+    });
+
+    this.userInterface.on("line", (line) => {
+      const trimmed = line.trim();
+      if (trimmed) {
+        console.log(`\n[User Hint Received]: ${trimmed}`);
+        this.userPromptQueue.push(trimmed);
+      }
     });
 
     this.pythonReader.on("line", (line) => {
@@ -223,6 +238,18 @@ export class MacOSAgent {
     while (step < 20) {
       console.log(`\n--- Step ${step + 1} ---`);
       
+      // ユーザーからの追加ヒントがあれば履歴に追加
+      while (this.userPromptQueue.length > 0) {
+        const hint = this.userPromptQueue.shift();
+        if (hint) {
+          history.push({ 
+            role: "user", 
+            content: `[ユーザーからの追加指示/ヒント]: ${hint}` 
+          });
+          console.log(`Added user hint to history: ${hint}`);
+        }
+      }
+
       const res = await this.callPython("screenshot");
       if (res.status !== "success" || !res.data || !res.mouse_position) {
         console.error("Failed to take screenshot or get mouse position:", res.message);
@@ -268,6 +295,7 @@ export class MacOSAgent {
     }
 
     this.pythonProcess.kill();
+    this.userInterface.close();
   }
 }
 
