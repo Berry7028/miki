@@ -12,6 +12,7 @@ export const ActionSchemaBase = z.discriminatedUnion("action", [
   z.object({ action: z.literal("osa"), params: z.object({ script: z.string() }) }),
   z.object({ action: z.literal("elements"), params: z.object({ app_name: z.string() }) }),
   z.object({ action: z.literal("wait"), params: z.object({ seconds: z.number() }) }),
+  z.object({ action: z.literal("search"), params: z.object({ query: z.string() }) }),
   z.object({ action: z.literal("done"), params: z.object({ message: z.string() }) }),
 ]);
 
@@ -28,6 +29,7 @@ export const ActionSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("osa"), params: z.object({ script: z.string() }) }),
   z.object({ action: z.literal("elements"), params: z.object({ app_name: z.string() }) }),
   z.object({ action: z.literal("wait"), params: z.object({ seconds: z.number() }) }),
+  z.object({ action: z.literal("search"), params: z.object({ query: z.string() }) }),
   z.object({ action: z.literal("done"), params: z.object({ message: z.string() }) }),
   z.object({ action: z.literal("batch"), params: z.object({ actions: z.array(ActionSchemaBase) }) }),
 ]);

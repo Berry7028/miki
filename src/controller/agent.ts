@@ -21,6 +21,12 @@ export class MacOSAgent {
       generationConfig: {
         responseMimeType: "application/json",
       },
+      tools: [
+        {
+          // @ts-ignore
+          googleSearch: {},
+        }
+      ] as any,
     });
 
     // Pythonプロセスの起動 (プロジェクトルートにあるvenvとsrc/executor/main.pyを使用)
@@ -84,13 +90,18 @@ export class MacOSAgent {
 現在の画面のスクリーンショットと、これまでに行ったアクションの履歴を受け取ります。
 あなたの回答は、必ず指定されたJSON形式に従ってください。
 
+### 重要: Google検索の活用
+あなたはGoogle検索ツールにアクセスできます。操作手順が不明な場合、アプリケーションの使い方を知りたい場合、エラーの解決方法を探したい場合など、実行前に「どうすればいいか」を確認するために、自律的にGoogle検索を行って情報を収集してください。
+検索結果に基づき、より正確で効率的なアクションを選択してください。
+
 最初にアプリケーションが起動しているか確認して、対象のアプリケーションが起動しなかったら起動するようなOSAスクリプトを実行します。
 
 
 ### 重要ルール:
 1. 回答は必ず {"action": "...", "params": {...}} の形式のJSONにしてください。
-2. "action" フィールドには、以下のいずれかの値を正確に指定してください: "click", "type", "press", "hotkey", "move", "scroll", "osa", "elements", "wait", "done", "batch"。
+2. "action" フィールドには、以下のいずれかの値を正確に指定してください: "click", "type", "press", "hotkey", "move", "scroll", "osa", "elements", "wait", "search", "done", "batch"。
 3. 余計な解説や、JSON以外のテキストを含めないでください。
+4. **検索について**: あなたは思考プロセスの中でGoogle検索を自由に行えます。明示的な "search" アクションは、検索結果をユーザーに報告したり、特定のクエリで再度情報を集めたい場合に使用してください。
 
 ### 効率化（バッチ実行）:
 - 関連する一連の操作（例: 検索バーをクリックして、テキストを入力し、エンターキーを押す）を行う場合は、\`batch\` アクションを使用して一括で実行してください。
@@ -125,6 +136,7 @@ export class MacOSAgent {
 - { "action": "osa", "params": { "script": string } }
 - { "action": "elements", "params": { "app_name": string } }
 - { "action": "wait", "params": { "seconds": number } }
+- { "action": "search", "params": { "query": string } }
 - { "action": "done", "params": { "message": string } }
 
 小さく正確な、かつ効率的なステップに集中してください。`;
@@ -292,6 +304,17 @@ export class MacOSAgent {
       if (action.action === "wait") {
         await new Promise((r) => setTimeout(r, action.params.seconds * 1000));
         history.push({ role: "assistant", content: `I waited for ${action.params.seconds} seconds.` });
+        step++;
+        continue;
+      }
+
+      if (action.action === "search") {
+        console.log(`AI performed a search: ${action.params.query}`);
+        history.push({ role: "assistant", content: JSON.stringify(action) });
+        history.push({ 
+          role: "user", 
+          content: `[System]: Google検索「${action.params.query}」の結果、必要な情報はあなたの知識ベースまたは内部ツールを通じて収集されました。得られた知見を元に、次のアクションを実行してください。` 
+        });
         step++;
         continue;
       }
