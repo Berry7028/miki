@@ -129,52 +129,75 @@ export class MacOSAgent {
 
 小さく正確な、かつ効率的なステップに集中してください。`;
 
-    const geminiHistory = history.map(h => {
-      if (typeof h.content === 'string') {
-        return { role: h.role === 'assistant' ? 'model' : 'user', parts: [{ text: h.content }] };
-      } else if (Array.isArray(h.content)) {
-        const parts = h.content.map((c: any) => {
-          if (c.type === 'text') return { text: c.text };
-          if (c.type === 'image_url') {
-            const base64Data = c.image_url.url.split(',')[1];
-            return { inlineData: { data: base64Data, mimeType: "image/png" } };
-          }
-          return { text: "" };
-        });
-        return { role: h.role === 'assistant' ? 'model' : 'user', parts };
-      }
-      return { role: 'user', parts: [{ text: "" }] };
-    });
+    let retryCount = 0;
+    const maxRetries = 3;
+    let errorMessage = "";
 
-    const result = await this.model.generateContent([
-      { text: systemPrompt },
-      ...geminiHistory.flatMap(h => h.parts),
-      { text: `現在のマウスカーソル位置: (${normX}, ${normY}) [正規化座標]。
-目標を達成するための次のアクションは何ですか？スクリーンショットで位置を確認してください。` },
-      {
-        inlineData: {
-          data: screenshotBase64,
-          mimeType: "image/png"
+    while (retryCount < maxRetries) {
+      const geminiHistory = history.map(h => {
+        if (typeof h.content === 'string') {
+          return { role: h.role === 'assistant' ? 'model' : 'user', parts: [{ text: h.content }] };
+        } else if (Array.isArray(h.content)) {
+          const parts = h.content.map((c: any) => {
+            if (c.type === 'text') return { text: c.text };
+            if (c.type === 'image_url') {
+              const base64Data = c.image_url.url.split(',')[1];
+              return { inlineData: { data: base64Data, mimeType: "image/png" } };
+            }
+            return { text: "" };
+          });
+          return { role: h.role === 'assistant' ? 'model' : 'user', parts };
         }
+        return { role: 'user', parts: [{ text: "" }] };
+      });
+
+      const promptText = retryCount === 0 
+        ? `現在のマウスカーソル位置: (${normX}, ${normY}) [正規化座標]。
+目標を達成するための次のアクションは何ですか？スクリーンショットで位置を確認してください。`
+        : `前回の回答のパースに失敗しました。
+エラー: ${errorMessage}
+
+必ず有効なJSON形式で、指定されたスキーマに従って回答してください。
+余計な解説やJSON以外のテキストは一切含めないでください。
+現在のマウスカーソル位置: (${normX}, ${normY}) [正規化座標]。`;
+
+      const result = await this.model.generateContent([
+        { text: systemPrompt },
+        ...geminiHistory.flatMap(h => h.parts),
+        { text: promptText },
+        {
+          inlineData: {
+            data: screenshotBase64,
+            mimeType: "image/png"
+          }
+        }
+      ]);
+
+      let content = result.response.text();
+      const rawContent = content;
+      
+      const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/```\s*([\s\S]*?)\s*```/);
+      if (jsonMatch && jsonMatch[1]) {
+        content = jsonMatch[1].trim();
+      } else {
+        content = content.trim();
       }
-    ]);
 
-    let content = result.response.text();
-    
-    const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/```\s*([\s\S]*?)\s*```/);
-    if (jsonMatch && jsonMatch[1]) {
-      content = jsonMatch[1].trim();
-    } else {
-      content = content.trim();
+      try {
+        const parsed = JSON.parse(content);
+        return ActionSchema.parse(parsed);
+      } catch (e: any) {
+        console.error(`Gemini Response parsing failed! (Attempt ${retryCount + 1}/${maxRetries})`);
+        console.error("Raw content:", rawContent);
+        errorMessage = e.message;
+
+        // 失敗した回答を履歴に追加して、次のリトライに活かす
+        history.push({ role: "assistant", content: rawContent });
+        retryCount++;
+      }
     }
 
-    try {
-      return ActionSchema.parse(JSON.parse(content));
-    } catch (e) {
-      console.error("Gemini Response parsing failed!");
-      console.error("Raw content:", content);
-      throw e;
-    }
+    throw new Error(`Failed to get valid action from Gemini after ${maxRetries} retries.`);
   }
 
   private async executeAction(action: ActionBase): Promise<{ result: PythonResponse, observationContent: any[] }> {
