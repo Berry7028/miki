@@ -27,6 +27,9 @@ miki/
 └── package.json
 ```
 
+詳細はこちら [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+
+
 - **Controller (TypeScript/Bun)**: ユーザープロンプトの受付、LLMへのリクエスト、Agent Loopの管理
 - **Executor (Python)**: マウス・キーボード操作、スクリーンショット取得、GUI要素の解析
 
