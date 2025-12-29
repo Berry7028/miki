@@ -1,0 +1,5 @@
+pyautogui
+pillow
+pyperclip
+# その他、必要に応じて追加
+

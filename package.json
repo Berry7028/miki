@@ -10,7 +10,7 @@
     "typescript": "^5"
   },
   "scripts": {
-    "start": "bun run index.ts"
+    "start": "bun run src/controller/index.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

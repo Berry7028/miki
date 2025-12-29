@@ -7,12 +7,28 @@ PyAutoGUI による操作と、Vision LLM（GPT-4o / Claude 3.5 Sonnet）によ�
 ## 2. アーキテクチャ構成
 本プロジェクトは **Bun (TypeScript)** をメインコントローラーとし、**Python (PyAutoGUI)** を低レイヤーの操作ツールとして利用するハイブリッド構成とします。
 
-- **Main Controller (Bun/TS)**:
+```text
+miki/
+├── src/                # ソースコード
+│   ├── controller/     # TS側 (Bun) - エージェントの思考・制御
+│   │   ├── index.ts    # エントリーポイント
+│   │   ├── agent.ts    # Agentロジック
+│   │   └── types.ts    # 型定義
+│   └── executor/       # Python側 - MacOSの実際の操作
+│       ├── main.py     # 操作実行のエントリーポイント
+│       └── requirements.txt
+├── venv/               # Python仮想環境
+├── .env                # 環境変数 (GEMINI_API_KEY等)
+├── package.json        # Bun/TS 依存関係
+└── tsconfig.json       # TypeScript設定
+```
+
+- **Main Controller (src/controller)**:
   - ユーザープロンプトの受付と対話。
-  - LLM（Vision API）へのリクエストと推論。
-  - Agent Loop の管理（状態遷移、終了判定）。
+  - LLM（Gemini API）へのリクエストと推論。
+  - Agent Loop の管理。
   - Python プロセスの起動とコマンド送出。
-- **Action Executor (Python/PyAutoGUI)**:
+- **Action Executor (src/executor)**:
   - マウス操作（移動、クリック、ドラッグ）。
   - キーボード操作（タイピング、ホットキー）。
   - 画面情報の取得（スクリーンショット）。

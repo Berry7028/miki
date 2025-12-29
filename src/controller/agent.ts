@@ -1,57 +1,10 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import * as readline from "node:readline";
-import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
-import * as dotenv from "dotenv";
-import { z } from "zod";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { ActionSchema, type Action, type ActionBase, type PythonResponse } from "./types";
+import * as path from "node:path";
 
-dotenv.config();
-
-// アクションの定義（Geminiの構造化出力に使用）
-const ActionSchemaBase = z.discriminatedUnion("action", [
-  z.object({ action: z.literal("screenshot") }),
-  z.object({ action: z.literal("click"), params: z.object({ x: z.number(), y: z.number() }) }),
-  z.object({ action: z.literal("type"), params: z.object({ text: z.string() }) }),
-  z.object({ action: z.literal("press"), params: z.object({ key: z.string() }) }),
-  z.object({ action: z.literal("hotkey"), params: z.object({ keys: z.array(z.string()) }) }),
-  z.object({ action: z.literal("move"), params: z.object({ x: z.number(), y: z.number() }) }),
-  z.object({ action: z.literal("scroll"), params: z.object({ amount: z.number() }) }),
-  z.object({ action: z.literal("osa"), params: z.object({ script: z.string() }) }),
-  z.object({ action: z.literal("elements"), params: z.object({ app_name: z.string() }) }),
-  z.object({ action: z.literal("wait"), params: z.object({ seconds: z.number() }) }),
-  z.object({ action: z.literal("done"), params: z.object({ message: z.string() }) }),
-]);
-
-type ActionBase = z.infer<typeof ActionSchemaBase>;
-
-const ActionSchema = z.discriminatedUnion("action", [
-  z.object({ action: z.literal("screenshot") }),
-  z.object({ action: z.literal("click"), params: z.object({ x: z.number(), y: z.number() }) }),
-  z.object({ action: z.literal("type"), params: z.object({ text: z.string() }) }),
-  z.object({ action: z.literal("press"), params: z.object({ key: z.string() }) }),
-  z.object({ action: z.literal("hotkey"), params: z.object({ keys: z.array(z.string()) }) }),
-  z.object({ action: z.literal("move"), params: z.object({ x: z.number(), y: z.number() }) }),
-  z.object({ action: z.literal("scroll"), params: z.object({ amount: z.number() }) }),
-  z.object({ action: z.literal("osa"), params: z.object({ script: z.string() }) }),
-  z.object({ action: z.literal("elements"), params: z.object({ app_name: z.string() }) }),
-  z.object({ action: z.literal("wait"), params: z.object({ seconds: z.number() }) }),
-  z.object({ action: z.literal("done"), params: z.object({ message: z.string() }) }),
-  z.object({ action: z.literal("batch"), params: z.object({ actions: z.array(ActionSchemaBase) }) }),
-]);
-
-type Action = z.infer<typeof ActionSchema>;
-
-interface PythonResponse {
-  status: string;
-  data?: string;
-  width?: number;
-  height?: number;
-  mouse_position?: { x: number; y: number };
-  elements?: string[];
-  message?: string;
-  execution_time_ms?: number;
-}
-
-class MacOSAgent {
+export class MacOSAgent {
   private pythonProcess: ChildProcessWithoutNullStreams;
   private pythonReader: readline.Interface;
   private genAI: GoogleGenerativeAI;
@@ -62,14 +15,17 @@ class MacOSAgent {
   constructor() {
     this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
     this.model = this.genAI.getGenerativeModel({
-      model: "gemini-3-flash-preview", // 現在有効な最新のFlashモデル
+      model: "gemini-3-flash-preview",
       generationConfig: {
         responseMimeType: "application/json",
       },
     });
 
-    // Pythonプロセスの起動 (仮想環境のpythonを使用)
-    this.pythonProcess = spawn("./venv/bin/python", ["executor.py"]);
+    // Pythonプロセスの起動 (プロジェクトルートにあるvenvとsrc/executor/main.pyを使用)
+    const pythonPath = path.join(process.cwd(), "venv", "bin", "python");
+    const executorPath = path.join(process.cwd(), "src", "executor", "main.py");
+    
+    this.pythonProcess = spawn(pythonPath, [executorPath]);
     
     this.pythonReader = readline.createInterface({
       input: this.pythonProcess.stdout,
@@ -106,7 +62,6 @@ class MacOSAgent {
   }
 
   private async getActionFromLLM(history: any[], screenshotBase64: string, mousePosition: { x: number, y: number }): Promise<Action> {
-    // マウス位置を正規化
     const normX = Math.round((mousePosition.x / (this.screenSize.width || 1)) * 1000);
     const normY = Math.round((mousePosition.y / (this.screenSize.height || 1)) * 1000);
 
@@ -159,7 +114,6 @@ class MacOSAgent {
 
 小さく正確な、かつ効率的なステップに集中してください。`;
 
-    // 履歴の変換 (Gemini形式へ)
     const geminiHistory = history.map(h => {
       if (typeof h.content === 'string') {
         return { role: h.role === 'assistant' ? 'model' : 'user', parts: [{ text: h.content }] };
@@ -192,7 +146,6 @@ class MacOSAgent {
 
     let content = result.response.text();
     
-    // JSON抽出
     const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/```\s*([\s\S]*?)\s*```/);
     if (jsonMatch && jsonMatch[1]) {
       content = jsonMatch[1].trim();
@@ -210,7 +163,6 @@ class MacOSAgent {
   }
 
   private async executeAction(action: ActionBase): Promise<{ result: PythonResponse, observationContent: any[] }> {
-    // Execute (Normalize coordinates to actual pixels if needed)
     let execParams = { ... (action as any).params };
     let highlightPos: { x: number, y: number } | null = null;
 
@@ -218,7 +170,6 @@ class MacOSAgent {
       execParams.x = Math.round((execParams.x / 1000) * this.screenSize.width);
       execParams.y = Math.round((execParams.y / 1000) * this.screenSize.height);
       
-      // click や move の場合はハイライト用の位置を保持
       if (action.action === "click" || action.action === "move") {
         highlightPos = { x: execParams.x, y: execParams.y };
       }
@@ -229,7 +180,6 @@ class MacOSAgent {
       console.log(`  Action ${action.action}: ${result.execution_time_ms}ms`);
     }
     
-    // 操作直後にハイライト付きのスクリーンショットを取得（AIの確認用）
     let observationContent: any[] = [{ type: "text", text: `Action ${action.action} performed. Result: ${JSON.stringify(result)}` }];
     
     if (highlightPos) {
@@ -249,7 +199,6 @@ class MacOSAgent {
   async run(goal: string) {
     console.log(`Goal: ${goal}`);
     
-    // 1. 最初の状態を観察
     const initRes = await this.callPython("screenshot");
     if (initRes.status !== "success" || !initRes.data || !initRes.mouse_position) {
       console.error("Initial observation failed:", initRes.message);
@@ -274,7 +223,6 @@ class MacOSAgent {
     while (step < 20) {
       console.log(`\n--- Step ${step + 1} ---`);
       
-      // 2. Observe (現在の最新状態を取得)
       const res = await this.callPython("screenshot");
       if (res.status !== "success" || !res.data || !res.mouse_position) {
         console.error("Failed to take screenshot or get mouse position:", res.message);
@@ -283,7 +231,6 @@ class MacOSAgent {
       const screenshot = res.data;
       const mousePosition = res.mouse_position;
       
-      // 3. Thought & Decide
       const action = await this.getActionFromLLM(history, screenshot, mousePosition);
       console.log(`Action: ${JSON.stringify(action)}`);
 
@@ -299,7 +246,6 @@ class MacOSAgent {
         continue;
       }
 
-      // 3. Execute
       let finalObservationContent: any[] = [];
       
       if (action.action === "batch") {
@@ -307,7 +253,6 @@ class MacOSAgent {
         for (const subAction of action.params.actions) {
           const { observationContent } = await this.executeAction(subAction);
           finalObservationContent.push(...observationContent);
-          // 各アクション間に少し待機
           await new Promise((r) => setTimeout(r, 500));
         }
       } else {
@@ -315,25 +260,14 @@ class MacOSAgent {
         finalObservationContent.push(...observationContent);
       }
 
-      // 4. Record History
       history.push({ role: "assistant", content: JSON.stringify(action) });
       history.push({ role: "user", content: finalObservationContent });
 
       step++;
-      await new Promise((r) => setTimeout(r, 1000)); // 少し待機
+      await new Promise((r) => setTimeout(r, 1000));
     }
 
     this.pythonProcess.kill();
   }
 }
 
-// 実行部分
-async function main() {
-  const agent = new MacOSAgent();
-  await agent.init();
-
-  const goal = process.argv.slice(2).join(" ") || "YouTubeを開いて、'猫'を検索してください。";
-  await agent.run(goal);
-}
-
-main().catch(console.error);
