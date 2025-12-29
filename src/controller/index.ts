@@ -1,3 +1,9 @@
+// ⚠️ このファイルは非推奨です
+// CLI型インターフェースに移行しました。
+// 新しいエントリーポイントは src/cli/index.tsx です。
+// `bun run start` で起動してください。
+
+/*
 import * as dotenv from "dotenv";
 import { MacOSAgent } from "./agent";
 
@@ -12,4 +18,5 @@ async function main() {
 }
 
 main().catch(console.error);
+*/
 

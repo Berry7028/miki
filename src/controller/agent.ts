@@ -1,10 +1,11 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import * as readline from "node:readline";
+import { EventEmitter } from "node:events";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { ActionSchema, type Action, type ActionBase, type PythonResponse } from "./types";
 import * as path from "node:path";
 
-export class MacOSAgent {
+export class MacOSAgent extends EventEmitter {
   private pythonProcess: ChildProcessWithoutNullStreams;
   private pythonReader: readline.Interface;
   private genAI: GoogleGenerativeAI;
@@ -12,9 +13,9 @@ export class MacOSAgent {
   private screenSize: { width: number; height: number } = { width: 0, height: 0 };
   private pendingResolvers: ((value: any) => void)[] = [];
   private userPromptQueue: string[] = [];
-  private userInterface: readline.Interface;
 
   constructor() {
+    super();
     this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
     this.model = this.genAI.getGenerativeModel({
       model: "gemini-3-flash-preview",
@@ -40,32 +41,19 @@ export class MacOSAgent {
       terminal: false,
     });
 
-    this.userInterface = readline.createInterface({
-      input: process.stdin,
-      terminal: false,
-    });
-
-    this.userInterface.on("line", (line) => {
-      const trimmed = line.trim();
-      if (trimmed) {
-        console.log(`\n[User Hint Received]: ${trimmed}`);
-        this.userPromptQueue.push(trimmed);
-      }
-    });
-
     this.pythonReader.on("line", (line) => {
       const resolver = this.pendingResolvers.shift();
       if (resolver) {
         try {
           resolver(JSON.parse(line));
         } catch (e) {
-          console.error("Failed to parse Python output:", line);
+          this.emit('error', `Python出力のパース失敗: ${line}`);
         }
       }
     });
 
     this.pythonProcess.stderr.on("data", (data) => {
-      console.error(`Python Error: ${data}`);
+      this.emit('error', `Pythonエラー: ${data}`);
     });
   }
 
@@ -79,7 +67,27 @@ export class MacOSAgent {
   async init() {
     const res = await this.callPython("size");
     this.screenSize = { width: res.width || 0, height: res.height || 0 };
-    console.log(`Screen Size: ${this.screenSize.width}x${this.screenSize.height}`);
+    this.log('info', `画面サイズ: ${this.screenSize.width}x${this.screenSize.height}`);
+  }
+
+  private log(type: 'info' | 'success' | 'error' | 'hint' | 'action', message: string) {
+    this.emit('log', { type, message, timestamp: new Date() });
+  }
+
+  public addHint(hint: string) {
+    this.userPromptQueue.push(hint);
+    this.log('hint', `ヒントを追加: ${hint}`);
+  }
+
+  public reset() {
+    this.userPromptQueue = [];
+    this.emit('reset');
+  }
+
+  public destroy() {
+    this.pythonProcess.kill();
+    this.pythonReader.close();
+    this.removeAllListeners();
   }
 
   private async getActionFromLLM(history: any[], screenshotBase64: string, mousePosition: { x: number, y: number }): Promise<Action> {
@@ -199,8 +207,8 @@ export class MacOSAgent {
         const parsed = JSON.parse(content);
         return ActionSchema.parse(parsed);
       } catch (e: any) {
-        console.error(`Gemini Response parsing failed! (Attempt ${retryCount + 1}/${maxRetries})`);
-        console.error("Raw content:", rawContent);
+        this.log('error', `Geminiレスポンスのパース失敗 (試行 ${retryCount + 1}/${maxRetries})`);
+        this.log('error', `生コンテンツ: ${rawContent}`);
         errorMessage = e.message;
 
         // 失敗した回答を履歴に追加して、次のリトライに活かす
@@ -227,7 +235,7 @@ export class MacOSAgent {
 
     const result = await this.callPython(action.action, execParams);
     if (result.execution_time_ms !== undefined) {
-      console.log(`  Action ${action.action}: ${result.execution_time_ms}ms`);
+      this.log('info', `  アクション ${action.action}: ${result.execution_time_ms}ms`);
     }
     
     let observationContent: any[] = [{ type: "text", text: `Action ${action.action} performed. Result: ${JSON.stringify(result)}` }];
@@ -247,11 +255,11 @@ export class MacOSAgent {
   }
 
   async run(goal: string) {
-    console.log(`Goal: ${goal}`);
+    this.log('info', `ゴール: ${goal}`);
     
     const initRes = await this.callPython("screenshot");
     if (initRes.status !== "success" || !initRes.data || !initRes.mouse_position) {
-      console.error("Initial observation failed:", initRes.message);
+      this.log('error', `初期観察失敗: ${initRes.message}`);
       return;
     }
 
@@ -271,37 +279,40 @@ export class MacOSAgent {
     let step = 0;
 
     while (step < 20) {
-      console.log(`\n--- Step ${step + 1} ---`);
-      
+      this.emit('step', step + 1);
+      this.log('info', `--- ステップ ${step + 1} ---`);
+
       // ユーザーからの追加ヒントがあれば履歴に追加
       while (this.userPromptQueue.length > 0) {
         const hint = this.userPromptQueue.shift();
         if (hint) {
-          history.push({ 
-            role: "user", 
-            content: `[ユーザーからの追加指示/ヒント]: ${hint}` 
+          history.push({
+            role: "user",
+            content: `[ユーザーからの追加指示/ヒント]: ${hint}`
           });
-          console.log(`Added user hint to history: ${hint}`);
+          this.log('hint', `ヒントを履歴に追加: ${hint}`);
         }
       }
 
       const res = await this.callPython("screenshot");
       if (res.status !== "success" || !res.data || !res.mouse_position) {
-        console.error("Failed to take screenshot or get mouse position:", res.message);
+        this.log('error', `スクリーンショット取得失敗: ${res.message}`);
         break;
       }
       const screenshot = res.data;
       const mousePosition = res.mouse_position;
-      
+
       const action = await this.getActionFromLLM(history, screenshot, mousePosition);
-      console.log(`Action: ${JSON.stringify(action)}`);
+      this.log('action', `アクション: ${JSON.stringify(action)}`);
 
       if (action.action === "done") {
-        console.log(`Success: ${action.params.message}`);
+        this.log('success', `完了: ${action.params.message}`);
+        this.emit('completed', action.params.message);
         break;
       }
 
       if (action.action === "wait") {
+        this.log('info', `${action.params.seconds}秒待機中...`);
         await new Promise((r) => setTimeout(r, action.params.seconds * 1000));
         history.push({ role: "assistant", content: `I waited for ${action.params.seconds} seconds.` });
         step++;
@@ -309,7 +320,7 @@ export class MacOSAgent {
       }
 
       if (action.action === "search") {
-        console.log(`AI performed a search: ${action.params.query}`);
+        this.log('info', `AI検索実行: ${action.params.query}`);
         history.push({ role: "assistant", content: JSON.stringify(action) });
         history.push({ 
           role: "user", 
@@ -320,9 +331,9 @@ export class MacOSAgent {
       }
 
       let finalObservationContent: any[] = [];
-      
+
       if (action.action === "batch") {
-        console.log(`Executing batch of ${action.params.actions.length} actions...`);
+        this.log('info', `バッチ実行: ${action.params.actions.length}個のアクション`);
         for (const subAction of action.params.actions) {
           const { observationContent } = await this.executeAction(subAction);
           finalObservationContent.push(...observationContent);
@@ -340,8 +351,7 @@ export class MacOSAgent {
       await new Promise((r) => setTimeout(r, 1000));
     }
 
-    this.pythonProcess.kill();
-    this.userInterface.close();
+    this.emit('runCompleted');
   }
 }
 
