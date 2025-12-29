@@ -44,6 +44,7 @@ executor/
 - AppleScriptとJXAを使用したUI要素の取得
 - UI要素の検索とクリック
 - フォーカス制御とテキスト入力
+- Note: テキスト入力機能は`mouse_keyboard.py`との循環依存を避けるため、内部に複製されています
 
 ### actions/web_elements.py
 - ブラウザ内のWeb要素の取得

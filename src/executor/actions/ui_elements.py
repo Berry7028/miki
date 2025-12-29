@@ -2,8 +2,30 @@
 import subprocess
 import json
 import time
+import pyautogui
 
-from .mouse_keyboard import type_text
+
+def _type_text(text):
+    """
+    テキストを入力する（クリップボード経由でより確実に）
+    Note: This is duplicated from mouse_keyboard to avoid circular dependency
+    """
+    try:
+        # 特殊な文字や日本語入力の不安定さを避けるため、クリップボード経由での貼り付けを試みる
+        import pyperclip
+        old_clipboard = pyperclip.paste()
+        pyperclip.copy(text)
+        # command + v で貼り付け
+        pyautogui.hotkey('command', 'v')
+        # クリップボードを元に戻す（オプション）
+        time.sleep(0.1)
+        # pyperclip.copy(old_clipboard)
+        return {"status": "success", "method": "clipboard"}
+    except Exception:
+        # クリップボードが使えない場合は通常のタイピング
+        pyautogui.write(text, interval=0.05)
+        return {"status": "success", "method": "write"}
+
 
 
 def get_ui_elements(app_name):
@@ -269,4 +291,4 @@ def type_to_element(app_name, role, name, text):
 
     # テキスト入力
     time.sleep(0.2)
-    return type_text(text=text)
+    return _type_text(text=text)
