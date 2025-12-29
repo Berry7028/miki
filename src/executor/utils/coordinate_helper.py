@@ -7,8 +7,6 @@ def calculate_scale_factors():
     ディスプレイのスケーリング係数を計算する
     Retina等でのスクリーンショットと論理座標の差を考慮
     """
-    from PIL import Image
-    
     screen_w, screen_h = pyautogui.size()
     # 実際のスクリーンショットのサイズを取得
     shot = pyautogui.screenshot()

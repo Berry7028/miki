@@ -5,15 +5,22 @@ from io import BytesIO
 from PIL import Image, ImageDraw
 
 
+def _calculate_image_scale_factors(img):
+    """
+    画像とスクリーンサイズから倍率を計算
+    Retina等でのスクリーンショットと論理座標の差を考慮
+    """
+    screen_w, screen_h = pyautogui.size()
+    img_w, img_h = img.size
+    return img_w / screen_w, img_h / screen_h
+
+
 def draw_point_on_screenshot(img, x, y, radius=15, color="red"):
     """スクリーンショット上の指定座標にハイライト（赤い点）を描画する"""
     draw = ImageDraw.Draw(img)
-    # ディスプレイのスケーリング（Retina等）を考慮するため、pyautoguiのサイズと画像のサイズを比較
-    screen_w, screen_h = pyautogui.size()
-    img_w, img_h = img.size
     
-    scale_x = img_w / screen_w
-    scale_y = img_h / screen_h
+    # ディスプレイのスケーリング（Retina等）を考慮
+    scale_x, scale_y = _calculate_image_scale_factors(img)
     
     ix, iy = x * scale_x, y * scale_y
     
