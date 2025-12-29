@@ -4,8 +4,6 @@ import base64
 from io import BytesIO
 from PIL import Image, ImageDraw
 
-from ..utils.coordinate_helper import calculate_scale_factors, scale_coordinates
-
 
 def draw_point_on_screenshot(img, x, y, radius=15, color="red"):
     """スクリーンショット上の指定座標にハイライト（赤い点）を描画する"""
