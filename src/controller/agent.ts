@@ -6,17 +6,22 @@ import { ActionSchema, type Action, type ActionBase, type PythonResponse } from 
 import * as path from "node:path";
 
 export class MacOSAgent extends EventEmitter {
-  private pythonProcess: ChildProcessWithoutNullStreams;
-  private pythonReader: readline.Interface;
+  private pythonProcess!: ChildProcessWithoutNullStreams;
+  private pythonReader!: readline.Interface;
   private genAI: GoogleGenerativeAI;
   private model: any;
   private screenSize: { width: number; height: number } = { width: 0, height: 0 };
   private pendingResolvers: ((value: any) => void)[] = [];
   private userPromptQueue: string[] = [];
+  private isRestarting = false;
 
   constructor() {
     super();
-    this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error('GEMINI_API_KEY環境変数が設定されていません。');
+    }
+    this.genAI = new GoogleGenerativeAI(apiKey);
     this.model = this.genAI.getGenerativeModel({
       model: "gemini-3-flash-preview",
       generationConfig: {
@@ -30,12 +35,15 @@ export class MacOSAgent extends EventEmitter {
       ] as any,
     });
 
-    // Pythonプロセスの起動 (プロジェクトルートにあるvenvとsrc/executor/main.pyを使用)
+    this.startPythonProcess();
+  }
+
+  private startPythonProcess() {
     const pythonPath = path.join(process.cwd(), "venv", "bin", "python");
     const executorPath = path.join(process.cwd(), "src/executor/main.py");
-    
+
     this.pythonProcess = spawn(pythonPath, [executorPath]);
-    
+
     this.pythonReader = readline.createInterface({
       input: this.pythonProcess.stdout,
       terminal: false,
@@ -55,6 +63,46 @@ export class MacOSAgent extends EventEmitter {
     this.pythonProcess.stderr.on("data", (data) => {
       this.emit('error', `Pythonエラー: ${data}`);
     });
+
+    // プロセスクラッシュの検知と自動再起動
+    this.pythonProcess.on('exit', (code, signal) => {
+      if (!this.isRestarting) {
+        this.log('error', `Pythonプロセスが終了しました (code: ${code}, signal: ${signal})`);
+        this.handleProcessCrash();
+      }
+    });
+
+    this.pythonProcess.on('error', (error) => {
+      this.log('error', `Pythonプロセスエラー: ${error.message}`);
+      if (!this.isRestarting) {
+        this.handleProcessCrash();
+      }
+    });
+  }
+
+  private async handleProcessCrash() {
+    if (this.isRestarting) return;
+
+    this.isRestarting = true;
+    this.log('info', 'Pythonプロセスを再起動しています...');
+
+    // 古いプロセスのクリーンアップ
+    try {
+      this.pythonReader.close();
+      this.pythonProcess.kill();
+    } catch (e) {
+      // 既に終了している場合は無視
+    }
+
+    // 待機後に再起動
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    this.startPythonProcess();
+    this.isRestarting = false;
+
+    this.log('success', 'Pythonプロセスを再起動しました');
+
+    // 画面サイズを再初期化
+    await this.init();
   }
 
   private async callPython(action: string, params: any = {}): Promise<PythonResponse> {
