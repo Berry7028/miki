@@ -95,7 +95,7 @@ function getBackendPaths() {
   const executorOnedirBinary = path.join(executorOnedir, "miki-executor");
   const executorBinary = fs.existsSync(executorOnedirBinary)
     ? executorOnedirBinary
-    : executorOnedir;
+    : null;
   const devPython = path.join(__dirname, "..", "venv", "bin", "python");
   const devExecutor = path.join(__dirname, "..", "src", "executor", "main.py");
 
@@ -128,7 +128,11 @@ function ensureController() {
     DOTENV_CONFIG_QUIET: "true"
   };
 
-  if (app.isPackaged && fs.existsSync(executorBinary)) {
+  if (app.isPackaged) {
+    if (!executorBinary) {
+      console.error("Executor binary not found. Run npm run build:backend.");
+      return;
+    }
     env.MIKI_EXECUTOR_BINARY = executorBinary;
   } else {
     env.MIKI_PYTHON_PATH = devPython;

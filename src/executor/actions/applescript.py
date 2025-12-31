@@ -41,8 +41,7 @@ def run_osa(script):
         result = subprocess.run(
             ['osascript', '-e', script],
             capture_output=True,
-            text=True,
-            encoding='utf-8')
+            text=True)
         if result.returncode == 0:
             return {"status": "success", "output": result.stdout.strip()}
         else:

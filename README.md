@@ -110,3 +110,10 @@ npm --prefix desktop run dist
 - `src/controller/`: LLM 制御ロジック
 - `src/executor/`: MacOS 操作 (Python)
 - `venv/`: Python 仮想環境
+
+## セキュリティメモ
+
+- `desktop/renderer/index.html` と `desktop/renderer/chat.html` は Tailwind CDN を使うため、
+  CSP に `style-src 'unsafe-inline'` を含めています。
+- 本番配布では Tailwind をビルド時コンパイルに切り替えて `unsafe-inline` を避けるか、
+  そのリスクをドキュメント化してください。
