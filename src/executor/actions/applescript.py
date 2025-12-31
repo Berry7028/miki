@@ -38,7 +38,8 @@ def run_osa(script):
         # スクリプトの検証
         validate_script(script)
 
-        result = subprocess.run(['osascript', '-e', script], capture_output=True, text=True)
+        result = subprocess.run(
+            ['osascript', '-e', script], capture_output=True, text=True)
         if result.returncode == 0:
             return {"status": "success", "output": result.stdout.strip()}
         else:

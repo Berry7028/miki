@@ -27,7 +27,6 @@ def _type_text(text):
         return {"status": "success", "method": "write"}
 
 
-
 def get_ui_elements(app_name):
     """
     AppleScriptのGUI Scriptingを使用して、指定されたアプリのGUI要素一覧を効率的に取得する。
@@ -74,7 +73,8 @@ def get_ui_elements(app_name):
     end tell
     '''
     try:
-        result = subprocess.run(['osascript', '-e', script], capture_output=True, text=True)
+        result = subprocess.run(
+            ['osascript', '-e', script], capture_output=True, text=True)
         if result.returncode == 0:
             output = result.stdout.strip()
             if output.startswith("ERROR"):

@@ -20,7 +20,7 @@ export class MacOSAgent extends EventEmitter {
     super();
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      throw new Error('GEMINI_API_KEY環境変数が設定されていません。');
+      throw new Error("GEMINI_API_KEY環境変数が設定されていません。");
     }
     this.genAI = new GoogleGenerativeAI(apiKey);
     this.model = this.genAI.getGenerativeModel({
@@ -32,7 +32,7 @@ export class MacOSAgent extends EventEmitter {
         {
           // @ts-ignore
           googleSearch: {},
-        }
+        },
       ] as any,
     });
 
@@ -56,25 +56,25 @@ export class MacOSAgent extends EventEmitter {
         try {
           resolver(JSON.parse(line));
         } catch (e) {
-          this.emit('error', `Python出力のパース失敗: ${line}`);
+          this.emit("error", `Python出力のパース失敗: ${line}`);
         }
       }
     });
 
     this.pythonProcess.stderr.on("data", (data) => {
-      this.emit('error', `Pythonエラー: ${data}`);
+      this.emit("error", `Pythonエラー: ${data}`);
     });
 
     // プロセスクラッシュの検知と自動再起動
-    this.pythonProcess.on('exit', (code, signal) => {
+    this.pythonProcess.on("exit", (code, signal) => {
       if (!this.isRestarting) {
-        this.log('error', `Pythonプロセスが終了しました (code: ${code}, signal: ${signal})`);
+        this.log("error", `Pythonプロセスが終了しました (code: ${code}, signal: ${signal})`);
         this.handleProcessCrash();
       }
     });
 
-    this.pythonProcess.on('error', (error) => {
-      this.log('error', `Pythonプロセスエラー: ${error.message}`);
+    this.pythonProcess.on("error", (error) => {
+      this.log("error", `Pythonプロセスエラー: ${error.message}`);
       if (!this.isRestarting) {
         this.handleProcessCrash();
       }
@@ -85,7 +85,7 @@ export class MacOSAgent extends EventEmitter {
     if (this.isRestarting) return;
 
     this.isRestarting = true;
-    this.log('info', 'Pythonプロセスを再起動しています...');
+    this.log("info", "Pythonプロセスを再起動しています...");
 
     // 古いプロセスのクリーンアップ
     try {
@@ -96,11 +96,11 @@ export class MacOSAgent extends EventEmitter {
     }
 
     // 待機後に再起動
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     this.startPythonProcess();
     this.isRestarting = false;
 
-    this.log('success', 'Pythonプロセスを再起動しました');
+    this.log("success", "Pythonプロセスを再起動しました");
 
     // 画面サイズを再初期化
     await this.init();
@@ -116,21 +116,21 @@ export class MacOSAgent extends EventEmitter {
   async init() {
     const res = await this.callPython("size");
     this.screenSize = { width: res.width || 0, height: res.height || 0 };
-    this.log('info', `画面サイズ: ${this.screenSize.width}x${this.screenSize.height}`);
+    this.log("info", `画面サイズ: ${this.screenSize.width}x${this.screenSize.height}`);
   }
 
-  private log(type: 'info' | 'success' | 'error' | 'hint' | 'action', message: string) {
-    this.emit('log', { type, message, timestamp: new Date() });
+  private log(type: "info" | "success" | "error" | "hint" | "action", message: string) {
+    this.emit("log", { type, message, timestamp: new Date() });
   }
 
   public addHint(hint: string) {
     this.userPromptQueue.push(hint);
-    this.log('hint', `ヒントを追加: ${hint}`);
+    this.log("hint", `ヒントを追加: ${hint}`);
   }
 
   public reset() {
     this.userPromptQueue = [];
-    this.emit('reset');
+    this.emit("reset");
   }
 
   public destroy() {
@@ -139,7 +139,11 @@ export class MacOSAgent extends EventEmitter {
     this.removeAllListeners();
   }
 
-  private async getActionFromLLM(history: any[], screenshotBase64: string, mousePosition: { x: number, y: number }): Promise<Action> {
+  private async getActionFromLLM(
+    history: any[],
+    screenshotBase64: string,
+    mousePosition: { x: number; y: number },
+  ): Promise<Action> {
     const normX = Math.round((mousePosition.x / (this.screenSize.width || 1)) * 1000);
     const normY = Math.round((mousePosition.y / (this.screenSize.height || 1)) * 1000);
 
@@ -272,27 +276,28 @@ command+lは使用しないでください。
     let errorMessage = "";
 
     while (retryCount < maxRetries) {
-      const geminiHistory = history.map(h => {
-        if (typeof h.content === 'string') {
-          return { role: h.role === 'assistant' ? 'model' : 'user', parts: [{ text: h.content }] };
+      const geminiHistory = history.map((h) => {
+        if (typeof h.content === "string") {
+          return { role: h.role === "assistant" ? "model" : "user", parts: [{ text: h.content }] };
         } else if (Array.isArray(h.content)) {
           const parts = h.content.map((c: any) => {
-            if (c.type === 'text') return { text: c.text };
-            if (c.type === 'image_url') {
-              const base64Data = c.image_url.url.split(',')[1];
+            if (c.type === "text") return { text: c.text };
+            if (c.type === "image_url") {
+              const base64Data = c.image_url.url.split(",")[1];
               return { inlineData: { data: base64Data, mimeType: "image/png" } };
             }
             return { text: "" };
           });
-          return { role: h.role === 'assistant' ? 'model' : 'user', parts };
+          return { role: h.role === "assistant" ? "model" : "user", parts };
         }
-        return { role: 'user', parts: [{ text: "" }] };
+        return { role: "user", parts: [{ text: "" }] };
       });
 
-      const promptText = retryCount === 0 
-        ? `現在のマウスカーソル位置: (${normX}, ${normY}) [正規化座標]。
+      const promptText =
+        retryCount === 0
+          ? `現在のマウスカーソル位置: (${normX}, ${normY}) [正規化座標]。
 目標を達成するための次のアクションは何ですか？スクリーンショットで位置を確認してください。`
-        : `前回の回答のパースに失敗しました。
+          : `前回の回答のパースに失敗しました。
 エラー: ${errorMessage}
 
 必ず有効なJSON形式で、指定されたスキーマに従って回答してください。
@@ -306,15 +311,15 @@ command+lは使用しないでください。
         {
           inlineData: {
             data: screenshotBase64,
-            mimeType: "image/png"
-          }
-        }
+            mimeType: "image/png",
+          },
+        },
       ]);
 
       let fullContent = "";
       let thoughtProcess = "";
       const thoughtId = `thought-${this.currentStep}-${retryCount}`;
-      
+
       for await (const chunk of resultStream.stream) {
         // @ts-ignore
         const parts = chunk.candidates?.[0]?.content?.parts || [];
@@ -323,7 +328,13 @@ command+lは使用しないでください。
           if (part.thought) {
             // @ts-ignore
             thoughtProcess += part.text;
-            this.emit('log', { id: thoughtId, type: 'thought', message: thoughtProcess, timestamp: new Date(), isComplete: false });
+            this.emit("log", {
+              id: thoughtId,
+              type: "thought",
+              message: thoughtProcess,
+              timestamp: new Date(),
+              isComplete: false,
+            });
           } else if (part.text) {
             fullContent += part.text;
           }
@@ -331,13 +342,20 @@ command+lは使用しないでください。
       }
 
       if (thoughtProcess) {
-        this.emit('log', { id: thoughtId, type: 'thought', message: thoughtProcess, timestamp: new Date(), isComplete: true });
+        this.emit("log", {
+          id: thoughtId,
+          type: "thought",
+          message: thoughtProcess,
+          timestamp: new Date(),
+          isComplete: true,
+        });
       }
 
       let content = fullContent;
       const rawContent = content;
-      
-      const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/```\s*([\s\S]*?)\s*```/);
+
+      const jsonMatch =
+        content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/```\s*([\s\S]*?)\s*```/);
       if (jsonMatch && jsonMatch[1]) {
         content = jsonMatch[1].trim();
       } else {
@@ -348,8 +366,8 @@ command+lは使用しないでください。
         const parsed = JSON.parse(content);
         return ActionSchema.parse(parsed);
       } catch (e: any) {
-        this.log('error', `Geminiレスポンスのパース失敗 (試行 ${retryCount + 1}/${maxRetries})`);
-        this.log('error', `生コンテンツ: ${rawContent}`);
+        this.log("error", `Geminiレスポンスのパース失敗 (試行 ${retryCount + 1}/${maxRetries})`);
+        this.log("error", `生コンテンツ: ${rawContent}`);
         errorMessage = e.message;
 
         // 失敗した回答を履歴に追加して、次のリトライに活かす
@@ -361,12 +379,21 @@ command+lは使用しないでください。
     throw new Error(`Failed to get valid action from Gemini after ${maxRetries} retries.`);
   }
 
-  private async executeAction(action: ActionBase): Promise<{ result: PythonResponse, observationContent: any[] }> {
-    let execParams = { ... (action as any).params };
-    let highlightPos: { x: number, y: number } | null = null;
+  private async executeAction(
+    action: ActionBase,
+  ): Promise<{ result: PythonResponse; observationContent: any[] }> {
+    let execParams = { ...(action as any).params };
+    let highlightPos: { x: number; y: number } | null = null;
 
     // UI要素ベースの操作は座標変換不要
-    const elementBasedActions = ["clickElement", "typeToElement", "focusElement", "elementsJson", "webElements", "clickWebElement"];
+    const elementBasedActions = [
+      "clickElement",
+      "typeToElement",
+      "focusElement",
+      "elementsJson",
+      "webElements",
+      "clickWebElement",
+    ];
     const isElementBased = elementBasedActions.includes(action.action);
 
     if (!isElementBased && execParams.x !== undefined && execParams.y !== undefined) {
@@ -390,10 +417,15 @@ command+lは使用しないでください。
 
     const result = await this.callPython(action.action, execParams);
     if (result.execution_time_ms !== undefined) {
-      this.log('info', `  アクション ${action.action}: ${result.execution_time_ms}ms`);
+      this.log("info", `  アクション ${action.action}: ${result.execution_time_ms}ms`);
     }
 
-    let observationContent: any[] = [{ type: "text", text: `Action ${action.action} performed. Result: ${JSON.stringify(result)}` }];
+    let observationContent: any[] = [
+      {
+        type: "text",
+        text: `Action ${action.action} performed. Result: ${JSON.stringify(result)}`,
+      },
+    ];
 
     if (highlightPos) {
       const hRes = await this.callPython("screenshot", { highlight_pos: highlightPos });
@@ -402,7 +434,10 @@ command+lは使用しないでください。
           type: "image_url",
           image_url: { url: `data:image/png;base64,${hRes.data}` },
         });
-        observationContent.push({ type: "text", text: "The red dot in the screenshot above shows where the action was performed." });
+        observationContent.push({
+          type: "text",
+          text: "The red dot in the screenshot above shows where the action was performed.",
+        });
       }
     }
 
@@ -410,11 +445,11 @@ command+lは使用しないでください。
   }
 
   async run(goal: string) {
-    this.log('info', `ゴール: ${goal}`);
-    
+    this.log("info", `ゴール: ${goal}`);
+
     const initRes = await this.callPython("screenshot");
     if (initRes.status !== "success" || !initRes.data || !initRes.mouse_position) {
-      this.log('error', `初期観察失敗: ${initRes.message}`);
+      this.log("error", `初期観察失敗: ${initRes.message}`);
       return;
     }
 
@@ -423,19 +458,22 @@ command+lは使用しないでください。
       {
         role: "user",
         content: [
-          { type: "text", text: "これが現在のデスクトップの初期状態です。この画面から操作を開始してください。" },
+          {
+            type: "text",
+            text: "これが現在のデスクトップの初期状態です。この画面から操作を開始してください。",
+          },
           {
             type: "image_url",
             image_url: { url: `data:image/png;base64,${initRes.data}` },
           },
         ],
-      }
+      },
     ];
     this.currentStep = 0;
 
     while (this.currentStep < 20) {
-      this.emit('step', this.currentStep + 1);
-      this.log('info', `--- ステップ ${this.currentStep + 1} ---`);
+      this.emit("step", this.currentStep + 1);
+      this.log("info", `--- ステップ ${this.currentStep + 1} ---`);
 
       // ユーザーからの追加ヒントがあれば履歴に追加
       while (this.userPromptQueue.length > 0) {
@@ -443,43 +481,46 @@ command+lは使用しないでください。
         if (hint) {
           history.push({
             role: "user",
-            content: `[ユーザーからの追加指示/ヒント]: ${hint}`
+            content: `[ユーザーからの追加指示/ヒント]: ${hint}`,
           });
-          this.log('hint', `ヒントを履歴に追加: ${hint}`);
+          this.log("hint", `ヒントを履歴に追加: ${hint}`);
         }
       }
 
       const res = await this.callPython("screenshot");
       if (res.status !== "success" || !res.data || !res.mouse_position) {
-        this.log('error', `スクリーンショット取得失敗: ${res.message}`);
+        this.log("error", `スクリーンショット取得失敗: ${res.message}`);
         break;
       }
       const screenshot = res.data;
       const mousePosition = res.mouse_position;
 
       const action = await this.getActionFromLLM(history, screenshot, mousePosition);
-      this.log('action', `アクション: ${JSON.stringify(action)}`);
+      this.log("action", `アクション: ${JSON.stringify(action)}`);
 
       if (action.action === "done") {
-        this.log('success', `完了: ${action.params.message}`);
-        this.emit('completed', action.params.message);
+        this.log("success", `完了: ${action.params.message}`);
+        this.emit("completed", action.params.message);
         break;
       }
 
       if (action.action === "wait") {
-        this.log('info', `${action.params.seconds}秒待機中...`);
+        this.log("info", `${action.params.seconds}秒待機中...`);
         await new Promise((r) => setTimeout(r, action.params.seconds * 1000));
-        history.push({ role: "assistant", content: `I waited for ${action.params.seconds} seconds.` });
+        history.push({
+          role: "assistant",
+          content: `I waited for ${action.params.seconds} seconds.`,
+        });
         this.currentStep++;
         continue;
       }
 
       if (action.action === "search") {
-        this.log('info', `AI検索実行: ${action.params.query}`);
+        this.log("info", `AI検索実行: ${action.params.query}`);
         history.push({ role: "assistant", content: JSON.stringify(action) });
-        history.push({ 
-          role: "user", 
-          content: `[System]: Google検索「${action.params.query}」の結果、必要な情報はあなたの知識ベースまたは内部ツールを通じて収集されました。得られた知見を元に、次のアクションを実行してください。` 
+        history.push({
+          role: "user",
+          content: `[System]: Google検索「${action.params.query}」の結果、必要な情報はあなたの知識ベースまたは内部ツールを通じて収集されました。得られた知見を元に、次のアクションを実行してください。`,
         });
         this.currentStep++;
         continue;
@@ -488,7 +529,7 @@ command+lは使用しないでください。
       let finalObservationContent: any[] = [];
 
       if (action.action === "batch") {
-        this.log('info', `バッチ実行: ${action.params.actions.length}個のアクション`);
+        this.log("info", `バッチ実行: ${action.params.actions.length}個のアクション`);
         for (const subAction of action.params.actions) {
           const { observationContent } = await this.executeAction(subAction);
           finalObservationContent.push(...observationContent);
@@ -506,7 +547,6 @@ command+lは使用しないでください。
       await new Promise((r) => setTimeout(r, 1000));
     }
 
-    this.emit('runCompleted');
+    this.emit("runCompleted");
   }
 }
-

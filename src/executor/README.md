@@ -21,36 +21,43 @@ executor/
 ## モジュール構成
 
 ### main.py
+
 - TypeScript ControllerからのJSONコマンドを受信
 - 適切なアクションハンドラーにディスパッチ
 - 実行時間の計測とエラーハンドリング
 - 約92行の薄いディスパッチャーレイヤー
 
 ### actions/screenshot.py
+
 - スクリーンショット取得
 - ハイライト描画（操作位置の可視化）
 - 画面サイズ取得
 
 ### actions/mouse_keyboard.py
+
 - マウス操作（クリック、移動、ドラッグ）
 - キーボード操作（テキスト入力、キー押下、ホットキー）
 - スクロール操作
 
 ### actions/applescript.py
+
 - AppleScript (OSA) の実行
 - MacOS固有の高レベル操作
 
 ### actions/ui_elements.py
+
 - AppleScriptとJXAを使用したUI要素の取得
 - UI要素の検索とクリック
 - フォーカス制御とテキスト入力
 - Note: テキスト入力機能は`mouse_keyboard.py`との循環依存を避けるため、内部に複製されています
 
 ### actions/web_elements.py
+
 - ブラウザ内のWeb要素の取得
 - AXWebArea配下の要素操作
 
 ### utils/coordinate_helper.py
+
 - Retinaディスプレイ対応の座標スケーリング
 - 論理座標と物理座標の変換
 
@@ -73,6 +80,7 @@ main.pyは標準入出力を通じてJSONベースの通信を行います：
 - pyperclip: クリップボード操作
 
 インストール:
+
 ```bash
 pip install -r requirements.txt
 ```

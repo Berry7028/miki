@@ -58,7 +58,8 @@ def drag(from_x, from_y, to_x, to_y, duration=0.5, button="left"):
         # 開始位置に移動
         pyautogui.moveTo(from_x, from_y, duration=0.1)
         # ドラッグ実行
-        pyautogui.drag(to_x - from_x, to_y - from_y, duration=duration, button=button)
+        pyautogui.drag(to_x - from_x, to_y - from_y,
+                       duration=duration, button=button)
         return {"status": "success"}
     except Exception as e:
         return {"status": "error", "message": str(e)}

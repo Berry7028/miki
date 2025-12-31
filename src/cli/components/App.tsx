@@ -1,18 +1,18 @@
-import React from 'react';
-import { Box, Text } from 'ink';
-import { useAgent } from '../hooks/useAgent';
-import { LogPanel } from './LogPanel';
-import { InputPanel } from './InputPanel';
-import { StatusBar } from './StatusBar';
+import React from "react";
+import { Box, Text } from "ink";
+import { useAgent } from "../hooks/useAgent";
+import { LogPanel } from "./LogPanel";
+import { InputPanel } from "./InputPanel";
+import { StatusBar } from "./StatusBar";
 
 export const App: React.FC = () => {
   const { logs, status, runGoal, addHint } = useAgent();
 
   const handleInputSubmit = (input: string) => {
-    if (status.state === 'idle' || status.state === 'completed') {
+    if (status.state === "idle" || status.state === "completed") {
       // 新規ゴールを開始
       runGoal(input);
-    } else if (status.state === 'running') {
+    } else if (status.state === "running") {
       // 実行中のヒント追加
       addHint(input);
     }
@@ -32,7 +32,9 @@ export const App: React.FC = () => {
         {/* ログパネル（上部70%） */}
         <Box flexDirection="column" flexGrow={7} borderStyle="single" marginBottom={1}>
           <Box paddingX={1} borderStyle="single" borderBottom>
-            <Text bold color="yellow">📋 ログ</Text>
+            <Text bold color="yellow">
+              📋 ログ
+            </Text>
           </Box>
           <LogPanel logs={logs} />
         </Box>

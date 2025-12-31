@@ -18,12 +18,12 @@ def _calculate_image_scale_factors(img):
 def draw_point_on_screenshot(img, x, y, radius=15, color="red"):
     """スクリーンショット上の指定座標にハイライト（赤い点）を描画する"""
     draw = ImageDraw.Draw(img)
-    
+
     # ディスプレイのスケーリング（Retina等）を考慮
     scale_x, scale_y = _calculate_image_scale_factors(img)
-    
+
     ix, iy = x * scale_x, y * scale_y
-    
+
     left_up = (ix - radius, iy - radius)
     right_down = (ix + radius, iy + radius)
     draw.ellipse([left_up, right_down], fill=color, outline="white", width=2)
@@ -33,11 +33,12 @@ def draw_point_on_screenshot(img, x, y, radius=15, color="red"):
 def screenshot(highlight_pos=None):
     """画面のスクリーンショットを撮り、Base64文字列で返し、現在のマウス位置も提供する"""
     shot = pyautogui.screenshot()
-    
+
     # ハイライト位置が指定されている場合は描画
     if highlight_pos:
-        shot = draw_point_on_screenshot(shot, highlight_pos['x'], highlight_pos['y'])
-    
+        shot = draw_point_on_screenshot(
+            shot, highlight_pos['x'], highlight_pos['y'])
+
     buffered = BytesIO()
     shot.save(buffered, format="PNG")
     img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")

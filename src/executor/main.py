@@ -12,7 +12,7 @@ import pyautogui
 # 各アクションモジュールをインポート
 from actions.screenshot import screenshot, get_screen_size
 from actions.mouse_keyboard import (
-    click, type_text, press_key, hotkey, 
+    click, type_text, press_key, hotkey,
     mouse_move, scroll, drag
 )
 from actions.applescript import run_osa
@@ -63,7 +63,7 @@ def main():
         line = sys.stdin.readline()
         if not line:
             break
-        
+
         try:
             start_time = time.time()
             command_data = json.loads(line)
@@ -73,14 +73,14 @@ def main():
             # exitアクションは特別扱い
             if action == "exit":
                 break
-            
+
             # アクションを実行
             result = dispatch_action(action, params)
-            
+
             # 実行時間を追加
             end_time = time.time()
             result["execution_time_ms"] = int((end_time - start_time) * 1000)
-            
+
             print(json.dumps(result))
             sys.stdout.flush()
         except Exception as e:

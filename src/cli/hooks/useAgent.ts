@@ -1,12 +1,12 @@
-import { useEffect, useState, useCallback } from 'react';
-import { MacOSAgent } from '../../controller/agent';
-import type { LogEntry, AgentState, AgentStatus } from '../types';
+import { useEffect, useState, useCallback } from "react";
+import { MacOSAgent } from "../../controller/agent";
+import type { LogEntry, AgentState, AgentStatus } from "../types";
 
 export function useAgent() {
   const [agent, setAgent] = useState<MacOSAgent | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [status, setStatus] = useState<AgentStatus>({
-    state: 'idle',
+    state: "idle",
     currentStep: 0,
     maxSteps: 20,
   });
@@ -16,7 +16,7 @@ export function useAgent() {
     const newAgent = new MacOSAgent();
 
     // ログイベントのリスナー
-    newAgent.on('log', (logEntry: LogEntry) => {
+    newAgent.on("log", (logEntry: LogEntry) => {
       setLogs((prev) => {
         if (logEntry.id) {
           const index = prev.findIndex((l) => l.id === logEntry.id);
@@ -31,41 +31,50 @@ export function useAgent() {
     });
 
     // ステップイベントのリスナー
-    newAgent.on('step', (step: number) => {
+    newAgent.on("step", (step: number) => {
       setStatus((prev) => ({ ...prev, currentStep: step }));
     });
 
     // 完了イベントのリスナー
-    newAgent.on('completed', (message: string) => {
-      setStatus((prev) => ({ ...prev, state: 'completed' }));
-      setLogs((prev) => [...prev, {
-        type: 'success',
-        message: `タスク完了: ${message}`,
-        timestamp: new Date()
-      }]);
+    newAgent.on("completed", (message: string) => {
+      setStatus((prev) => ({ ...prev, state: "completed" }));
+      setLogs((prev) => [
+        ...prev,
+        {
+          type: "success",
+          message: `タスク完了: ${message}`,
+          timestamp: new Date(),
+        },
+      ]);
     });
 
     // 実行完了イベントのリスナー
-    newAgent.on('runCompleted', () => {
-      setStatus((prev) => ({ ...prev, state: 'idle', currentStep: 0 }));
+    newAgent.on("runCompleted", () => {
+      setStatus((prev) => ({ ...prev, state: "idle", currentStep: 0 }));
     });
 
     // エラーイベントのリスナー
-    newAgent.on('error', (errorMessage: string) => {
-      setLogs((prev) => [...prev, {
-        type: 'error',
-        message: errorMessage,
-        timestamp: new Date()
-      }]);
+    newAgent.on("error", (errorMessage: string) => {
+      setLogs((prev) => [
+        ...prev,
+        {
+          type: "error",
+          message: errorMessage,
+          timestamp: new Date(),
+        },
+      ]);
     });
 
     // 初期化
     newAgent.init().catch((err) => {
-      setLogs((prev) => [...prev, {
-        type: 'error',
-        message: `初期化失敗: ${err.message}`,
-        timestamp: new Date()
-      }]);
+      setLogs((prev) => [
+        ...prev,
+        {
+          type: "error",
+          message: `初期化失敗: ${err.message}`,
+          timestamp: new Date(),
+        },
+      ]);
     });
 
     setAgent(newAgent);
@@ -81,25 +90,31 @@ export function useAgent() {
     async (goal: string) => {
       if (!agent) return;
 
-      setStatus((prev) => ({ ...prev, state: 'running', currentGoal: goal }));
-      setLogs((prev) => [...prev, {
-        type: 'info',
-        message: `新しいゴールを開始: ${goal}`,
-        timestamp: new Date()
-      }]);
+      setStatus((prev) => ({ ...prev, state: "running", currentGoal: goal }));
+      setLogs((prev) => [
+        ...prev,
+        {
+          type: "info",
+          message: `新しいゴールを開始: ${goal}`,
+          timestamp: new Date(),
+        },
+      ]);
 
       try {
         await agent.run(goal);
       } catch (error: any) {
-        setLogs((prev) => [...prev, {
-          type: 'error',
-          message: `実行エラー: ${error.message}`,
-          timestamp: new Date()
-        }]);
-        setStatus((prev) => ({ ...prev, state: 'error' }));
+        setLogs((prev) => [
+          ...prev,
+          {
+            type: "error",
+            message: `実行エラー: ${error.message}`,
+            timestamp: new Date(),
+          },
+        ]);
+        setStatus((prev) => ({ ...prev, state: "error" }));
       }
     },
-    [agent]
+    [agent],
   );
 
   // ヒント追加
@@ -108,7 +123,7 @@ export function useAgent() {
       if (!agent) return;
       agent.addHint(hint);
     },
-    [agent]
+    [agent],
   );
 
   return {

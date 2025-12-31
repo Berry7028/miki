@@ -1,6 +1,6 @@
 // CLI固有の型定義
 
-export type LogType = 'info' | 'success' | 'error' | 'hint' | 'action' | 'thought';
+export type LogType = "info" | "success" | "error" | "hint" | "action" | "thought";
 
 export interface LogEntry {
   id?: string;
@@ -10,7 +10,7 @@ export interface LogEntry {
   isComplete?: boolean;
 }
 
-export type AgentState = 'idle' | 'running' | 'completed' | 'error';
+export type AgentState = "idle" | "running" | "completed" | "error";
 
 export interface AgentStatus {
   state: AgentState;

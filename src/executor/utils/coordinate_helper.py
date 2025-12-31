@@ -11,10 +11,10 @@ def calculate_scale_factors():
     # 実際のスクリーンショットのサイズを取得
     shot = pyautogui.screenshot()
     img_w, img_h = shot.size
-    
+
     scale_x = img_w / screen_w
     scale_y = img_h / screen_h
-    
+
     return scale_x, scale_y
 
 
