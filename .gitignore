@@ -45,3 +45,7 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 # desktop app build artifacts
 desktop/backend/
 desktop/dist/
+
+# pyinstaller artifacts
+build/
+*.spec
