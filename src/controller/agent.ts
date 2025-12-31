@@ -24,6 +24,12 @@ export class MacOSAgent extends EventEmitter {
     if (!apiKey) {
       throw new Error("GEMINI_API_KEY環境変数が設定されていません。");
     }
+    const nonAsciiIndex = [...apiKey].findIndex((char) => char.codePointAt(0)! > 255);
+    if (nonAsciiIndex !== -1) {
+      throw new Error(
+        `GEMINI_API_KEYに非ASCII文字が含まれています (index ${nonAsciiIndex})。設定画面で正しいAPIキーを保存してください。`,
+      );
+    }
     this.genAI = new GoogleGenerativeAI(apiKey);
     this.model = this.genAI.getGenerativeModel({
       model: "gemini-3-flash-preview",
@@ -319,7 +325,7 @@ command+lは使用しないでください。
 余計な解説やJSON以外のテキストは一切含めないでください。
 現在のマウスカーソル位置: (${normX}, ${normY}) [正規化座標]。`;
 
-      const resultStream = await this.model.generateContentStream([
+      const promptParts = [
         { text: systemPrompt },
         ...geminiHistory.flatMap((h: any) => h.parts),
         { text: promptText },
@@ -329,41 +335,57 @@ command+lは使用しないでください。
             mimeType: "image/png",
           },
         },
-      ]);
+      ];
 
       let fullContent = "";
       let thoughtProcess = "";
       const thoughtId = `thought-${this.currentStep}-${retryCount}`;
 
-      for await (const chunk of resultStream.stream) {
-        // @ts-ignore
-        const parts = chunk.candidates?.[0]?.content?.parts || [];
-        for (const part of parts) {
+      try {
+        const resultStream = await this.model.generateContentStream(promptParts);
+        for await (const chunk of resultStream.stream) {
           // @ts-ignore
-          if (part.thought) {
+          const parts = chunk.candidates?.[0]?.content?.parts || [];
+          for (const part of parts) {
             // @ts-ignore
-            thoughtProcess += part.text;
-            this.emit("log", {
-              id: thoughtId,
-              type: "thought",
-              message: thoughtProcess,
-              timestamp: new Date(),
-              isComplete: false,
-            });
-          } else if (part.text) {
-            fullContent += part.text;
+            if (part.thought) {
+              // @ts-ignore
+              thoughtProcess += part.text;
+              this.emit("log", {
+                id: thoughtId,
+                type: "thought",
+                message: thoughtProcess,
+                timestamp: new Date(),
+                isComplete: false,
+              });
+            } else if (part.text) {
+              fullContent += part.text;
+            }
           }
         }
-      }
 
-      if (thoughtProcess) {
-        this.emit("log", {
-          id: thoughtId,
-          type: "thought",
-          message: thoughtProcess,
-          timestamp: new Date(),
-          isComplete: true,
-        });
+        if (thoughtProcess) {
+          this.emit("log", {
+            id: thoughtId,
+            type: "thought",
+            message: thoughtProcess,
+            timestamp: new Date(),
+            isComplete: true,
+          });
+        }
+      } catch (error: any) {
+        this.log("error", `Geminiストリーミング失敗: ${error?.message || error}`);
+        this.log("info", "非ストリーミングで再試行します。");
+        try {
+          const response = await this.model.generateContent(promptParts);
+          fullContent = response.response.text();
+        } catch (fallbackError: any) {
+          this.log(
+            "error",
+            `Gemini非ストリーミング失敗: ${fallbackError?.message || fallbackError}`,
+          );
+          throw fallbackError;
+        }
       }
 
       let content = fullContent;

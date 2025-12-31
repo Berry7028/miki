@@ -55,8 +55,11 @@ function sendStatus(state: StatusState, goal?: string) {
 
 async function startRun(goal: string) {
   if (running) {
-    send("error", { message: "Agent already running." });
-    return;
+    send("log", { type: "info", message: "既存のタスクを停止して新しいタスクを開始します..." });
+    agent?.stop();
+    // 停止を待機
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    running = false;
   }
   loadEnv();
   ensureAgent();
@@ -67,7 +70,11 @@ async function startRun(goal: string) {
     await agent!.init();
     await agent!.run(goal);
   } catch (error) {
-    send("error", { message: error instanceof Error ? error.message : String(error) });
+    if (error instanceof Error) {
+      send("error", { message: error.stack || error.message });
+    } else {
+      send("error", { message: String(error) });
+    }
   } finally {
     running = false;
     sendStatus("idle");
