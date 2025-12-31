@@ -1,5 +1,6 @@
 {
   "name": "miki-desktop",
+  "version": "0.1.0",
   "private": true,
   "scripts": {
     "desktop:install": "npm --prefix desktop install",
