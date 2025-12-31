@@ -33,7 +33,11 @@ function getBackendPaths() {
     ? path.join(process.resourcesPath, "backend")
     : path.join(__dirname, "backend");
   const controllerEntry = path.join(backendRoot, "controller", "index.js");
-  const executorBinary = path.join(backendRoot, "executor", "miki-executor");
+  const executorOnedir = path.join(backendRoot, "executor", "miki-executor");
+  const executorOnedirBinary = path.join(executorOnedir, "miki-executor");
+  const executorBinary = fs.existsSync(executorOnedirBinary)
+    ? executorOnedirBinary
+    : executorOnedir;
   const devPython = path.join(__dirname, "..", "venv", "bin", "python");
   const devExecutor = path.join(__dirname, "..", "src", "executor", "main.py");
 
@@ -62,7 +66,8 @@ function ensureController() {
   const env = {
     ...process.env,
     ELECTRON_RUN_AS_NODE: "1",
-    MIKI_ENV_PATH: path.join(app.getPath("userData"), ".env")
+    MIKI_ENV_PATH: path.join(app.getPath("userData"), ".env"),
+    DOTENV_CONFIG_QUIET: "true"
   };
 
   if (app.isPackaged && fs.existsSync(executorBinary)) {
@@ -116,6 +121,32 @@ function sendToController(payload) {
   controllerProcess.stdin.write(`${JSON.stringify(payload)}\n`);
 }
 
+function ensureEnvDir() {
+  const dir = app.getPath("userData");
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  return dir;
+}
+
+function envFilePath() {
+  return path.join(ensureEnvDir(), ".env");
+}
+
+function readApiKey() {
+  const envPath = envFilePath();
+  if (!fs.existsSync(envPath)) return "";
+  const content = fs.readFileSync(envPath, "utf-8");
+  const match = content.match(/^GEMINI_API_KEY=(.*)$/m);
+  return match ? match[1].trim() : "";
+}
+
+function writeApiKey(apiKey) {
+  const envPath = envFilePath();
+  const value = (apiKey || "").trim();
+  fs.writeFileSync(envPath, `GEMINI_API_KEY=${value}\n`, "utf-8");
+}
+
 app.whenReady().then(() => {
   mainWindow = createWindow();
   ensureController();
@@ -151,4 +182,11 @@ ipcMain.handle("miki:stop", () => {
 
 ipcMain.handle("miki:reset", () => {
   sendToController({ type: "reset" });
+});
+
+ipcMain.handle("miki:getApiKey", () => readApiKey());
+
+ipcMain.handle("miki:setApiKey", (_event, apiKey) => {
+  writeApiKey(apiKey);
+  return true;
 });

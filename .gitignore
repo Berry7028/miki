@@ -41,3 +41,7 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # Finder (MacOS) folder config
 .DS_Store
+
+# desktop app build artifacts
+desktop/backend/
+desktop/dist/

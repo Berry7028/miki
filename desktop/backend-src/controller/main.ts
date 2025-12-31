@@ -20,6 +20,7 @@ function send(event: string, payload: Record<string, unknown> = {}) {
 }
 
 function loadEnv() {
+  process.env.DOTENV_CONFIG_QUIET = "true";
   const envPath = process.env.MIKI_ENV_PATH;
   if (envPath && fs.existsSync(envPath)) {
     dotenv.config({ path: envPath });
@@ -57,6 +58,7 @@ async function startRun(goal: string) {
     send("error", { message: "Agent already running." });
     return;
   }
+  loadEnv();
   ensureAgent();
   running = true;
   sendStatus("running", goal);
