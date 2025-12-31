@@ -23,7 +23,7 @@ export const App: React.FC = () => {
       {/* ヘッダー */}
       <Box borderStyle="double" paddingX={1} marginBottom={1}>
         <Text bold color="cyan">
-          🤖 miki - MacOS 自動操作エージェント CLI
+          miki - MacOS 自動操作エージェント CLI
         </Text>
       </Box>
 
@@ -33,7 +33,7 @@ export const App: React.FC = () => {
         <Box flexDirection="column" flexGrow={7} borderStyle="single" marginBottom={1}>
           <Box paddingX={1} borderStyle="single" borderBottom>
             <Text bold color="yellow">
-              📋 ログ
+              ログ
             </Text>
           </Box>
           <LogPanel logs={logs} />

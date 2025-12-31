@@ -43,11 +43,14 @@ export const InputPanel: React.FC<InputPanelProps> = ({ state, onSubmit }) => {
           }
         />
       </Box>
-      <Box marginTop={1}>
+      <Box marginTop={1} flexDirection="column">
         <Text dimColor>
           {state === "idle" || state === "completed"
             ? "Enterキーで実行開始"
             : "実行中にヒントを入力できます"}
+        </Text>
+        <Text dimColor>
+          日本語入力の変換を確定してからEnterキーを押すと、ずれなく送信できます。
         </Text>
       </Box>
     </Box>
