@@ -173,3 +173,164 @@ window.miki?.getApiKey().then((value) => {
     apiKeyInput.value = value;
   }
 });
+
+// Setup Wizard
+const setupModal = document.querySelector("#setup-modal");
+const setupSteps = document.querySelectorAll(".setup-step");
+const setupPrevBtn = document.querySelector("#setup-prev-btn");
+const setupNextBtn = document.querySelector("#setup-next-btn");
+const setupFinishBtn = document.querySelector("#setup-finish-btn");
+const setupApiInput = document.querySelector("#setup-api-input");
+const setupApiStatus = document.querySelector("#setup-api-status");
+const setupAccessibilityGranted = document.querySelector("#setup-accessibility-granted");
+const setupAccessibilityDenied = document.querySelector("#setup-accessibility-denied");
+const setupScreenGranted = document.querySelector("#setup-screen-granted");
+const setupScreenDenied = document.querySelector("#setup-screen-denied");
+const setupOpenAccessibilityBtn = document.querySelector("#setup-open-accessibility-btn");
+const setupOpenScreenBtn = document.querySelector("#setup-open-screen-btn");
+
+let currentSetupStep = 0;
+let setupStatus = null;
+
+function showSetupModal() {
+  if (setupModal) {
+    setupModal.classList.remove("hidden");
+    setupModal.classList.add("flex");
+  }
+}
+
+function hideSetupModal() {
+  if (setupModal) {
+    setupModal.classList.add("hidden");
+    setupModal.classList.remove("flex");
+  }
+}
+
+function showSetupStep(index) {
+  setupSteps.forEach((step, i) => {
+    if (i === index) {
+      step.classList.remove("hidden");
+    } else {
+      step.classList.add("hidden");
+    }
+  });
+
+  if (setupPrevBtn) {
+    if (index === 0) {
+      setupPrevBtn.classList.add("hidden");
+    } else {
+      setupPrevBtn.classList.remove("hidden");
+    }
+  }
+
+  if (setupNextBtn && setupFinishBtn) {
+    if (index === setupSteps.length - 1) {
+      setupNextBtn.classList.add("hidden");
+      setupFinishBtn.classList.remove("hidden");
+    } else {
+      setupNextBtn.classList.remove("hidden");
+      setupFinishBtn.classList.add("hidden");
+    }
+  }
+
+  if (index === 1) {
+    updateAccessibilityStatus();
+  } else if (index === 2) {
+    updateScreenStatus();
+  }
+}
+
+async function updateAccessibilityStatus() {
+  const status = await window.miki?.getSetupStatus();
+  if (status?.hasAccessibility) {
+    setupAccessibilityGranted?.classList.remove("hidden");
+    setupAccessibilityDenied?.classList.add("hidden");
+  } else {
+    setupAccessibilityGranted?.classList.add("hidden");
+    setupAccessibilityDenied?.classList.remove("hidden");
+  }
+}
+
+async function updateScreenStatus() {
+  const status = await window.miki?.getSetupStatus();
+  if (status?.hasScreenRecording) {
+    setupScreenGranted?.classList.remove("hidden");
+    setupScreenDenied?.classList.add("hidden");
+  } else {
+    setupScreenGranted?.classList.add("hidden");
+    setupScreenDenied?.classList.remove("hidden");
+  }
+}
+
+setupPrevBtn?.addEventListener("click", () => {
+  if (currentSetupStep > 0) {
+    currentSetupStep--;
+    showSetupStep(currentSetupStep);
+  }
+});
+
+setupNextBtn?.addEventListener("click", async () => {
+  if (currentSetupStep === 0) {
+    const key = sanitizeInput(setupApiInput?.value);
+    if (!key) {
+      if (setupApiStatus) {
+        setupApiStatus.textContent = "APIキーを入力してください。";
+      }
+      return;
+    }
+    await window.miki?.setApiKey(key);
+    if (setupApiStatus) {
+      setupApiStatus.textContent = "";
+    }
+  }
+
+  if (currentSetupStep === 1) {
+    const status = await window.miki?.getSetupStatus();
+    if (!status?.hasAccessibility) {
+      if (setupApiStatus) {
+        setupApiStatus.textContent = "アクセシビリティ権限を付与してください。";
+      }
+      return;
+    }
+  }
+
+  if (currentSetupStep < setupSteps.length - 1) {
+    currentSetupStep++;
+    showSetupStep(currentSetupStep);
+  }
+});
+
+setupFinishBtn?.addEventListener("click", async () => {
+  const status = await window.miki?.getSetupStatus();
+  if (!status?.hasScreenRecording) {
+    alert("画面収録権限を付与してください。");
+    return;
+  }
+
+  await window.miki?.markSetupCompleted();
+  hideSetupModal();
+  appendLog({
+    type: "success",
+    time: toTime(),
+    message: "セットアップが完了しました。"
+  });
+});
+
+setupOpenAccessibilityBtn?.addEventListener("click", () => {
+  window.miki?.openSystemPreferences("accessibility");
+  setTimeout(updateAccessibilityStatus, 2000);
+});
+
+setupOpenScreenBtn?.addEventListener("click", () => {
+  window.miki?.openSystemPreferences("screen-recording");
+  setTimeout(updateScreenStatus, 2000);
+});
+
+// Check setup status on load
+window.miki?.getSetupStatus().then((status) => {
+  setupStatus = status;
+  if (status?.needsSetup) {
+    showSetupModal();
+    showSetupStep(0);
+  }
+});

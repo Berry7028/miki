@@ -8,6 +8,9 @@ contextBridge.exposeInMainWorld("miki", {
   reset: () => ipcRenderer.invoke("miki:reset"),
   getApiKey: () => ipcRenderer.invoke("miki:getApiKey"),
   setApiKey: (apiKey) => ipcRenderer.invoke("miki:setApiKey", apiKey),
+  getSetupStatus: () => ipcRenderer.invoke("miki:getSetupStatus"),
+  markSetupCompleted: () => ipcRenderer.invoke("miki:markSetupCompleted"),
+  openSystemPreferences: (pane) => ipcRenderer.invoke("miki:openSystemPreferences", pane),
   onBackendEvent: (callback) => {
     const listener = (_event, payload) => callback(payload);
     ipcRenderer.on("miki:backend", listener);

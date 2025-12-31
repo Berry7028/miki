@@ -1,5 +1,5 @@
-const { app, BrowserWindow, ipcMain } = require("electron");
-const { spawn } = require("node:child_process");
+const { app, BrowserWindow, ipcMain, shell, systemPreferences } = require("electron");
+const { spawn, execSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 const readline = require("node:readline");
@@ -147,6 +147,71 @@ function writeApiKey(apiKey) {
   fs.writeFileSync(envPath, `GEMINI_API_KEY=${value}\n`, "utf-8");
 }
 
+function setupFlagPath() {
+  return path.join(ensureEnvDir(), ".setup_completed");
+}
+
+function isSetupCompleted() {
+  return fs.existsSync(setupFlagPath());
+}
+
+function markSetupCompleted() {
+  fs.writeFileSync(setupFlagPath(), String(Date.now()), "utf-8");
+}
+
+function checkAccessibilityPermission() {
+  if (process.platform !== "darwin") {
+    return true;
+  }
+  try {
+    const trusted = systemPreferences.isTrustedAccessibilityClient(false);
+    return trusted;
+  } catch (error) {
+    console.error("Failed to check accessibility permission:", error);
+    return false;
+  }
+}
+
+function checkScreenRecordingPermission() {
+  if (process.platform !== "darwin") {
+    return true;
+  }
+  try {
+    const status = systemPreferences.getMediaAccessStatus("screen");
+    return status === "granted";
+  } catch (error) {
+    console.error("Failed to check screen recording permission:", error);
+    return false;
+  }
+}
+
+function openSystemPreferences(pane) {
+  if (process.platform !== "darwin") {
+    return;
+  }
+  if (pane === "accessibility") {
+    shell.openExternal("x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility");
+  } else if (pane === "screen-recording") {
+    shell.openExternal("x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture");
+  }
+}
+
+function getSetupStatus() {
+  const apiKey = readApiKey();
+  const hasApiKey = !!apiKey;
+  const hasAccessibility = checkAccessibilityPermission();
+  const hasScreenRecording = checkScreenRecordingPermission();
+  const setupCompleted = isSetupCompleted();
+
+  return {
+    setupCompleted,
+    hasApiKey,
+    hasAccessibility,
+    hasScreenRecording,
+    needsSetup: !setupCompleted || !hasApiKey || !hasAccessibility || !hasScreenRecording
+  };
+}
+
 app.whenReady().then(() => {
   mainWindow = createWindow();
   ensureController();
@@ -188,5 +253,17 @@ ipcMain.handle("miki:getApiKey", () => readApiKey());
 
 ipcMain.handle("miki:setApiKey", (_event, apiKey) => {
   writeApiKey(apiKey);
+  return true;
+});
+
+ipcMain.handle("miki:getSetupStatus", () => getSetupStatus());
+
+ipcMain.handle("miki:markSetupCompleted", () => {
+  markSetupCompleted();
+  return true;
+});
+
+ipcMain.handle("miki:openSystemPreferences", (_event, pane) => {
+  openSystemPreferences(pane);
   return true;
 });
