@@ -17,7 +17,17 @@ export function useAgent() {
 
     // ログイベントのリスナー
     newAgent.on('log', (logEntry: LogEntry) => {
-      setLogs((prev) => [...prev, logEntry]);
+      setLogs((prev) => {
+        if (logEntry.id) {
+          const index = prev.findIndex((l) => l.id === logEntry.id);
+          if (index !== -1) {
+            const newLogs = [...prev];
+            newLogs[index] = logEntry;
+            return newLogs;
+          }
+        }
+        return [...prev, logEntry];
+      });
     });
 
     // ステップイベントのリスナー

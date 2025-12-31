@@ -14,6 +14,7 @@ export class MacOSAgent extends EventEmitter {
   private pendingResolvers: ((value: any) => void)[] = [];
   private userPromptQueue: string[] = [];
   private isRestarting = false;
+  private currentStep = 0;
 
   constructor() {
     super();
@@ -298,9 +299,9 @@ command+lは使用しないでください。
 余計な解説やJSON以外のテキストは一切含めないでください。
 現在のマウスカーソル位置: (${normX}, ${normY}) [正規化座標]。`;
 
-      const result = await this.model.generateContent([
+      const resultStream = await this.model.generateContentStream([
         { text: systemPrompt },
-        ...geminiHistory.flatMap(h => h.parts),
+        ...geminiHistory.flatMap((h: any) => h.parts),
         { text: promptText },
         {
           inlineData: {
@@ -310,7 +311,30 @@ command+lは使用しないでください。
         }
       ]);
 
-      let content = result.response.text();
+      let fullContent = "";
+      let thoughtProcess = "";
+      const thoughtId = `thought-${this.currentStep}-${retryCount}`;
+      
+      for await (const chunk of resultStream.stream) {
+        // @ts-ignore
+        const parts = chunk.candidates?.[0]?.content?.parts || [];
+        for (const part of parts) {
+          // @ts-ignore
+          if (part.thought) {
+            // @ts-ignore
+            thoughtProcess += part.text;
+            this.emit('log', { id: thoughtId, type: 'thought', message: thoughtProcess, timestamp: new Date(), isComplete: false });
+          } else if (part.text) {
+            fullContent += part.text;
+          }
+        }
+      }
+
+      if (thoughtProcess) {
+        this.emit('log', { id: thoughtId, type: 'thought', message: thoughtProcess, timestamp: new Date(), isComplete: true });
+      }
+
+      let content = fullContent;
       const rawContent = content;
       
       const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/```\s*([\s\S]*?)\s*```/);
@@ -407,11 +431,11 @@ command+lは使用しないでください。
         ],
       }
     ];
-    let step = 0;
+    this.currentStep = 0;
 
-    while (step < 20) {
-      this.emit('step', step + 1);
-      this.log('info', `--- ステップ ${step + 1} ---`);
+    while (this.currentStep < 20) {
+      this.emit('step', this.currentStep + 1);
+      this.log('info', `--- ステップ ${this.currentStep + 1} ---`);
 
       // ユーザーからの追加ヒントがあれば履歴に追加
       while (this.userPromptQueue.length > 0) {
@@ -446,7 +470,7 @@ command+lは使用しないでください。
         this.log('info', `${action.params.seconds}秒待機中...`);
         await new Promise((r) => setTimeout(r, action.params.seconds * 1000));
         history.push({ role: "assistant", content: `I waited for ${action.params.seconds} seconds.` });
-        step++;
+        this.currentStep++;
         continue;
       }
 
@@ -457,7 +481,7 @@ command+lは使用しないでください。
           role: "user", 
           content: `[System]: Google検索「${action.params.query}」の結果、必要な情報はあなたの知識ベースまたは内部ツールを通じて収集されました。得られた知見を元に、次のアクションを実行してください。` 
         });
-        step++;
+        this.currentStep++;
         continue;
       }
 
@@ -478,7 +502,7 @@ command+lは使用しないでください。
       history.push({ role: "assistant", content: JSON.stringify(action) });
       history.push({ role: "user", content: finalObservationContent });
 
-      step++;
+      this.currentStep++;
       await new Promise((r) => setTimeout(r, 1000));
     }
 
