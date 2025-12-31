@@ -1,0 +1,52 @@
+{
+  "name": "miki-desktop",
+  "version": "0.1.0",
+  "description": "Electron desktop app for macOS",
+  "main": "main.js",
+  "author": "",
+  "license": "MIT",
+  "type": "commonjs",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "build:backend": "node scripts/build-backend.mjs",
+    "build:executor": "python3 -m pyinstaller --name miki-executor --onedir ../src/executor/main.py --distpath backend/executor",
+    "dist": "npm run build:backend && npm run build:executor && electron-builder"
+  },
+  "devDependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "dotenv": "^17.2.3",
+    "electron": "^30.0.0",
+    "electron-builder": "^24.13.3",
+    "esbuild": "^0.23.0",
+    "typescript": "^5.6.3",
+    "zod": "^4.2.1"
+  },
+  "build": {
+    "appId": "com.miki.desktop",
+    "productName": "miki",
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**",
+      "package.json"
+    ],
+    "asar": true,
+    "extraResources": [
+      {
+        "from": "backend/controller",
+        "to": "backend/controller"
+      },
+      {
+        "from": "backend/executor",
+        "to": "backend/executor"
+      }
+    ],
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.productivity"
+    }
+  }
+}

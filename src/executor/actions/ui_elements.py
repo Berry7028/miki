@@ -4,27 +4,32 @@ import json
 import time
 import pyautogui
 
+from actions.clipboard_utils import copy_text
+
 
 def _type_text(text):
     """
     テキストを入力する（クリップボード経由でより確実に）
     Note: This is duplicated from mouse_keyboard to avoid circular dependency
     """
+    # 特殊な文字や日本語入力の不安定さを避けるため、クリップボード経由での貼り付けを試みる
+    copy_result = copy_text(text)
+    if copy_result["status"] == "success":
+        try:
+            # command + v で貼り付け
+            pyautogui.hotkey('command', 'v')
+            # クリップボードを元に戻す（オプション）
+            time.sleep(0.1)
+            return {"status": "success", "method": copy_result["method"]}
+        except Exception as e:
+            return {"status": "error", "message": f"Failed to paste text: {str(e)}"}
+
+    # クリップボードが使えない場合は通常のタイピング
     try:
-        # 特殊な文字や日本語入力の不安定さを避けるため、クリップボード経由での貼り付けを試みる
-        import pyperclip
-        old_clipboard = pyperclip.paste()
-        pyperclip.copy(text)
-        # command + v で貼り付け
-        pyautogui.hotkey('command', 'v')
-        # クリップボードを元に戻す（オプション）
-        time.sleep(0.1)
-        # pyperclip.copy(old_clipboard)
-        return {"status": "success", "method": "clipboard"}
-    except Exception:
-        # クリップボードが使えない場合は通常のタイピング
         pyautogui.write(text, interval=0.05)
         return {"status": "success", "method": "write"}
+    except Exception as e:
+        return {"status": "error", "message": f"Failed to type text: {str(e)}"}
 
 
 def get_ui_elements(app_name):

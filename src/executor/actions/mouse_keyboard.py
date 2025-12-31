@@ -2,6 +2,8 @@
 import pyautogui
 import time
 
+from actions.clipboard_utils import copy_text
+
 
 def click(x, y, clicks=1, button="left"):
     """指定された座標をクリックする"""
@@ -10,34 +12,51 @@ def click(x, y, clicks=1, button="left"):
 
 
 def type_text(text):
-    """テキストを入力する（クリップボード経由でより確実に）"""
+    """テキストを入力する（クリップボード経由で日本語対応）"""
+    copy_result = copy_text(text)
+    if copy_result["status"] != "success":
+        return {"status": "error", "message": copy_result["message"]}
+
     try:
-        # 特殊な文字や日本語入力の不安定さを避けるため、クリップボード経由での貼り付けを試みる
-        import pyperclip
-        old_clipboard = pyperclip.paste()
-        pyperclip.copy(text)
+        time.sleep(0.05)
         # command + v で貼り付け
-        pyautogui.hotkey('command', 'v')
-        # クリップボードを元に戻す（オプション）
-        time.sleep(0.1)
-        # pyperclip.copy(old_clipboard)
-        return {"status": "success", "method": "clipboard"}
-    except Exception:
-        # クリップボードが使えない場合は通常のタイピング
-        pyautogui.write(text, interval=0.05)
-        return {"status": "success", "method": "write"}
+        pyautogui.keyDown('command')
+        pyautogui.press('v')
+        pyautogui.keyUp('command')
+        time.sleep(0.05)
+        return {"status": "success", "method": copy_result["method"]}
+    except Exception as e:
+        return {"status": "error", "message": f"Failed to type text: {str(e)}"}
 
 
 def press_key(key):
     """特定のキーを押す"""
-    pyautogui.press(key)
-    return {"status": "success"}
+    try:
+        # ASCII文字のみを受け入れる
+        if not isinstance(key, str):
+            return {"status": "error", "message": f"Invalid key type: {type(key)}"}
+        if not key.isascii():
+            return {"status": "error", "message": f"Non-ASCII key detected: {key}. Only ASCII keys are supported."}
+        pyautogui.press(key)
+        return {"status": "success"}
+    except Exception as e:
+        return {"status": "error", "message": f"Failed to press key: {str(e)}"}
 
 
 def hotkey(keys):
     """ホットキーを実行する"""
-    pyautogui.hotkey(*keys)
-    return {"status": "success"}
+    try:
+        # keysが文字列のリストであることを確認し、ASCII文字のみを受け入れる
+        for key in keys:
+            if not isinstance(key, str):
+                return {"status": "error", "message": f"Invalid key type: {type(key)}"}
+            # 日本語文字が含まれていないかチェック
+            if not key.isascii():
+                return {"status": "error", "message": f"Non-ASCII key detected: {key}. Only ASCII keys are supported."}
+        pyautogui.hotkey(*keys)
+        return {"status": "success"}
+    except Exception as e:
+        return {"status": "error", "message": f"Failed to execute hotkey: {str(e)}"}
 
 
 def mouse_move(x, y):

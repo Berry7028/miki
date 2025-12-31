@@ -1,4 +1,5 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import * as fs from "node:fs";
 import * as readline from "node:readline";
 import { EventEmitter } from "node:events";
 import { GoogleGenerativeAI } from "@google/generative-ai";
@@ -15,12 +16,19 @@ export class MacOSAgent extends EventEmitter {
   private userPromptQueue: string[] = [];
   private isRestarting = false;
   private currentStep = 0;
+  private stopRequested = false;
 
   constructor() {
     super();
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       throw new Error("GEMINI_API_KEY環境変数が設定されていません。");
+    }
+    const nonAsciiIndex = [...apiKey].findIndex((char) => char.codePointAt(0)! > 255);
+    if (nonAsciiIndex !== -1) {
+      throw new Error(
+        `GEMINI_API_KEYに非ASCII文字が含まれています (index ${nonAsciiIndex})。設定画面で正しいAPIキーを保存してください。`,
+      );
     }
     this.genAI = new GoogleGenerativeAI(apiKey);
     this.model = this.genAI.getGenerativeModel({
@@ -40,10 +48,17 @@ export class MacOSAgent extends EventEmitter {
   }
 
   private startPythonProcess() {
-    const pythonPath = path.join(process.cwd(), "venv", "bin", "python");
-    const executorPath = path.join(process.cwd(), "src/executor/main.py");
+    const executorBinary = process.env.MIKI_EXECUTOR_BINARY;
+    const pythonPath =
+      process.env.MIKI_PYTHON_PATH || path.join(process.cwd(), "venv", "bin", "python");
+    const executorPath =
+      process.env.MIKI_EXECUTOR_PATH || path.join(process.cwd(), "src/executor/main.py");
 
-    this.pythonProcess = spawn(pythonPath, [executorPath]);
+    if (executorBinary && fs.existsSync(executorBinary)) {
+      this.pythonProcess = spawn(executorBinary, []);
+    } else {
+      this.pythonProcess = spawn(pythonPath, [executorPath]);
+    }
 
     this.pythonReader = readline.createInterface({
       input: this.pythonProcess.stdout,
@@ -130,7 +145,13 @@ export class MacOSAgent extends EventEmitter {
 
   public reset() {
     this.userPromptQueue = [];
+    this.stopRequested = false;
     this.emit("reset");
+  }
+
+  public stop() {
+    this.stopRequested = true;
+    this.log("info", "停止要求を受け付けました。");
   }
 
   public destroy() {
@@ -304,7 +325,7 @@ command+lは使用しないでください。
 余計な解説やJSON以外のテキストは一切含めないでください。
 現在のマウスカーソル位置: (${normX}, ${normY}) [正規化座標]。`;
 
-      const resultStream = await this.model.generateContentStream([
+      const promptParts = [
         { text: systemPrompt },
         ...geminiHistory.flatMap((h: any) => h.parts),
         { text: promptText },
@@ -314,41 +335,57 @@ command+lは使用しないでください。
             mimeType: "image/png",
           },
         },
-      ]);
+      ];
 
       let fullContent = "";
       let thoughtProcess = "";
       const thoughtId = `thought-${this.currentStep}-${retryCount}`;
 
-      for await (const chunk of resultStream.stream) {
-        // @ts-ignore
-        const parts = chunk.candidates?.[0]?.content?.parts || [];
-        for (const part of parts) {
+      try {
+        const resultStream = await this.model.generateContentStream(promptParts);
+        for await (const chunk of resultStream.stream) {
           // @ts-ignore
-          if (part.thought) {
+          const parts = chunk.candidates?.[0]?.content?.parts || [];
+          for (const part of parts) {
             // @ts-ignore
-            thoughtProcess += part.text;
-            this.emit("log", {
-              id: thoughtId,
-              type: "thought",
-              message: thoughtProcess,
-              timestamp: new Date(),
-              isComplete: false,
-            });
-          } else if (part.text) {
-            fullContent += part.text;
+            if (part.thought) {
+              // @ts-ignore
+              thoughtProcess += part.text;
+              this.emit("log", {
+                id: thoughtId,
+                type: "thought",
+                message: thoughtProcess,
+                timestamp: new Date(),
+                isComplete: false,
+              });
+            } else if (part.text) {
+              fullContent += part.text;
+            }
           }
         }
-      }
 
-      if (thoughtProcess) {
-        this.emit("log", {
-          id: thoughtId,
-          type: "thought",
-          message: thoughtProcess,
-          timestamp: new Date(),
-          isComplete: true,
-        });
+        if (thoughtProcess) {
+          this.emit("log", {
+            id: thoughtId,
+            type: "thought",
+            message: thoughtProcess,
+            timestamp: new Date(),
+            isComplete: true,
+          });
+        }
+      } catch (error: any) {
+        this.log("error", `Geminiストリーミング失敗: ${error?.message || error}`);
+        this.log("info", "非ストリーミングで再試行します。");
+        try {
+          const response = await this.model.generateContent(promptParts);
+          fullContent = response.response.text();
+        } catch (fallbackError: any) {
+          this.log(
+            "error",
+            `Gemini非ストリーミング失敗: ${fallbackError?.message || fallbackError}`,
+          );
+          throw fallbackError;
+        }
       }
 
       let content = fullContent;
@@ -446,6 +483,7 @@ command+lは使用しないでください。
 
   async run(goal: string) {
     this.log("info", `ゴール: ${goal}`);
+    this.stopRequested = false;
 
     const initRes = await this.callPython("screenshot");
     if (initRes.status !== "success" || !initRes.data || !initRes.mouse_position) {
@@ -472,6 +510,11 @@ command+lは使用しないでください。
     this.currentStep = 0;
 
     while (this.currentStep < 20) {
+      if (this.stopRequested) {
+        this.log("info", "停止しました。");
+        this.emit("stopped");
+        break;
+      }
       this.emit("step", this.currentStep + 1);
       this.log("info", `--- ステップ ${this.currentStep + 1} ---`);
 
