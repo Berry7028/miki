@@ -40,7 +40,7 @@ export const LogPanel: React.FC<LogPanelProps> = ({ logs, maxLogs = 100 }) => {
       case "action":
         return "[ACTION]";
       case "thought":
-        return isComplete ? "✅ [THOUGHT COMPLETE]" : "🧠 [THINKING]";
+        return isComplete ? "[THOUGHT COMPLETE]" : "[THINKING]";
       default:
         return "";
     }
@@ -52,7 +52,9 @@ export const LogPanel: React.FC<LogPanelProps> = ({ logs, maxLogs = 100 }) => {
   return (
     <Box flexDirection="column" paddingX={1} paddingY={1}>
       {displayLogs.length === 0 ? (
-        <Text dimColor>ログがまだありません。ゴールを入力して開始してください。</Text>
+        <Text dimColor wrap="wrap">
+          ログがまだありません。ゴールを入力して開始してください。
+        </Text>
       ) : (
         displayLogs.map((log, index) => {
           const isThought = log.type === "thought";
@@ -61,18 +63,18 @@ export const LogPanel: React.FC<LogPanelProps> = ({ logs, maxLogs = 100 }) => {
               ? log.message.split("\n")[0] || "思考が完了しました"
               : log.message;
 
-          return (
-            <Box
-              key={`${log.timestamp.getTime()}-${index}`}
-              marginBottom={0}
-              flexDirection="column"
-            >
-              <Text color={getLogColor(log.type)}>
-                <Text bold>{getLogPrefix(log.type, log.isComplete)}</Text> {displayMessage}
-              </Text>
-            </Box>
-          );
-        })
+            return (
+              <Box
+                key={`${log.timestamp.getTime()}-${index}`}
+                marginBottom={0}
+                flexDirection="column"
+              >
+                <Text color={getLogColor(log.type)} wrap="wrap">
+                  <Text bold>{getLogPrefix(log.type, log.isComplete)}</Text> {displayMessage}
+                </Text>
+              </Box>
+            );
+          })
       )}
     </Box>
   );
