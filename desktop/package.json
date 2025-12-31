@@ -10,7 +10,8 @@
     "start": "electron .",
     "dev": "electron .",
     "build:backend": "node scripts/build-backend.mjs",
-    "dist": "npm run build:backend && electron-builder"
+    "build:executor": "python3 -m pyinstaller --name miki-executor --onedir ../src/executor/main.py --distpath backend/executor",
+    "dist": "npm run build:backend && npm run build:executor && electron-builder"
   },
   "devDependencies": {
     "@google/generative-ai": "^0.24.1",

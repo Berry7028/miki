@@ -20,6 +20,11 @@ jobs:
           node-version: 20
           cache: npm
           cache-dependency-path: desktop/package-lock.json
+      - name: Setup Python
+        if: steps.version.outputs.changed == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
       - name: Check version change
         id: version
@@ -42,6 +47,11 @@ jobs:
       - name: Install dependencies
         if: steps.version.outputs.changed == 'true'
         run: npm --prefix desktop install
+      - name: Install Python dependencies
+        if: steps.version.outputs.changed == 'true'
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -r requirements.txt pyinstaller
 
       - name: Build and package
         if: steps.version.outputs.changed == 'true'
