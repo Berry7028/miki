@@ -132,9 +132,11 @@ function setup_python() {
   source "$VENV_DIR/bin/activate"
 
   if [ -f "$PROJECT_ROOT/requirements.txt" ]; then
+    pip install --upgrade pip
     pip install -r "$PROJECT_ROOT/requirements.txt"
   else
-    echo -e "${YELLOW}requirements.txt が見つかりません${NC}"
+    echo -e "${YELLOW}requirements.txt が見つかりません。基本パッケージをインストールします...${NC}"
+    pip install pyautogui pyperclip pillow
   fi
 
   echo -e "${GREEN}✓ Python環境セットアップ完了${NC}"

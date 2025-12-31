@@ -1,10 +1,11 @@
-const { app, BrowserWindow, ipcMain, shell, systemPreferences } = require("electron");
+const { app, BrowserWindow, ipcMain, shell, systemPreferences, globalShortcut, screen } = require("electron");
 const { spawn, execSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 const readline = require("node:readline");
 
 let mainWindow;
+let chatWindow;
 let controllerProcess;
 let controllerReader;
 
@@ -26,6 +27,63 @@ function createWindow() {
 
   win.loadFile(path.join(__dirname, "renderer", "index.html"));
   return win;
+}
+
+function createChatWindow() {
+  if (chatWindow && !chatWindow.isDestroyed()) {
+    chatWindow.show();
+    chatWindow.focus();
+    return chatWindow;
+  }
+
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+
+  const windowWidth = 480;
+  const windowHeight = 600;
+  const margin = 20;
+
+  const x = Math.floor((screenWidth - windowWidth) / 2);
+  const y = screenHeight - windowHeight - margin;
+
+  const win = new BrowserWindow({
+    width: windowWidth,
+    height: windowHeight,
+    x: x,
+    y: y,
+    backgroundColor: "#1a1f2e",
+    titleBarStyle: "hiddenInset",
+    alwaysOnTop: true,
+    vibrancy: "under-window",
+    visualEffectState: "active",
+    roundedCorners: true,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+
+  win.loadFile(path.join(__dirname, "renderer", "chat.html"));
+
+  win.on("closed", () => {
+    chatWindow = null;
+  });
+
+  return win;
+}
+
+function toggleChatWindow() {
+  if (chatWindow && !chatWindow.isDestroyed()) {
+    if (chatWindow.isVisible()) {
+      chatWindow.hide();
+    } else {
+      chatWindow.show();
+      chatWindow.focus();
+    }
+  } else {
+    chatWindow = createChatWindow();
+  }
 }
 
 function getBackendPaths() {
@@ -94,6 +152,9 @@ function ensureController() {
       const payload = JSON.parse(line);
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send("miki:backend", payload);
+      }
+      if (chatWindow && !chatWindow.isDestroyed()) {
+        chatWindow.webContents.send("miki:backend", payload);
       }
     } catch (error) {
       console.error("Failed to parse controller output:", line);
@@ -216,6 +277,17 @@ app.whenReady().then(() => {
   mainWindow = createWindow();
   ensureController();
 
+  // グローバルショートカット登録
+  // Note: macOSで左右のCommandキーを区別するのは困難なため、
+  // Command+Shift+Spaceを使用（カスタマイズ可能）
+  const shortcutRegistered = globalShortcut.register("CommandOrControl+Shift+Space", () => {
+    toggleChatWindow();
+  });
+
+  if (!shortcutRegistered) {
+    console.error("グローバルショートカットの登録に失敗しました");
+  }
+
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       mainWindow = createWindow();
@@ -231,6 +303,10 @@ app.on("window-all-closed", () => {
 
 app.on("before-quit", () => {
   controllerProcess?.kill();
+});
+
+app.on("will-quit", () => {
+  globalShortcut.unregisterAll();
 });
 
 ipcMain.handle("miki:start", (_event, goal) => {

@@ -8,6 +8,12 @@ import sys
 import json
 import time
 import pyautogui
+import io
+
+# 標準入出力をUTF-8に設定
+sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8')
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', line_buffering=True)
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', line_buffering=True)
 
 # 各アクションモジュールをインポート
 from actions.screenshot import screenshot, get_screen_size
@@ -81,10 +87,10 @@ def main():
             end_time = time.time()
             result["execution_time_ms"] = int((end_time - start_time) * 1000)
 
-            print(json.dumps(result))
+            print(json.dumps(result, ensure_ascii=False))
             sys.stdout.flush()
         except Exception as e:
-            print(json.dumps({"status": "error", "message": str(e)}))
+            print(json.dumps({"status": "error", "message": str(e)}, ensure_ascii=False))
             sys.stdout.flush()
 
 
