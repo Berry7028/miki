@@ -7,14 +7,17 @@ export interface SetupStatus {
 }
 
 export interface BackendEvent {
-  event: "status" | "step" | "log" | "completed" | "error";
+  event: "status" | "step" | "log" | "completed" | "error" | "thinking" | "tool";
   state?: "idle" | "running" | "stopping";
   goal?: string;
   step?: number;
-  type?: "info" | "success" | "error" | "hint" | "action";
+  type?: "info" | "success" | "error" | "hint" | "action" | "thinking" | "tool";
   message?: string;
   timestamp?: number;
   result?: string;
+  toolName?: string;
+  toolInput?: any;
+  toolOutput?: any;
 }
 
 export interface MikiAPI {
