@@ -6,6 +6,7 @@ const readline = require("node:readline");
 
 let mainWindow;
 let chatWindow;
+let overlayWindow;
 let controllerProcess;
 let controllerReader;
 
@@ -26,6 +27,50 @@ function createWindow() {
   });
 
   win.loadFile(path.join(__dirname, "renderer", "index.html"));
+  return win;
+}
+
+function createOverlayWindow() {
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    return overlayWindow;
+  }
+
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width, height } = primaryDisplay.bounds;
+
+  const win = new BrowserWindow({
+    width,
+    height,
+    x: 0,
+    y: 0,
+    transparent: true,
+    frame: false,
+    show: false,
+    alwaysOnTop: true,
+    hasShadow: false,
+    resizable: false,
+    movable: false,
+    focusable: false,
+    skipTaskbar: true,
+    enableLargerThanScreen: true,
+    backgroundColor: "#00000000",
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+
+  win.setIgnoreMouseEvents(true);
+  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  win.setAlwaysOnTop(true, "screen-saver");
+
+  win.loadFile(path.join(__dirname, "renderer", "overlay.html"));
+
+  win.on("closed", () => {
+    overlayWindow = null;
+  });
+
   return win;
 }
 
@@ -159,6 +204,35 @@ function ensureController() {
       }
       if (chatWindow && !chatWindow.isDestroyed()) {
         chatWindow.webContents.send("miki:backend", payload);
+      }
+      if (overlayWindow && !overlayWindow.isDestroyed()) {
+        overlayWindow.webContents.send("miki:backend", payload);
+      }
+
+      // オーバーレイの表示・非表示制御
+      if (payload.event === "status") {
+        console.log("Status event received:", payload.state);
+        if (payload.state === "running") {
+          if (!overlayWindow || overlayWindow.isDestroyed()) {
+            console.log("Creating overlay window...");
+            overlayWindow = createOverlayWindow();
+            overlayWindow.webContents.on("did-finish-load", () => {
+              console.log("Overlay window finished load, sending status...");
+              overlayWindow.webContents.send("miki:backend", payload);
+            });
+          } else {
+            overlayWindow.webContents.send("miki:backend", payload);
+          }
+          overlayWindow.showInactive();
+        } else if (payload.state === "idle") {
+          if (overlayWindow && !overlayWindow.isDestroyed()) {
+            overlayWindow.webContents.send("miki:backend", { event: "fadeout" });
+          }
+        }
+      } else if (payload.event === "completed") {
+        if (overlayWindow && !overlayWindow.isDestroyed()) {
+          overlayWindow.webContents.send("miki:backend", { event: "fadeout" });
+        }
       }
     } catch (error) {
       console.error("Failed to parse controller output:", line);
