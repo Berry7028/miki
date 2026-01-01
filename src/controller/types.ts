@@ -137,7 +137,20 @@ export interface PythonResponse {
   height?: number;
   mouse_position?: { x: number; y: number };
   elements?: string[];
-  ui_data?: UIElementsResponse; // JSON形式のUI要素データ
+  ui_data?: UIElementsResponse;
   message?: string;
   execution_time_ms?: number;
+}
+
+// キャッシュ関連の型定義
+export interface CacheMetadata {
+  cacheName: string;
+  createdAt: string;
+  expiresAt: string;
+  tokenCount: number;
+}
+
+export interface CacheManager {
+  systemPromptCache: CacheMetadata | null;
+  uiElementsCaches: Map<string, CacheMetadata>;
 }
