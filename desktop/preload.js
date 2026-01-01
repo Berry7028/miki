@@ -15,5 +15,10 @@ contextBridge.exposeInMainWorld("miki", {
     const listener = (_event, payload) => callback(payload);
     ipcRenderer.on("miki:backend", listener);
     return () => ipcRenderer.removeListener("miki:backend", listener);
+  },
+  onMousePos: (callback) => {
+    const listener = (_event, pos) => callback(pos);
+    ipcRenderer.on("miki:mouse-pos", listener);
+    return () => ipcRenderer.removeListener("miki:mouse-pos", listener);
   }
 });

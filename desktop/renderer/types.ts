@@ -32,6 +32,7 @@ export interface MikiAPI {
   markSetupCompleted: () => Promise<boolean>;
   openSystemPreferences: (pane: "accessibility" | "screen-recording") => Promise<boolean>;
   onBackendEvent: (callback: (payload: BackendEvent) => void) => () => void;
+  onMousePos: (callback: (pos: { x: number; y: number }) => void) => () => void;
 }
 
 declare global {

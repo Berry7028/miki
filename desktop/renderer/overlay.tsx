@@ -1,16 +1,23 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
+
+const TRAIL_LENGTH = 8;
 
 const Overlay = () => {
   const [visible, setVisible] = useState(false);
-  const [shouldRender, setShouldRender] = useState(true);
+  const [status, setStatus] = useState<string>("idle");
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [trail, setTrail] = useState<{ x: number; y: number }[]>([]);
+  const requestRef = useRef<number>();
 
   useEffect(() => {
     console.log("Overlay component mounted");
-    const unsubscribe = window.miki?.onBackendEvent((payload: any) => {
+    
+    const unsubscribeBackend = window.miki?.onBackendEvent((payload: any) => {
       console.log("Overlay received event:", payload);
       if (payload.event === "status") {
-        if (payload.state === "running") {
+        setStatus(payload.state);
+        if (payload.state === "running" || payload.state === "thinking") {
           setVisible(true);
         } else if (payload.state === "idle") {
           setVisible(false);
@@ -20,12 +27,18 @@ const Overlay = () => {
       }
     });
 
+    const unsubscribeMouse = window.miki?.onMousePos((pos: { x: number; y: number }) => {
+      setMousePos(pos);
+      setTrail((prev) => [pos, ...prev].slice(0, TRAIL_LENGTH));
+    });
+
     return () => {
-      unsubscribe?.();
+      unsubscribeBackend?.();
+      unsubscribeMouse?.();
     };
   }, []);
 
-  if (!shouldRender) return null;
+  if (!visible) return null;
 
   const overlayStyle: React.CSSProperties = {
     position: "fixed",
@@ -34,16 +47,14 @@ const Overlay = () => {
     right: 0,
     bottom: 0,
     pointerEvents: "none",
-    opacity: visible ? 1 : 0,
-    transition: "opacity 1s ease-in-out",
     zIndex: 9999,
   };
 
-  const commonGradient = "radial-gradient(circle, rgba(99, 102, 241, 0.4) 0%, rgba(99, 102, 241, 0) 70%)";
+  const isThinking = status === "thinking" || status === "running";
 
   return (
     <div style={overlayStyle}>
-      {/* Top side */}
+      {/* Edge Glow (Existing) */}
       <div
         style={{
           position: "absolute",
@@ -51,10 +62,9 @@ const Overlay = () => {
           left: 0,
           right: 0,
           height: "15vh",
-          background: "linear-gradient(to bottom, rgba(99, 102, 241, 0.5) 0%, rgba(99, 102, 241, 0) 100%)",
+          background: "linear-gradient(to bottom, rgba(255, 176, 64, 0.3) 0%, rgba(255, 176, 64, 0) 100%)",
         }}
       />
-      {/* Bottom side */}
       <div
         style={{
           position: "absolute",
@@ -62,10 +72,9 @@ const Overlay = () => {
           left: 0,
           right: 0,
           height: "15vh",
-          background: "linear-gradient(to top, rgba(99, 102, 241, 0.5) 0%, rgba(99, 102, 241, 0) 100%)",
+          background: "linear-gradient(to top, rgba(255, 176, 64, 0.3) 0%, rgba(255, 176, 64, 0) 100%)",
         }}
       />
-      {/* Left side */}
       <div
         style={{
           position: "absolute",
@@ -73,10 +82,9 @@ const Overlay = () => {
           bottom: 0,
           left: 0,
           width: "15vw",
-          background: "linear-gradient(to right, rgba(99, 102, 241, 0.5) 0%, rgba(99, 102, 241, 0) 100%)",
+          background: "linear-gradient(to right, rgba(255, 176, 64, 0.3) 0%, rgba(255, 176, 64, 0) 100%)",
         }}
       />
-      {/* Right side */}
       <div
         style={{
           position: "absolute",
@@ -84,12 +92,124 @@ const Overlay = () => {
           bottom: 0,
           right: 0,
           width: "15vw",
-          background: "linear-gradient(to left, rgba(99, 102, 241, 0.5) 0%, rgba(99, 102, 241, 0) 100%)",
+          background: "linear-gradient(to left, rgba(255, 176, 64, 0.3) 0%, rgba(255, 176, 64, 0) 100%)",
         }}
       />
+
+      {/* Glow Effect */}
+      <div
+        style={{
+          position: "absolute",
+          left: mousePos.x - 100,
+          top: mousePos.y - 100,
+          width: 200,
+          height: 200,
+          background: "radial-gradient(circle, rgba(255, 176, 64, 0.15) 0%, rgba(255, 176, 64, 0) 70%)",
+          borderRadius: "50%",
+          pointerEvents: "none",
+          transition: "transform 0.1s ease-out",
+        }}
+      />
+
+      {/* Trail Effect */}
+      {trail.slice(1).map((pos, i) => (
+        <div
+          key={i}
+          style={{
+            position: "absolute",
+            left: pos.x,
+            top: pos.y,
+            opacity: (TRAIL_LENGTH - i - 1) / TRAIL_LENGTH * 0.3,
+            transform: `scale(${(TRAIL_LENGTH - i - 1) / TRAIL_LENGTH})`,
+            pointerEvents: "none",
+          }}
+        >
+          <CursorSVG color="#FFB040" scale={0.8} />
+        </div>
+      ))}
+
+      {/* Main Cursor */}
+      <div
+        style={{
+          position: "absolute",
+          left: mousePos.x,
+          top: mousePos.y,
+          pointerEvents: "none",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "flex-start",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <CursorSVG color="#FFB040" />
+          
+          {/* Thinking Label */}
+          {status === "thinking" && (
+            <div
+              style={{
+                marginLeft: 8,
+                padding: "4px 12px",
+                background: "white",
+                borderRadius: 20,
+                boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 13,
+                fontWeight: 500,
+                color: "#333",
+                animation: "fadeIn 0.2s ease-out",
+              }}
+            >
+              <LoadingSpinner />
+              Thinking...
+            </div>
+          )}
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateX(-10px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 };
+
+const CursorSVG = ({ color = "#FFB040", scale = 1 }) => (
+  <svg
+    width={24 * scale}
+    height={24 * scale}
+    viewBox="0 0 24 24"
+    fill="none"
+    style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.2))" }}
+  >
+    <path
+      d="M5.65376 12.3673H5.46026L5.31717 12.4976L0.500002 16.8829L0.500002 1.19841L11.7841 12.3673H5.65376Z"
+      fill={color}
+      stroke="white"
+      strokeWidth="1.5"
+    />
+  </svg>
+);
+
+const LoadingSpinner = () => (
+  <div
+    style={{
+      width: 12,
+      height: 12,
+      border: "2px solid #EEE",
+      borderTop: "2px solid #FFB040",
+      borderRadius: "50%",
+      animation: "spin 1s linear infinite",
+    }}
+  />
+);
 
 const container = document.getElementById("root");
 if (container) {

@@ -67,7 +67,18 @@ function createOverlayWindow() {
 
   win.loadFile(path.join(__dirname, "renderer", "overlay.html"));
 
+  // マウス位置の同期を開始
+  const positionTimer = setInterval(() => {
+    if (win.isDestroyed()) {
+      clearInterval(positionTimer);
+      return;
+    }
+    const point = screen.getCursorScreenPoint();
+    win.webContents.send("miki:mouse-pos", point);
+  }, 16); // ~60fps
+
   win.on("closed", () => {
+    clearInterval(positionTimer);
     overlayWindow = null;
   });
 
