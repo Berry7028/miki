@@ -183,17 +183,18 @@ def click_element(app_name, role, name):
     const se = Application("System Events");
     const proc = se.processes["{app_name}"];
 
-    function findElement(root, role, name) {{
+    function findElementRecursive(elem, role, name, depth) {{
+      if (depth > 5) return null;
       try {{
-        const elements = root.entireContents();
-        for (let i = 0; i < elements.length; i++) {{
-          const elem = elements[i];
-          try {{
-            const props = elem.properties();
-            if (props.role === role && (props.name === name || props.title === name)) {{
-              return elem;
-            }}
-          }} catch (e) {{}}
+        const props = elem.properties();
+        if (props.role === role && (props.name === name || props.title === name)) {{
+          return elem;
+        }}
+        
+        const children = elem.uiElements();
+        for (let i = 0; i < children.length; i++) {{
+          const found = findElementRecursive(children[i], role, name, depth + 1);
+          if (found) return found;
         }}
       }} catch (e) {{}}
       return null;
@@ -202,7 +203,7 @@ def click_element(app_name, role, name):
     if (proc.windows.length === 0) {{
       "ERROR: No windows found";
     }} else {{
-      const elem = findElement(proc.windows[0], "{role}", "{name}");
+      const elem = findElementRecursive(proc.windows[0], "{role}", "{name}", 0);
       if (elem !== null) {{
         elem.click();
         "success";
@@ -238,17 +239,18 @@ def focus_element(app_name, role, name):
     const se = Application("System Events");
     const proc = se.processes["{app_name}"];
 
-    function findElement(root, role, name) {{
+    function findElementRecursive(elem, role, name, depth) {{
+      if (depth > 5) return null;
       try {{
-        const elements = root.entireContents();
-        for (let i = 0; i < elements.length; i++) {{
-          const elem = elements[i];
-          try {{
-            const props = elem.properties();
-            if (props.role === role && (props.name === name || props.title === name)) {{
-              return elem;
-            }}
-          }} catch (e) {{}}
+        const props = elem.properties();
+        if (props.role === role && (props.name === name || props.title === name)) {{
+          return elem;
+        }}
+        
+        const children = elem.uiElements();
+        for (let i = 0; i < children.length; i++) {{
+          const found = findElementRecursive(children[i], role, name, depth + 1);
+          if (found) return found;
         }}
       }} catch (e) {{}}
       return null;
@@ -257,7 +259,7 @@ def focus_element(app_name, role, name):
     if (proc.windows.length === 0) {{
       "ERROR: No windows found";
     }} else {{
-      const elem = findElement(proc.windows[0], "{role}", "{name}");
+      const elem = findElementRecursive(proc.windows[0], "{role}", "{name}", 0);
       if (elem !== null) {{
         elem.focused = true;
         "success";
