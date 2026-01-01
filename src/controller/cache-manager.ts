@@ -52,8 +52,13 @@ export class GeminiCacheManager {
 
       console.error(`System prompt cache created: ${cache.name}`);
       return this.systemPromptCache;
-    } catch (error) {
-      console.error("Failed to create system prompt cache:", error);
+    } catch (error: any) {
+      // 1024トークン未満などの理由でキャッシュに失敗した場合は無視する
+      if (error?.message?.includes("too small") || error?.status === 400) {
+        console.error("System prompt is too small for caching. Skipping.");
+      } else {
+        console.error("Failed to create system prompt cache:", error);
+      }
       return null;
     }
   }
@@ -93,8 +98,12 @@ export class GeminiCacheManager {
       this.uiElementsCaches.set(appName, metadata);
       console.error(`UI elements cache created for ${appName}: ${cache.name}`);
       return metadata;
-    } catch (error) {
-      console.error(`Failed to cache UI elements for ${appName}:`, error);
+    } catch (error: any) {
+      if (error?.message?.includes("too small") || error?.status === 400) {
+        console.error(`UI elements for ${appName} are too small for caching. Skipping.`);
+      } else {
+        console.error(`Failed to cache UI elements for ${appName}:`, error);
+      }
       return null;
     }
   }

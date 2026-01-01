@@ -504,7 +504,18 @@ export class MacOSAgent extends EventEmitter {
       .replace("{SCREEN_WIDTH}", this.screenSize.width.toString())
       .replace("{SCREEN_HEIGHT}", this.screenSize.height.toString());
     
-    await this.cacheManager.createSystemPromptCache(formattedPrompt, this.modelName);
+    // トークン数をチェック（Geminiのキャッシュには最低1024トークン必要）
+    try {
+      const { totalTokens } = await this.model.countTokens(formattedPrompt);
+      if (totalTokens >= 1024) {
+        await this.cacheManager.createSystemPromptCache(formattedPrompt, this.modelName);
+      } else {
+        this.log("info", `システムプロンプトが小さいためキャッシュをスキップします (${totalTokens} tokens)`);
+      }
+    } catch (e) {
+      console.error("Token count failed, attempting cache anyway:", e);
+      await this.cacheManager.createSystemPromptCache(formattedPrompt, this.modelName);
+    }
 
     const initRes = await this.callPython("screenshot");
     if (initRes.status !== "success" || !initRes.data || !initRes.mouse_position) {
