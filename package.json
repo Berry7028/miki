@@ -3,11 +3,11 @@
   "version": "0.1.1",
   "private": true,
   "scripts": {
-    "desktop:install": "npm --prefix desktop install",
-    "desktop:dev": "npm --prefix desktop run dev",
-    "desktop:build:backend": "npm --prefix desktop run build:backend",
-    "desktop:dist": "npm --prefix desktop run dist",
-    "dev": "npm --prefix desktop run dev"
+    "desktop:install": "bun install --cwd desktop",
+    "desktop:dev": "bun --cwd desktop run dev",
+    "desktop:build:backend": "bun --cwd desktop run build:backend",
+    "desktop:dist": "bun --cwd desktop run dist",
+    "dev": "bun --cwd desktop run dev"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
