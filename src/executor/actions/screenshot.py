@@ -47,6 +47,19 @@ def screenshot(highlight_pos=None):
 
 
 def get_screen_size():
-    """画面サイズを取得する"""
+    """画面サイズを取得する。物理解像度と論理解像度の比率（スケール）も返す"""
     width, height = pyautogui.size()
-    return {"status": "success", "width": width, "height": height}
+    # スクリーンショットを一時的に撮って物理サイズを確認
+    shot = pyautogui.screenshot()
+    phys_width, phys_height = shot.size
+    scale_x = phys_width / width
+    scale_y = phys_height / height
+    
+    return {
+        "status": "success", 
+        "width": width, 
+        "height": height,
+        "physical_width": phys_width,
+        "physical_height": phys_height,
+        "scale": scale_x 
+    }
