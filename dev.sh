@@ -22,16 +22,19 @@ function print_menu() {
   echo ""
   echo -e "  ${GREEN}1${NC}) アプリを起動（開発モード）"
   echo -e "  ${GREEN}2${NC}) セットアップをリセットして起動"
-  echo -e "  ${GREEN}3${NC}) バックエンドをビルド"
-  echo -e "  ${GREEN}4${NC}) 配布用パッケージをビルド"
-  echo -e "  ${GREEN}5${NC}) ビルド成果物を削除"
-  echo -e "  ${GREEN}6${NC}) セットアップフラグをリセット"
-  echo -e "  ${GREEN}7${NC}) 依存関係をインストール"
-  echo -e "  ${GREEN}8${NC}) Python仮想環境をセットアップ"
-  echo -e "  ${GREEN}9${NC}) アプリのログディレクトリを開く"
+  echo -e "  ${GREEN}3${NC}) 全コンポーネントを一括ビルド"
+  echo -e "  ${GREEN}4${NC}) フロントエンド（レンダラー）をビルド"
+  echo -e "  ${GREEN}5${NC}) バックエンドをビルド"
+  echo -e "  ${GREEN}6${NC}) Pythonエグゼキュータをビルド"
+  echo -e "  ${GREEN}7${NC}) 配布用パッケージをビルド"
+  echo -e "  ${GREEN}8${NC}) ビルド成果物を削除"
+  echo -e "  ${GREEN}9${NC}) セットアップフラグをリセット"
+  echo -e "  ${GREEN}10${NC}) 依存関係をインストール"
+  echo -e "  ${GREEN}11${NC}) Python仮想環境をセットアップ"
+  echo -e "  ${GREEN}12${NC}) アプリのログディレクトリを開く"
   echo -e "  ${RED}0${NC}) 終了"
   echo ""
-  echo -e "${YELLOW}選択してください [0-9]:${NC} "
+  echo -e "${YELLOW}選択してください [0-12]:${NC} "
 }
 
 function print_help() {
@@ -42,7 +45,10 @@ function print_help() {
   echo "コマンド一覧:"
   echo "  ${GREEN}start${NC}            - アプリを起動（開発モード）"
   echo "  ${GREEN}start-fresh${NC}      - セットアップをリセットしてアプリを起動"
-  echo "  ${GREEN}build${NC}            - バックエンドをビルド"
+  echo "  ${GREEN}build-all${NC}        - 全コンポーネントを一括ビルド"
+  echo "  ${GREEN}build-renderer${NC}   - フロントエンド（レンダラー）をビルド"
+  echo "  ${GREEN}build-backend${NC}    - バックエンドをビルド"
+  echo "  ${GREEN}build-executor${NC}   - Pythonエグゼキュータをビルド"
   echo "  ${GREEN}dist${NC}             - 配布用パッケージをビルド"
   echo "  ${GREEN}clean${NC}            - ビルド成果物を削除"
   echo "  ${GREEN}reset-setup${NC}      - セットアップフラグをリセット"
@@ -59,7 +65,7 @@ function print_help() {
 function start_app() {
   echo -e "${BLUE}アプリを起動します...${NC}"
   cd "$DESKTOP_DIR"
-  npm run dev
+  bun run dev
 }
 
 function start_fresh() {
@@ -67,21 +73,43 @@ function start_fresh() {
   reset_setup
   echo -e "${BLUE}アプリを起動します...${NC}"
   cd "$DESKTOP_DIR"
-  npm run dev
+  bun run dev
 }
 
 function build_backend() {
   echo -e "${BLUE}バックエンドをビルドします...${NC}"
   cd "$DESKTOP_DIR"
-  npm run build:backend
-  echo -e "${GREEN}✓ ビルド完了${NC}"
+  bun run build:backend
+  echo -e "${GREEN}✓ バックエンド ビルド完了${NC}"
+}
+
+function build_renderer() {
+  echo -e "${BLUE}フロントエンド（レンダラー）をビルドします...${NC}"
+  cd "$DESKTOP_DIR"
+  bun run build:renderer
+  echo -e "${GREEN}✓ フロントエンド ビルド完了${NC}"
+}
+
+function build_executor() {
+  echo -e "${BLUE}Pythonエグゼキュータをビルドします...${NC}"
+  cd "$DESKTOP_DIR"
+  bun run build:executor
+  echo -e "${GREEN}✓ エグゼキュータ ビルド完了${NC}"
+}
+
+function build_all() {
+  echo -e "${BLUE}全てのコンポーネントを一括ビルドします...${NC}"
+  build_renderer
+  build_backend
+  build_executor
+  echo -e "${GREEN}✓ 全コンポーネントのビルドが完了しました${NC}"
 }
 
 function build_dist() {
   echo -e "${BLUE}配布用パッケージをビルドします...${NC}"
   cd "$DESKTOP_DIR"
-  npm run dist
-  echo -e "${GREEN}✓ ビルド完了${NC}"
+  bun run dist
+  echo -e "${GREEN}✓ 配布パッケージ ビルド完了${NC}"
   echo -e "${BLUE}出力先: $DESKTOP_DIR/dist/${NC}"
 }
 
@@ -115,7 +143,7 @@ function install_deps() {
 
   echo -e "${BLUE}Desktop依存関係をインストール中...${NC}"
   cd "$DESKTOP_DIR"
-  npm install
+  bun install
 
   echo -e "${GREEN}✓ インストール完了${NC}"
 }
@@ -136,7 +164,7 @@ function setup_python() {
     pip install -r "$PROJECT_ROOT/requirements.txt"
   else
     echo -e "${YELLOW}requirements.txt が見つかりません。基本パッケージをインストールします...${NC}"
-    pip install pyautogui pyperclip pillow
+    pip install pyautogui pyperclip pillow pyinstaller
   fi
 
   echo -e "${GREEN}✓ Python環境セットアップ完了${NC}"
@@ -169,30 +197,42 @@ function interactive_menu() {
         start_fresh
         ;;
       3)
-        build_backend
+        build_all
         read -p "Enterキーを押して続行..." -r
         ;;
       4)
-        build_dist
+        build_renderer
         read -p "Enterキーを押して続行..." -r
         ;;
       5)
-        clean_build
+        build_backend
         read -p "Enterキーを押して続行..." -r
         ;;
       6)
-        reset_setup
+        build_executor
         read -p "Enterキーを押して続行..." -r
         ;;
       7)
-        install_deps
+        build_dist
         read -p "Enterキーを押して続行..." -r
         ;;
       8)
-        setup_python
+        clean_build
         read -p "Enterキーを押して続行..." -r
         ;;
       9)
+        reset_setup
+        read -p "Enterキーを押して続行..." -r
+        ;;
+      10)
+        install_deps
+        read -p "Enterキーを押して続行..." -r
+        ;;
+      11)
+        setup_python
+        read -p "Enterキーを押して続行..." -r
+        ;;
+      12)
         open_logs
         read -p "Enterキーを押して続行..." -r
         ;;
@@ -201,7 +241,7 @@ function interactive_menu() {
         exit 0
         ;;
       *)
-        echo -e "${RED}無効な選択です。0-9の数字を入力してください。${NC}"
+        echo -e "${RED}無効な選択です。0-12の数字を入力してください。${NC}"
         sleep 2
         ;;
     esac
@@ -221,8 +261,17 @@ else
     start-fresh)
       start_fresh
       ;;
-    build)
+    build-all)
+      build_all
+      ;;
+    build-renderer)
+      build_renderer
+      ;;
+    build-backend|build)
       build_backend
+      ;;
+    build-executor)
+      build_executor
       ;;
     dist)
       build_dist
