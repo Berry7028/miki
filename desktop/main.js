@@ -117,7 +117,7 @@ function ensureController() {
     getBackendPaths();
 
   if (!fs.existsSync(controllerEntry)) {
-    console.error("Controller entry not found. Run npm run build:backend.");
+    console.error("Controller entry not found. Run bun run build:backend.");
     return;
   }
 
@@ -130,7 +130,7 @@ function ensureController() {
 
   if (app.isPackaged) {
     if (!executorBinary) {
-      console.error("Executor binary not found. Run npm run build:backend.");
+      console.error("Executor binary not found. Run bun run build:backend.");
       return;
     }
     env.MIKI_EXECUTOR_BINARY = executorBinary;
