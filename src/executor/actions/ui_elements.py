@@ -205,8 +205,15 @@ def click_element(app_name, role, name):
     }} else {{
       const elem = findElementRecursive(proc.windows[0], "{role}", "{name}", 0);
       if (elem !== null) {{
-        elem.click();
-        "success";
+        const props = elem.properties();
+        const pos = props.position;
+        const size = props.size;
+        // 座標とサイズをJSONで返す
+        JSON.stringify({{
+          status: "success",
+          x: pos[0] + size[0] / 2,
+          y: pos[1] + size[1] / 2
+        }});
       }} else {{
         "ERROR: Element not found";
       }}
@@ -221,6 +228,14 @@ def click_element(app_name, role, name):
             timeout=5
         )
         output = result.stdout.strip()
+        if output.startswith("{"):
+            data = json.loads(output)
+            if data.get("status") == "success":
+                # pyautoguiを使用して移動アニメーション付きでクリック
+                pyautogui.click(x=data["x"], y=data["y"], duration=0.5,
+                                tween=pyautogui.easeInOutQuad)
+                return {"status": "success"}
+        
         if output == "success":
             return {"status": "success"}
         else:

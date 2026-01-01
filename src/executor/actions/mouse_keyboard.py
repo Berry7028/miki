@@ -2,13 +2,21 @@
 import pyautogui
 import time
 
+# アクション間の待機時間を設定（より人間らしい動きにするため）
+pyautogui.PAUSE = 0.1
+
 from actions.clipboard_utils import copy_text
 
 
-def click(x, y, clicks=1, button="left"):
-    """指定された座標をクリックする"""
-    pyautogui.click(x=x, y=y, clicks=clicks, button=button)
-    return {"status": "success"}
+def click(x, y, clicks=1, button="left", duration=0.5):
+    """指定された座標に移動しながらクリックする"""
+    try:
+        # イージング関数を使用して人間らしい動きにする
+        pyautogui.click(x=x, y=y, clicks=clicks, button=button,
+                        duration=duration, tween=pyautogui.easeInOutQuad)
+        return {"status": "success"}
+    except Exception as e:
+        return {"status": "error", "message": f"Failed to click: {str(e)}"}
 
 
 def type_text(text):
@@ -59,10 +67,13 @@ def hotkey(keys):
         return {"status": "error", "message": f"Failed to execute hotkey: {str(e)}"}
 
 
-def mouse_move(x, y):
-    """マウスを移動する"""
-    pyautogui.moveTo(x, y, duration=0.25)
-    return {"status": "success"}
+def mouse_move(x, y, duration=0.5):
+    """指定された座標に移動する"""
+    try:
+        pyautogui.moveTo(x, y, duration=duration, tween=pyautogui.easeInOutQuad)
+        return {"status": "success"}
+    except Exception as e:
+        return {"status": "error", "message": f"Failed to move mouse: {str(e)}"}
 
 
 def scroll(amount):
@@ -71,14 +82,15 @@ def scroll(amount):
     return {"status": "success"}
 
 
-def drag(from_x, from_y, to_x, to_y, duration=0.5, button="left"):
+def drag(from_x, from_y, to_x, to_y, duration=0.8, button="left"):
     """ドラッグアンドドロップを実行する"""
     try:
-        # 開始位置に移動
-        pyautogui.moveTo(from_x, from_y, duration=0.1)
+        # 開始位置に移動（少し人間らしく）
+        pyautogui.moveTo(from_x, from_y, duration=0.4,
+                         tween=pyautogui.easeInOutQuad)
         # ドラッグ実行
-        pyautogui.drag(to_x - from_x, to_y - from_y,
-                       duration=duration, button=button)
+        pyautogui.dragTo(to_x, to_y, duration=duration,
+                         button=button, tween=pyautogui.easeInOutQuad)
         return {"status": "success"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
