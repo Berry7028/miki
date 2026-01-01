@@ -196,9 +196,17 @@ function ensureController() {
   });
 
   controllerReader.on("line", (line) => {
-    if (!line.trim()) return;
+    const trimmedLine = line.trim();
+    if (!trimmedLine) return;
+    
+    // JSONでない可能性が高い行（ログなど）はスキップ
+    if (!trimmedLine.startsWith("{") && !trimmedLine.startsWith("[")) {
+      console.log(`Controller info: ${trimmedLine}`);
+      return;
+    }
+
     try {
-      const payload = JSON.parse(line);
+      const payload = JSON.parse(trimmedLine);
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send("miki:backend", payload);
       }

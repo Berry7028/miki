@@ -50,7 +50,7 @@ export class GeminiCacheManager {
         tokenCount: 0, // SDKから取得できない場合は0
       };
 
-      console.log(`System prompt cache created: ${cache.name}`);
+      console.error(`System prompt cache created: ${cache.name}`);
       return this.systemPromptCache;
     } catch (error) {
       console.error("Failed to create system prompt cache:", error);
@@ -91,7 +91,7 @@ export class GeminiCacheManager {
       };
 
       this.uiElementsCaches.set(appName, metadata);
-      console.log(`UI elements cache created for ${appName}: ${cache.name}`);
+      console.error(`UI elements cache created for ${appName}: ${cache.name}`);
       return metadata;
     } catch (error) {
       console.error(`Failed to cache UI elements for ${appName}:`, error);
