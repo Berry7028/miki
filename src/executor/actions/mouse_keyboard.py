@@ -8,7 +8,7 @@ pyautogui.PAUSE = 0.1
 from actions.clipboard_utils import copy_text
 
 
-def click(x, y, clicks=1, button="left", duration=0.5):
+def click(x, y, clicks=1, button="left", duration=1):
     """指定された座標に移動しながらクリックする"""
     try:
         # イージング関数を使用して人間らしい動きにする
@@ -40,7 +40,7 @@ def type_text(text):
 def press_key(key):
     """特定のキーを押す"""
     try:
-        # ASCII文字のみを受け入れる
+        # ASCII文字のみを受 け入れる
         if not isinstance(key, str):
             return {"status": "error", "message": f"Invalid key type: {type(key)}"}
         if not key.isascii():
@@ -67,7 +67,7 @@ def hotkey(keys):
         return {"status": "error", "message": f"Failed to execute hotkey: {str(e)}"}
 
 
-def mouse_move(x, y, duration=0.5):
+def mouse_move(x, y, duration=1):
     """指定された座標に移動する"""
     try:
         pyautogui.moveTo(x, y, duration=duration, tween=pyautogui.easeInOutQuad)
