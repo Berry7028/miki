@@ -38,8 +38,6 @@ const Overlay = () => {
     };
   }, []);
 
-  if (!visible) return null;
-
   const overlayStyle: React.CSSProperties = {
     position: "fixed",
     top: 0,
@@ -48,6 +46,9 @@ const Overlay = () => {
     bottom: 0,
     pointerEvents: "none",
     zIndex: 9999,
+    opacity: visible ? 1 : 0,
+    transition: "opacity 0.5s ease-in-out",
+    visibility: visible ? "visible" : "hidden",
   };
 
   const isThinking = status === "thinking" || status === "running";

@@ -209,6 +209,10 @@ export class MacOSAgent extends EventEmitter {
     this.emit("log", { type, message, timestamp: new Date() });
   }
 
+  private emitStatus(state: "idle" | "running" | "thinking" | "stopping") {
+    this.emit("status", { state, timestamp: new Date() });
+  }
+
   public addHint(hint: string) {
     this.userPromptQueue.push(hint);
     this.log("hint", `ヒントを追加: ${hint}`);
@@ -512,6 +516,7 @@ export class MacOSAgent extends EventEmitter {
   async run(goal: string) {
     this.log("info", `ゴール: ${goal}`);
     this.stopRequested = false;
+    this.emitStatus("running");
 
     // システムプロンプトをキャッシュ (Phase 1)
     const formattedPrompt = SYSTEM_PROMPT
@@ -584,7 +589,9 @@ export class MacOSAgent extends EventEmitter {
       const screenshot = res.data;
       const mousePosition = res.mouse_position;
 
+      this.emitStatus("thinking");
       const action = await this.getActionFromLLM(history, screenshot, mousePosition);
+      this.emitStatus("running");
       this.log("action", `アクション: ${JSON.stringify(action)}`);
 
       if (action.action === "done") {

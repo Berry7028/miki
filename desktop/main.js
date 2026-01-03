@@ -231,18 +231,20 @@ function ensureController() {
       // オーバーレイの表示・非表示制御
       if (payload.event === "status") {
         console.log("Status event received:", payload.state);
-        if (payload.state === "running") {
+        if (payload.state === "running" || payload.state === "thinking") {
           if (!overlayWindow || overlayWindow.isDestroyed()) {
             console.log("Creating overlay window...");
             overlayWindow = createOverlayWindow();
             overlayWindow.webContents.on("did-finish-load", () => {
-              console.log("Overlay window finished load, sending status...");
+              console.log("Overlay window finished load, sending current status...");
               overlayWindow.webContents.send("miki:backend", payload);
             });
           } else {
             overlayWindow.webContents.send("miki:backend", payload);
+            if (!overlayWindow.isVisible()) {
+              overlayWindow.showInactive();
+            }
           }
-          overlayWindow.showInactive();
         } else if (payload.state === "idle") {
           if (overlayWindow && !overlayWindow.isDestroyed()) {
             overlayWindow.webContents.send("miki:backend", { event: "fadeout" });

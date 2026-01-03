@@ -43,6 +43,7 @@ function ensureAgent() {
     });
   });
   agent.on("step", (step: number) => send("step", { step }));
+  agent.on("status", (payload: { state: StatusState }) => sendStatus(payload.state));
   agent.on("completed", (message: string) => send("completed", { message }));
   agent.on("runCompleted", () => sendStatus("idle"));
   agent.on("stopped", () => sendStatus("idle"));
