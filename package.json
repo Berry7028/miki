@@ -1,6 +1,6 @@
 {
   "name": "miki-desktop",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "private": true,
   "scripts": {
     "desktop:install": "bun install --cwd desktop",
