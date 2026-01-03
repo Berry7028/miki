@@ -20,11 +20,6 @@ jobs:
           node-version: 20
           cache: npm
           cache-dependency-path: desktop/package-lock.json
-      - name: Setup Python
-        if: steps.version.outputs.changed == 'true'
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
 
       - name: Check version change
         id: version
@@ -43,6 +38,20 @@ jobs:
           else
             echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Install bun
+        if: steps.version.outputs.changed == 'true'
+        run: curl -fsSL https://bun.sh/install | bash
+
+      - name: Add bun to PATH
+        if: steps.version.outputs.changed == 'true'
+        run: echo "$HOME/.bun/bin" >> $GITHUB_PATH
+
+      - name: Setup Python
+        if: steps.version.outputs.changed == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
       - name: Install dependencies
         if: steps.version.outputs.changed == 'true'
