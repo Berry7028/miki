@@ -14,6 +14,14 @@
     "build:executor": "../venv/bin/pyinstaller --name miki-executor --onedir ../src/executor/main.py --distpath backend/executor -y",
     "dist": "bun run build:renderer && bun run build:backend && bun run build:executor && electron-builder"
   },
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^7.3.6",
+    "@mui/material": "^7.3.6",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
+  },
   "devDependencies": {
     "@google/generative-ai": "^0.24.1",
     "dotenv": "^17.2.3",
