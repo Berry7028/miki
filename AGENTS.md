@@ -1,45 +1,45 @@
-# Repository Guidelines
+# リポジトリガイドライン
 
-## Project Structure & Module Organization
-- `desktop/`: Electron desktop app.
-  - `desktop/main.js`: Main process (window + backend spawn).
-  - `desktop/preload.js`: Secure bridge via `contextBridge`.
-  - `desktop/renderer/`: UI (`index.html`, `renderer.js`) using Tailwind CDN.
-  - `desktop/backend-src/`: Node controller entry for desktop builds.
-  - `desktop/backend/`: Bundled controller/executor output (gitignored).
-- `src/controller/`: LLM control logic (shared by desktop backend build).
-- `src/executor/`: macOS automation executor (Python).
-- `venv/`: Python virtual environment.
+## プロジェクト構造およびモジュールの整理
+- `desktop/`: Electron デスクトップアプリ。
+  - `desktop/main.js`: メインプロセス（ウィンドウ＋バックエンド起動）。
+  - `desktop/preload.js`: `contextBridge` によるセキュアブリッジ。
+  - `desktop/renderer/`: UI（`index.html`, `renderer.js`）。Tailwind CDN 使用。
+  - `desktop/backend-src/`: デスクトップビルド用 Node コントローラーエントリ。
+  - `desktop/backend/`: バンドル済みコントローラー／エグゼキューター出力（gitignore 済み）。
+- `src/controller/`: LLM 制御ロジック（デスクトップバックエンドビルドと共通）。
+- `src/executor/`: macOS オートメーションエグゼキューター（Python）。
+- `venv/`: Python 仮想環境。
 
-## Build, Test, and Development Commands
-- `npm --prefix desktop install`: Install desktop dependencies.
-- `npm --prefix desktop run dev`: Launch the Electron app.
-- `npm --prefix desktop run build:backend`: Bundle desktop controller.
-- `npm --prefix desktop run dist`: Build a desktop distributable.
+## ビルド・テスト・開発コマンド
+- `npm --prefix desktop install`：デスクトップ依存パッケージインストール。
+- `npm --prefix desktop run dev`：Electron アプリ起動。
+- `npm --prefix desktop run build:backend`：デスクトップコントローラーバンドル。
+- `npm --prefix desktop run dist`：デスクトップ配布ビルド。
 
-## Coding Style & Naming Conventions
-- Use 2-space indentation in JSON/HTML; JS follows existing style (double quotes).
-- Keep filenames lowercase and descriptive (`desktop/renderer/renderer.js`).
-- Prefer clear, short function names in the main process (`createWindow`, `ensureController`).
-- Format TypeScript/Python with existing tooling (`prettier`, `autopep8`) where applicable.
+## コーディング規約・命名規則
+- JSON/HTML は 2 スペースインデント。JS は既存のダブルクォートスタイルを踏襲。
+- ファイル名は小文字＆説明的（例：`desktop/renderer/renderer.js`）。
+- メインプロセスでは簡潔で分かりやすい関数名（`createWindow`, `ensureController` など）を使用。
+- TypeScript/Python は既存ツール（`prettier`, `autopep8` など）で整形。
 
-## Testing Guidelines
-No automated tests are set up. If you add tests, include:
-- A `test` script at the relevant level (`desktop/package.json`).
-- A clear location such as `desktop/renderer/__tests__/`.
-- Test naming like `*.test.js`.
+## テストガイドライン
+自動テストは未導入。テストを追加する場合は以下の方針で：
+- 対象階層の `desktop/package.json` に `test` スクリプトを追加。
+- `desktop/renderer/__tests__/` など明確な場所に配置。
+- ファイル名は `*.test.js` のように命名。
 
-## Commit & Pull Request Guidelines
-Recent commit history mixes conventional-style prefixes (e.g., `feat:`) with short summaries.
-Follow that pattern:
-- Use a short, present-tense summary, optionally with a type (`feat:`, `fix:`).
-- Keep the first line under ~72 characters.
+## コミット＆プルリクエストガイドライン
+直近のコミット履歴では慣習的プレフィックス（例：`feat:`）と短い要約が混在。
+このパターンを踏襲：
+- タイプ（`feat:`, `fix:`）付きまたは短い現在形要約を先頭行に。
+- 1 行目は約 72 文字以内を目安に。
 
-Pull requests should include:
-- A concise description of behavior changes.
-- Screenshots for UI changes in `desktop/renderer/`.
-- Any relevant issue links.
+プルリクエストには以下を含めること：
+- 振る舞いの簡潔な記述。
+- `desktop/renderer/` の UI 変更にはスクリーンショット添付。
+- 関連する Issue リンク。
 
-## Security & Configuration Tips
-- Keep `nodeIntegration: false` and `contextIsolation: true` in `desktop/main.js`.
-- Update CSP in `desktop/renderer/index.html` if new external assets are needed.
+## セキュリティ＆設定のポイント
+- `desktop/main.js` では `nodeIntegration: false` と `contextIsolation: true` を維持。
+- 新しい外部アセットが必要なら `desktop/renderer/index.html` の CSP を更新。
