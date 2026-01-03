@@ -96,6 +96,10 @@ export class MacOSAgent extends EventEmitter {
       model: this.modelName,
       generationConfig: {
         responseMimeType: "application/json",
+        // @ts-ignore
+        thinkingConfig: {
+          thinkingLevel: "minimal",
+        },
       },
       tools: [
         {
@@ -246,6 +250,10 @@ export class MacOSAgent extends EventEmitter {
           model: this.modelName,
           generationConfig: {
             responseMimeType: "application/json",
+            // @ts-ignore
+            thinkingConfig: {
+              thinkingLevel: "minimal",
+            },
           },
           tools: [
             {
