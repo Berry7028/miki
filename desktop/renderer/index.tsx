@@ -37,7 +37,7 @@ import {
   VpnKey,
 } from "@mui/icons-material";
 import { theme } from "./theme";
-import { BackendEvent, SetupStatus } from "./types";
+import type { BackendEvent, SetupStatus } from "./types";
 
 const App = () => {
   const [apiKey, setApiKey] = useState("");

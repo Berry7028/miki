@@ -27,7 +27,7 @@ import {
   ExpandLess,
 } from "@mui/icons-material";
 import { theme } from "./theme";
-import { BackendEvent } from "./types";
+import type { BackendEvent } from "./types";
 
 interface Message {
   type: "user" | "ai" | "action" | "result" | "error" | "thinking" | "tool";
