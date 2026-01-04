@@ -40,11 +40,13 @@ function print_menu() {
 function print_help() {
   echo -e "${BLUE}miki desktop 開発スクリプト${NC}"
   echo ""
-  echo "使い方: ./dev.sh [コマンド]"
+  echo "使い方: ./dev.sh [コマンド] [オプション]"
   echo ""
   echo "コマンド一覧:"
   echo "  ${GREEN}start${NC}            - アプリを起動（開発モード）"
+  echo "  ${GREEN}start --debug${NC}    - アプリをデバッグモードで起動"
   echo "  ${GREEN}start-fresh${NC}      - セットアップをリセットしてアプリを起動"
+  echo "  ${GREEN}start-fresh --debug${NC} - セットアップをリセットしてデバッグモードで起動"
   echo "  ${GREEN}build-all${NC}        - 全コンポーネントを一括ビルド"
   echo "  ${GREEN}build-renderer${NC}   - フロントエンド（レンダラー）をビルド"
   echo "  ${GREEN}build-backend${NC}    - バックエンドをビルド"
@@ -58,6 +60,10 @@ function print_help() {
   echo "  ${GREEN}logs${NC}             - アプリのログディレクトリを開く"
   echo "  ${GREEN}help${NC}             - このヘルプを表示"
   echo ""
+  echo "デバッグモード:"
+  echo "  --debug フラグを使用すると、エージェントが呼び出すツールの詳細な"
+  echo "  ログがコンソールに出力され、スクリーンショットが .screenshot/ に保存されます。"
+  echo ""
   echo "引数なしで実行すると対話型メニューが表示されます。"
   echo ""
 }
@@ -65,7 +71,14 @@ function print_help() {
 function start_app() {
   echo -e "${BLUE}アプリを起動します...${NC}"
   cd "$DESKTOP_DIR"
-  bun run dev
+  
+  # 引数をチェックして --debug フラグを渡す
+  if [ "$1" = "--debug" ]; then
+    echo -e "${YELLOW}[DEBUG MODE]${NC}"
+    bun run dev -- --debug
+  else
+    bun run dev
+  fi
 }
 
 function start_fresh() {
@@ -73,7 +86,14 @@ function start_fresh() {
   reset_setup
   echo -e "${BLUE}アプリを起動します...${NC}"
   cd "$DESKTOP_DIR"
-  bun run dev
+  
+  # 引数をチェックして --debug フラグを渡す
+  if [ "$1" = "--debug" ]; then
+    echo -e "${YELLOW}[DEBUG MODE]${NC}"
+    bun run dev -- --debug
+  else
+    bun run dev
+  fi
 }
 
 function build_backend() {
@@ -256,10 +276,10 @@ else
   # 引数あり - コマンドライン引数で実行
   case "${1}" in
     start)
-      start_app
+      start_app "${2}"
       ;;
     start-fresh)
-      start_fresh
+      start_fresh "${2}"
       ;;
     build-all)
       build_all

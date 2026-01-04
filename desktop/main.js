@@ -10,6 +10,9 @@ let overlayWindow;
 let controllerProcess;
 let controllerReader;
 
+// デバッグモードフラグ (コマンドライン引数 --debug で有効化)
+const debugMode = process.argv.includes("--debug");
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1200,
@@ -183,6 +186,12 @@ function ensureController() {
     MIKI_ENV_PATH: path.join(app.getPath("userData"), ".env"),
     DOTENV_CONFIG_QUIET: "true"
   };
+
+  // デバッグモードの環境変数を設定
+  if (debugMode) {
+    env.MIKI_DEBUG = "1";
+    console.log("[DEBUG MODE ENABLED]");
+  }
 
   if (app.isPackaged) {
     if (!executorBinary) {

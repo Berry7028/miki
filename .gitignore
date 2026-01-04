@@ -49,3 +49,6 @@ desktop/dist/
 # pyinstaller artifacts
 build/
 *.spec
+
+# debug screenshots
+.screenshot/
