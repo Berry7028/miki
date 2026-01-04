@@ -8,11 +8,19 @@ import { ActionSchema, type Action, type ActionBase, type PythonResponse } from 
 import * as path from "node:path";
 
 // パフォーマンス最適化設定
+// Note: 環境に応じて調整可能。高速化優先だが、安定性に問題がある場合は値を増やすこと
 const PERFORMANCE_CONFIG = {
-  MAX_STEPS: 30,                    // 最大ステップ数（20から増加）
-  STEP_DELAY_MS: 500,               // ステップ間の遅延（1000msから削減）
-  BATCH_ACTION_DELAY_MS: 100,       // バッチアクション間の遅延（500msから削減）
-  SCREENSHOT_QUALITY: 85,           // JPEG品質（1-100）
+  // 最大ステップ数: 通常タスクは10-20ステップだが、リトライやエラー対応の余裕を見て30に設定
+  MAX_STEPS: 30,
+  // ステップ間の遅延: 1秒だと体感が重いため、UIが追いつく最低ラインとして500msに設定
+  // システムが不安定な場合は1000msに戻すことを推奨
+  STEP_DELAY_MS: 500,
+  // バッチアクション間の遅延: OSに負荷をかけすぎない程度の100msに設定
+  // 一部の環境で安定しない場合は200-300msに増やすこと
+  BATCH_ACTION_DELAY_MS: 100,
+  // JPEG品質: 85で視覚品質を維持しつつファイルサイズを削減（1-100）
+  // AIの認識精度に問題がある場合は90-95に上げることを検討
+  SCREENSHOT_QUALITY: 85,
 };
 
 // デバッグログ用定数
@@ -341,9 +349,9 @@ export class MacOSAgent extends EventEmitter {
               const url = c.image_url.url;
               const base64Data = url.split(",")[1];
               // 画像形式を自動検出（data:image/jpeg;base64, または data:image/png;base64,）
-              // より堅牢な正規表現ベースの検出
-              const mimeMatch = url.match(/^data:(image\/[a-z]+);base64,/);
-              const mimeType = mimeMatch ? mimeMatch[1] : "image/jpeg";
+              // 正規表現でMIMEタイプをキャプチャ（image/jpeg, image/png, image/webp等）
+              const mimeMatch = url.match(/^data:(image\/[a-z0-9.+-]+);base64,/i);
+              const mimeType = mimeMatch?.[1] ?? "image/jpeg";
               return { inlineData: { data: base64Data, mimeType } };
             }
             return { text: "" };
@@ -613,7 +621,10 @@ export class MacOSAgent extends EventEmitter {
     ];
 
     if (highlightPos) {
-      const hRes = await this.callPython("screenshot", { highlight_pos: highlightPos });
+      const hRes = await this.callPython("screenshot", { 
+        highlight_pos: highlightPos,
+        quality: PERFORMANCE_CONFIG.SCREENSHOT_QUALITY 
+      });
       if (hRes.status === "success" && hRes.data) {
         observationContent.push({
           type: "image_url",
@@ -652,7 +663,9 @@ export class MacOSAgent extends EventEmitter {
       await this.cacheManager.createSystemPromptCache(formattedPrompt, this.modelName);
     }
 
-    const initRes = await this.callPython("screenshot");
+    const initRes = await this.callPython("screenshot", { 
+      quality: PERFORMANCE_CONFIG.SCREENSHOT_QUALITY 
+    });
     if (initRes.status !== "success" || !initRes.data || !initRes.mouse_position) {
       this.log("error", `初期観察失敗: ${initRes.message}`);
       return;
@@ -697,7 +710,9 @@ export class MacOSAgent extends EventEmitter {
         }
       }
 
-      const res = await this.callPython("screenshot");
+      const res = await this.callPython("screenshot", { 
+        quality: PERFORMANCE_CONFIG.SCREENSHOT_QUALITY 
+      });
       if (res.status !== "success" || !res.data || !res.mouse_position) {
         this.log("error", `スクリーンショット取得失敗: ${res.message}`);
         break;

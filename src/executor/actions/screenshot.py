@@ -37,6 +37,7 @@ def screenshot(highlight_pos=None, quality=85):
     Args:
         highlight_pos: ハイライト位置 {"x": int, "y": int}
         quality: JPEG品質（1-100）。デフォルト85で高品質かつ軽量
+                 TypeScript側のPERFORMANCE_CONFIG.SCREENSHOT_QUALITYから渡される
     """
     shot = pyautogui.screenshot()
 
