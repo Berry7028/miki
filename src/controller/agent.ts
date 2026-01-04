@@ -339,9 +339,12 @@ export class MacOSAgent extends EventEmitter {
           const parts = h.content.map((c: any) => {
             if (c.type === "text") return { text: c.text };
             if (c.type === "image_url") {
-              const base64Data = c.image_url.url.split(",")[1];
+              const url = c.image_url.url;
+              const base64Data = url.split(",")[1];
               // 画像形式を自動検出（data:image/jpeg;base64, または data:image/png;base64,）
-              const mimeType = c.image_url.url.includes("image/jpeg") ? "image/jpeg" : "image/png";
+              // より堅牢な正規表現ベースの検出
+              const mimeMatch = url.match(/^data:(image\/[a-z]+);base64,/);
+              const mimeType = mimeMatch ? mimeMatch[1] : "image/jpeg";
               return { inlineData: { data: base64Data, mimeType } };
             }
             return { text: "" };

@@ -63,8 +63,15 @@ def screenshot(highlight_pos=None, max_size=1920, quality=85):
             shot, highlight_pos['x'], highlight_pos['y'])
 
     # JPEG形式で圧縮して転送データ量を削減
+    # Note: スクリーンショットは通常透明度を持たないため、RGBへの変換は安全
     buffered = BytesIO()
-    shot.convert('RGB').save(buffered, format="JPEG", quality=quality, optimize=True)
+    if shot.mode == 'RGBA':
+        # RGBAの場合は白背景で合成してRGBに変換
+        rgb_shot = Image.new('RGB', shot.size, (255, 255, 255))
+        rgb_shot.paste(shot, mask=shot.split()[3])  # アルファチャンネルをマスクとして使用
+        rgb_shot.save(buffered, format="JPEG", quality=quality, optimize=True)
+    else:
+        shot.convert('RGB').save(buffered, format="JPEG", quality=quality, optimize=True)
     img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
     x, y = pyautogui.position()
     return {"status": "success", "data": img_str, "mouse_position": {"x": x, "y": y}}
