@@ -15,7 +15,6 @@ const PERFORMANCE_CONFIG = {
   MAX_STEPS: 30,                    // 最大ステップ数（20→30）
   STEP_DELAY_MS: 500,               // ステップ間の遅延（1000→500ms）
   BATCH_ACTION_DELAY_MS: 100,       // バッチアクション間の遅延（500→100ms）
-  SCREENSHOT_MAX_SIZE: 1920,        // スクリーンショット最大サイズ
   SCREENSHOT_QUALITY: 85,           // JPEG品質（1-100）
 };
 ```
@@ -82,7 +81,6 @@ const mimeType = mimeMatch ? mimeMatch[1] : "image/jpeg";
 
 3. **src/executor/actions/screenshot.py**
    - JPEG圧縮の実装
-   - 解像度の適応調整
    - RGBA透明度対応
 
 ### 新規ファイル

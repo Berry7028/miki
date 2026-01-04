@@ -12,7 +12,6 @@ const PERFORMANCE_CONFIG = {
   MAX_STEPS: 30,                    // 最大ステップ数（20から増加）
   STEP_DELAY_MS: 500,               // ステップ間の遅延（1000msから削減）
   BATCH_ACTION_DELAY_MS: 100,       // バッチアクション間の遅延（500msから削減）
-  SCREENSHOT_MAX_SIZE: 1920,        // スクリーンショット最大サイズ（ピクセル）
   SCREENSHOT_QUALITY: 85,           // JPEG品質（1-100）
 };
 

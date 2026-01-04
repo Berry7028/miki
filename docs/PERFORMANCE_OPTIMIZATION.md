@@ -23,11 +23,9 @@
 
 **変更点:**
 - スクリーンショットフォーマット: PNG → JPEG（quality=85）
-- 大きな画像の自動縮小: 最大1920pxに制限
 
 **効果:**
 - 転送データ量: 約50-70%削減
-- Retina ディスプレイでの過剰な解像度を適切にダウンスケール
 - JPEG品質85により視覚的な品質を維持しつつ大幅にファイルサイズを削減
 
 **実装場所:** `src/executor/actions/screenshot.py`, `src/controller/agent.ts`
@@ -76,7 +74,6 @@ const PERFORMANCE_CONFIG = {
   MAX_STEPS: 30,                    // 最大ステップ数
   STEP_DELAY_MS: 500,               // ステップ間の遅延
   BATCH_ACTION_DELAY_MS: 100,       // バッチアクション間の遅延
-  SCREENSHOT_MAX_SIZE: 1920,        // スクリーンショット最大サイズ（ピクセル）
   SCREENSHOT_QUALITY: 85,           // JPEG品質（1-100）
 };
 ```
@@ -104,7 +101,6 @@ const PERFORMANCE_CONFIG = {
 
 1. `STEP_DELAY_MS`を更に削減（例: 500ms → 300ms）
 2. `SCREENSHOT_QUALITY`を下げる（例: 85 → 75）
-3. `SCREENSHOT_MAX_SIZE`を小さくする（例: 1920 → 1280）
 
 注意: 過度な高速化は安定性に影響する可能性があります。
 
