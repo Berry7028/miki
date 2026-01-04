@@ -2,16 +2,16 @@
 import pyautogui
 import time
 
-# アクション間の待機時間を設定（より人間らしい動きにするため）
-pyautogui.PAUSE = 0.1
+# アクション間の待機時間を設定（高速化のため最小限に）
+pyautogui.PAUSE = 0.05
 
 from actions.clipboard_utils import copy_text
 
 
-def click(x, y, clicks=1, button="left", duration=1):
+def click(x, y, clicks=1, button="left", duration=0.1):
     """指定された座標に移動しながらクリックする"""
     try:
-        # イージング関数を使用して人間らしい動きにする
+        # イージング関数を使用して高速かつスムーズに移動
         pyautogui.click(x=x, y=y, clicks=clicks, button=button,
                         duration=duration, tween=pyautogui.easeInOutQuad)
         return {"status": "success"}
@@ -67,7 +67,7 @@ def hotkey(keys):
         return {"status": "error", "message": f"Failed to execute hotkey: {str(e)}"}
 
 
-def mouse_move(x, y, duration=1):
+def mouse_move(x, y, duration=0.1):
     """指定された座標に移動する"""
     try:
         pyautogui.moveTo(x, y, duration=duration, tween=pyautogui.easeInOutQuad)
@@ -82,11 +82,11 @@ def scroll(amount):
     return {"status": "success"}
 
 
-def drag(from_x, from_y, to_x, to_y, duration=0.8, button="left"):
+def drag(from_x, from_y, to_x, to_y, duration=0.2, button="left"):
     """ドラッグアンドドロップを実行する"""
     try:
-        # 開始位置に移動（少し人間らしく）
-        pyautogui.moveTo(from_x, from_y, duration=0.4,
+        # 開始位置に移動（高速化）
+        pyautogui.moveTo(from_x, from_y, duration=0.1,
                          tween=pyautogui.easeInOutQuad)
         # ドラッグ実行
         pyautogui.dragTo(to_x, to_y, duration=duration,

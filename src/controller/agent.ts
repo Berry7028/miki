@@ -7,6 +7,15 @@ import { GeminiCacheManager } from "./cache-manager";
 import { ActionSchema, type Action, type ActionBase, type PythonResponse } from "./types";
 import * as path from "node:path";
 
+// パフォーマンス最適化設定
+const PERFORMANCE_CONFIG = {
+  MAX_STEPS: 30,                    // 最大ステップ数（20から増加）
+  STEP_DELAY_MS: 500,               // ステップ間の遅延（1000msから削減）
+  BATCH_ACTION_DELAY_MS: 100,       // バッチアクション間の遅延（500msから削減）
+  SCREENSHOT_MAX_SIZE: 1920,        // スクリーンショット最大サイズ（ピクセル）
+  SCREENSHOT_QUALITY: 85,           // JPEG品質（1-100）
+};
+
 // デバッグログ用定数
 const DEBUG_TEXT_TRUNCATE_LENGTH = 200;
 const DEBUG_SCREENSHOT_PREVIEW_LENGTH = 50;
@@ -331,7 +340,9 @@ export class MacOSAgent extends EventEmitter {
             if (c.type === "text") return { text: c.text };
             if (c.type === "image_url") {
               const base64Data = c.image_url.url.split(",")[1];
-              return { inlineData: { data: base64Data, mimeType: "image/png" } };
+              // 画像形式を自動検出（data:image/jpeg;base64, または data:image/png;base64,）
+              const mimeType = c.image_url.url.includes("image/jpeg") ? "image/jpeg" : "image/png";
+              return { inlineData: { data: base64Data, mimeType } };
             }
             return { text: "" };
           });
@@ -366,7 +377,7 @@ export class MacOSAgent extends EventEmitter {
       promptParts.push({
         inlineData: {
           data: screenshotBase64,
-          mimeType: "image/png",
+          mimeType: "image/jpeg",
         },
       });
 
@@ -604,7 +615,7 @@ export class MacOSAgent extends EventEmitter {
       if (hRes.status === "success" && hRes.data) {
         observationContent.push({
           type: "image_url",
-          image_url: { url: `data:image/png;base64,${hRes.data}` },
+          image_url: { url: `data:image/jpeg;base64,${hRes.data}` },
         });
         observationContent.push({
           type: "text",
@@ -656,14 +667,14 @@ export class MacOSAgent extends EventEmitter {
           },
           {
             type: "image_url",
-            image_url: { url: `data:image/png;base64,${initRes.data}` },
+            image_url: { url: `data:image/jpeg;base64,${initRes.data}` },
           },
         ],
       },
     ];
     this.currentStep = 0;
 
-    while (this.currentStep < 20) {
+    while (this.currentStep < PERFORMANCE_CONFIG.MAX_STEPS) {
       if (this.stopRequested) {
         this.log("info", "停止しました。");
         this.emit("stopped");
@@ -744,7 +755,7 @@ export class MacOSAgent extends EventEmitter {
         for (const subAction of action.params.actions) {
           const { observationContent } = await this.executeAction(subAction);
           finalObservationContent.push(...observationContent);
-          await new Promise((r) => setTimeout(r, 500));
+          await new Promise((r) => setTimeout(r, PERFORMANCE_CONFIG.BATCH_ACTION_DELAY_MS));
         }
       } else {
         const { observationContent } = await this.executeAction(action as ActionBase);
@@ -755,7 +766,7 @@ export class MacOSAgent extends EventEmitter {
       history.push({ role: "user", content: finalObservationContent });
 
       this.currentStep++;
-      await new Promise((r) => setTimeout(r, 1000));
+      await new Promise((r) => setTimeout(r, PERFORMANCE_CONFIG.STEP_DELAY_MS));
     }
 
     this.emit("runCompleted");
