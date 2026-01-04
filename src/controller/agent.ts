@@ -7,6 +7,10 @@ import { GeminiCacheManager } from "./cache-manager";
 import { ActionSchema, type Action, type ActionBase, type PythonResponse } from "./types";
 import * as path from "node:path";
 
+// デバッグログ用定数
+const DEBUG_TEXT_TRUNCATE_LENGTH = 200;
+const DEBUG_SCREENSHOT_PREVIEW_LENGTH = 50;
+
 const SYSTEM_PROMPT = `
 あなたはMacOSを精密に操作する自動化エージェントです。
 現在のスクリーンショット、マウス位置、履歴に基づき、目標達成のための次の一手を決定してください。
@@ -90,6 +94,8 @@ export class MacOSAgent extends EventEmitter {
     
     // デバッグモード時にスクリーンショットディレクトリを設定
     if (this.debugMode) {
+      // Note: process.cwd() はコントローラープロセスが起動された作業ディレクトリ（プロジェクトルート）を指す
+      // desktop/main.js から spawn されるため、プロジェクトルート/.screenshot に保存される
       this.screenshotDir = path.join(process.cwd(), ".screenshot");
       if (!fs.existsSync(this.screenshotDir)) {
         fs.mkdirSync(this.screenshotDir, { recursive: true });
@@ -232,8 +238,8 @@ export class MacOSAgent extends EventEmitter {
     if (!this.debugMode) return;
     console.error(`\n[DEBUG] ========== ${title} ==========`);
     for (const [key, value] of Object.entries(content)) {
-      if (typeof value === 'string' && value.length > 200) {
-        console.error(`[DEBUG] ${key}: ${value.substring(0, 200)}... (${value.length} chars)`);
+      if (typeof value === 'string' && value.length > DEBUG_TEXT_TRUNCATE_LENGTH) {
+        console.error(`[DEBUG] ${key}: ${value.substring(0, DEBUG_TEXT_TRUNCATE_LENGTH)}... (${value.length} chars)`);
       } else if (typeof value === 'object' && value !== null) {
         console.error(`[DEBUG] ${key}: ${JSON.stringify(value, null, 2)}`);
       } else {
@@ -381,7 +387,7 @@ export class MacOSAgent extends EventEmitter {
           "History length": `${geminiHistory.length} messages`,
           "Total prompt parts": promptParts.length,
           "History details": `\n[DEBUG]   ${historyDescription}`,
-          "Screenshot": screenshotBase64.substring(0, 50)
+          "Screenshot": screenshotBase64.substring(0, DEBUG_SCREENSHOT_PREVIEW_LENGTH)
         });
       }
 
