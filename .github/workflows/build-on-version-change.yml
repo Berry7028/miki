@@ -57,8 +57,9 @@ jobs:
       - name: Install Python dependencies
         if: steps.version.outputs.changed == 'true'
         run: |
-          python3 -m pip install --upgrade pip --break-system-packages
-          python3 -m pip install --break-system-packages -r requirements.txt pyinstaller
+          python3 -m venv venv
+          venv/bin/pip install --upgrade pip
+          venv/bin/pip install -r requirements.txt
 
       - name: Build and package
         if: steps.version.outputs.changed == 'true'
