@@ -81,9 +81,22 @@ export class MacOSAgent extends EventEmitter {
   private isRestarting = false;
   private currentStep = 0;
   private stopRequested = false;
+  private debugMode: boolean = false;
+  private screenshotDir: string = "";
 
-  constructor() {
+  constructor(debugMode: boolean = false) {
     super();
+    this.debugMode = debugMode;
+    
+    // デバッグモード時にスクリーンショットディレクトリを設定
+    if (this.debugMode) {
+      this.screenshotDir = path.join(process.cwd(), ".screenshot");
+      if (!fs.existsSync(this.screenshotDir)) {
+        fs.mkdirSync(this.screenshotDir, { recursive: true });
+      }
+      console.error(`[Agent] Debug mode enabled. Screenshots will be saved to: ${this.screenshotDir}`);
+    }
+    
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       throw new Error("GEMINI_API_KEY環境変数が設定されていません。");
@@ -325,6 +338,27 @@ export class MacOSAgent extends EventEmitter {
         },
       });
 
+      // デバッグログ: AIに送る内容
+      if (this.debugMode) {
+        console.error(`\n[DEBUG] ========== Sending to AI (Step ${this.currentStep}, Retry ${retryCount}) ==========`);
+        console.error(`[DEBUG] Using cache: ${cacheName || "No"}`);
+        console.error(`[DEBUG] Prompt text: ${promptText}`);
+        console.error(`[DEBUG] History length: ${geminiHistory.length} messages`);
+        console.error(`[DEBUG] Total prompt parts: ${promptParts.length}`);
+        
+        // 履歴の内容をログ（画像データは除外）
+        geminiHistory.forEach((h, i) => {
+          const partsDescription = h.parts.map((p: any) => {
+            if (p.text) return `text(${p.text.substring(0, 100)}...)`;
+            if (p.inlineData) return `image(${p.inlineData.mimeType})`;
+            return "unknown";
+          }).join(", ");
+          console.error(`[DEBUG]   History[${i}] (${h.role}): ${partsDescription}`);
+        });
+        console.error(`[DEBUG] Screenshot included: ${screenshotBase64.substring(0, 50)}... (${screenshotBase64.length} chars)`);
+        console.error(`[DEBUG] ==========================================\n`);
+      }
+
       let fullContent = "";
       let thoughtProcess = "";
       const thoughtId = `thought-${this.currentStep}-${retryCount}`;
@@ -379,6 +413,15 @@ export class MacOSAgent extends EventEmitter {
       let content = fullContent;
       const rawContent = content;
 
+      // デバッグログ: AIからの応答
+      if (this.debugMode) {
+        console.error(`\n[DEBUG] ========== AI Response (Step ${this.currentStep}, Retry ${retryCount}) ==========`);
+        console.error(`[DEBUG] Raw response: ${rawContent}`);
+        if (thoughtProcess) {
+          console.error(`[DEBUG] Thought process: ${thoughtProcess}`);
+        }
+      }
+
       const jsonMatch =
         content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/```\s*([\s\S]*?)\s*```/);
       if (jsonMatch && jsonMatch[1]) {
@@ -427,6 +470,12 @@ export class MacOSAgent extends EventEmitter {
           delete parsed.y;
         }
 
+        // デバッグログ: パース成功
+        if (this.debugMode) {
+          console.error(`[DEBUG] Parsed action: ${JSON.stringify(parsed, null, 2)}`);
+          console.error(`[DEBUG] ==========================================\n`);
+        }
+
         return ActionSchema.parse(parsed);
       } catch (e: any) {
         this.log("error", `Geminiレスポンスのパース失敗 (試行 ${retryCount + 1}/${maxRetries})`);
@@ -447,6 +496,13 @@ export class MacOSAgent extends EventEmitter {
   ): Promise<{ result: PythonResponse; observationContent: any[] }> {
     let execParams = { ...(action as any).params };
     let highlightPos: { x: number; y: number } | null = null;
+
+    // デバッグログ: アクション実行前
+    if (this.debugMode) {
+      console.error(`\n[DEBUG] ========== Executing Action ==========`);
+      console.error(`[DEBUG] Action: ${action.action}`);
+      console.error(`[DEBUG] Params (original): ${JSON.stringify(execParams, null, 2)}`);
+    }
 
     // UI要素ベースの操作は座標変換不要
     const elementBasedActions = [
@@ -478,7 +534,25 @@ export class MacOSAgent extends EventEmitter {
       highlightPos = { x: execParams.from_x, y: execParams.from_y };
     }
 
+    if (this.debugMode && !isElementBased) {
+      console.error(`[DEBUG] Params (converted): ${JSON.stringify(execParams, null, 2)}`);
+    }
+
     const result = await this.callPython(action.action, execParams);
+
+    // デバッグログ: アクション実行結果
+    if (this.debugMode) {
+      console.error(`[DEBUG] Result: ${JSON.stringify(result, null, 2)}`);
+      
+      // UI要素取得アクションの場合、詳細な結果をログ出力
+      if (action.action === "elementsJson" && result.ui_data) {
+        console.error(`[DEBUG] UI Elements Retrieved: ${JSON.stringify(result.ui_data, null, 2)}`);
+      }
+      if (action.action === "webElements" && result.elements) {
+        console.error(`[DEBUG] Web Elements Retrieved: ${JSON.stringify(result.elements, null, 2)}`);
+      }
+      console.error(`[DEBUG] ==========================================\n`);
+    }
 
     // UI要素のキャッシュ (Phase 2)
     if (action.action === "elementsJson" && result.status === "success" && result.ui_data) {
@@ -588,6 +662,19 @@ export class MacOSAgent extends EventEmitter {
       }
       const screenshot = res.data;
       const mousePosition = res.mouse_position;
+
+      // デバッグモード: スクリーンショットを保存
+      if (this.debugMode && this.screenshotDir) {
+        try {
+          const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+          const filename = `step-${String(this.currentStep + 1).padStart(3, "0")}-${timestamp}.png`;
+          const filepath = path.join(this.screenshotDir, filename);
+          fs.writeFileSync(filepath, Buffer.from(screenshot, "base64"));
+          console.error(`[DEBUG] Screenshot saved: ${filepath}`);
+        } catch (e) {
+          console.error(`[DEBUG] Failed to save screenshot: ${e}`);
+        }
+      }
 
       this.emitStatus("thinking");
       const action = await this.getActionFromLLM(history, screenshot, mousePosition);

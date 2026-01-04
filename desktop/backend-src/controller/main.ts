@@ -15,6 +15,13 @@ type StatusState = "idle" | "running" | "stopping";
 let agent: MacOSAgent | null = null;
 let running = false;
 
+// デバッグモードフラグ
+const debugMode = process.env.MIKI_DEBUG === "1";
+
+if (debugMode) {
+  console.error("[Controller] Debug mode enabled");
+}
+
 function send(event: string, payload: Record<string, unknown> = {}) {
   process.stdout.write(JSON.stringify({ event, ...payload }) + "\n");
 }
@@ -35,7 +42,7 @@ function loadEnv() {
 
 function ensureAgent() {
   if (agent) return;
-  agent = new MacOSAgent();
+  agent = new MacOSAgent(debugMode);
   agent.on("log", (payload: { type: string; message: string; timestamp: Date }) => {
     send("log", {
       ...payload,
