@@ -46,6 +46,12 @@ const ChatApp = () => {
   const [thinkingText, setThinkingText] = useState<string>("");
   const [isThinking, setIsThinking] = useState(false);
   const [showThinking, setShowThinking] = useState(true);
+  const quickPrompts = [
+    { label: "画面をスキャン", value: "今の画面を確認して、次にすべき操作を提案して。" },
+    { label: "実行内容を要約", value: "最新の実行状況を要約して、次のアクションを決めて。" },
+    { label: "自動操作を準備", value: "自動操作の準備をして、実行手順を提示して。" },
+    { label: "トラブルシュート", value: "エラーがないか確認し、改善策を教えて。" },
+  ];
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -59,6 +65,14 @@ const ChatApp = () => {
   const addMessage = useCallback((msg: Message) => {
     setMessages((prev) => [...prev, msg]);
   }, []);
+
+  useEffect(() => {
+    addMessage({
+      type: "ai",
+      content: "こんにちは！何を自動化しましょうか？画面を見ながらサポートします。",
+      timestamp: Date.now(),
+    });
+  }, [addMessage]);
 
   useEffect(() => {
     const unsubscribe = window.miki?.onBackendEvent((payload) => {
@@ -114,8 +128,8 @@ const ChatApp = () => {
     return () => unsubscribe?.();
   }, [addMessage]);
 
-  const handleSend = async () => {
-    const text = inputText.trim();
+  const startConversation = async (rawText: string) => {
+    const text = rawText.trim();
     if (!text || isProcessing) return;
 
     addMessage({ type: "user", content: text, timestamp: Date.now() });
@@ -132,6 +146,14 @@ const ChatApp = () => {
       });
       setIsProcessing(false);
     }
+  };
+
+  const handleSend = async () => {
+    await startConversation(inputText);
+  };
+
+  const handleQuickPrompt = (prompt: string) => {
+    startConversation(prompt);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -242,6 +264,40 @@ const ChatApp = () => {
               </Box>
             </Fade>
           )}
+        </Box>
+
+        <Box
+          sx={{
+            px: 2,
+            py: 1.5,
+            borderBottom: "1px solid rgba(255,255,255,0.06)",
+            bgcolor: "rgba(255,255,255,0.02)",
+          }}
+        >
+          <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 700 }}>
+            クイックアクション
+          </Typography>
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 1 }}>
+            {quickPrompts.map((item) => (
+              <Chip
+                key={item.value}
+                label={item.label}
+                variant="outlined"
+                clickable
+                disabled={isProcessing}
+                onClick={() => handleQuickPrompt(item.value)}
+                sx={{
+                  height: 28,
+                  borderColor: "rgba(255,255,255,0.14)",
+                  bgcolor: "rgba(255,255,255,0.04)",
+                  "&:hover": {
+                    borderColor: "primary.main",
+                    bgcolor: "rgba(99, 102, 241, 0.1)",
+                  },
+                }}
+              />
+            ))}
+          </Box>
         </Box>
 
         {/* Thinking Process Area */}

@@ -25,6 +25,8 @@ import {
   Chip,
   Avatar,
   LinearProgress,
+  Tabs,
+  Tab,
 } from "@mui/material";
 import {
   Save,
@@ -57,6 +59,13 @@ const App = () => {
   const [logs, setLogs] = useState<BackendEvent[]>([]);
   const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null);
   const [setupStep, setSetupStep] = useState(0);
+  const sectionItems = [
+    { id: "status", label: "ステータス" },
+    { id: "api", label: "APIキー" },
+    { id: "permissions", label: "権限" },
+    { id: "logs", label: "ログ" },
+  ];
+  const [activeSection, setActiveSection] = useState(sectionItems[0].id);
 
   const appendLog = useCallback((event: BackendEvent) => {
     setLogs((prev) => [event, ...prev].slice(0, 100));
@@ -101,6 +110,32 @@ const App = () => {
     };
   }, [appendLog]);
 
+  useEffect(() => {
+    if (typeof IntersectionObserver === "undefined") return;
+    const observers: IntersectionObserver[] = [];
+
+    sectionItems.forEach((section) => {
+      const element = document.getElementById(section.id);
+      if (!element) return;
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              setActiveSection(section.id);
+            }
+          });
+        },
+        { rootMargin: "-45% 0px -45% 0px", threshold: 0.2 }
+      );
+
+      observer.observe(element);
+      observers.push(observer);
+    });
+
+    return () => observers.forEach((observer) => observer.disconnect());
+  }, []);
+
   const handleSaveApiKey = async () => {
     if (!apiKey.trim()) return;
     await window.miki?.setApiKey(apiKey);
@@ -127,6 +162,12 @@ const App = () => {
     await window.miki?.markSetupCompleted();
     const s = await window.miki?.getSetupStatus();
     setSetupStatus(s);
+  };
+
+  const handleNavChange = (_: React.SyntheticEvent, value: string) => {
+    setActiveSection(value);
+    const target = document.getElementById(value);
+    target?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const isRunning = status.state === "running";
@@ -178,12 +219,54 @@ const App = () => {
             </Box>
           </Box>
 
+          <Paper
+            sx={{
+              p: 1.5,
+              mb: 4,
+              position: "sticky",
+              top: 12,
+              zIndex: 5,
+              backdropFilter: "blur(18px)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              backgroundImage:
+                "linear-gradient(90deg, rgba(99,102,241,0.06), rgba(16,185,129,0.04))",
+            }}
+          >
+            <Tabs
+              value={activeSection}
+              onChange={handleNavChange}
+              variant="scrollable"
+              scrollButtons="auto"
+              textColor="inherit"
+              indicatorColor="primary"
+            >
+              {sectionItems.map((section) => (
+                <Tab
+                  key={section.id}
+                  value={section.id}
+                  label={section.label}
+                  sx={{
+                    color: activeSection === section.id ? "primary.light" : "text.secondary",
+                    fontWeight: 700,
+                    letterSpacing: "0.04em",
+                    px: 2,
+                    minHeight: 44,
+                  }}
+                />
+              ))}
+            </Tabs>
+          </Paper>
+
           <Grid container spacing={4}>
             {/* Main Dashboard Area */}
             <Grid item xs={12} lg={8}>
               <Stack spacing={3}>
                 {/* System Status Card */}
-                <Paper sx={{ p: 4, position: "relative", overflow: "hidden" }}>
+                <Paper
+                  component="section"
+                  id="status"
+                  sx={{ p: 4, position: "relative", overflow: "hidden", scrollMarginTop: 120 }}
+                >
                   <Box
                     sx={{
                       position: "absolute",
@@ -292,7 +375,7 @@ const App = () => {
                 </Paper>
 
                 {/* API Key Card */}
-                <Paper sx={{ p: 4 }}>
+                <Paper component="section" id="api" sx={{ p: 4, scrollMarginTop: 120 }}>
                   <Stack
                     direction="row"
                     alignItems="center"
@@ -386,7 +469,7 @@ const App = () => {
                 </Paper>
 
                 {/* Permissions Status Card */}
-                <Paper sx={{ p: 4 }}>
+                <Paper component="section" id="permissions" sx={{ p: 4, scrollMarginTop: 120 }}>
                   <Typography
                     variant="h6"
                     gutterBottom
@@ -541,6 +624,7 @@ const App = () => {
             {/* Sidebar - Execution Log */}
             <Grid item xs={12} lg={4}>
               <Paper
+                id="logs"
                 sx={{
                   p: 4,
                   height: "calc(100vh - 200px)",
@@ -548,6 +632,7 @@ const App = () => {
                   flexDirection: "column",
                   position: "sticky",
                   top: "20px",
+                  scrollMarginTop: 120,
                 }}
               >
                 <Box
