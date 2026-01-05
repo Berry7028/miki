@@ -358,7 +358,7 @@ export class MacOSAgent extends EventEmitter {
       const functionCalls: GeminiFunctionCall[] =
         Array.isArray(rawFunctionCalls)
           ? rawFunctionCalls
-          : typeof rawFunctionCalls === "function"
+          : Array.isArray(rawFunctionCalls?.())
             ? rawFunctionCalls()
             : [];
 
@@ -591,7 +591,7 @@ export class MacOSAgent extends EventEmitter {
 
       for (let i = 0; i < actions.length; i++) {
         const action = actions[i];
-        const call = calls[i] ?? { name: action.action, args: (action as any).params };
+        const call = calls[i] ?? { name: action.action, args: action.params ?? {} };
 
         history.push({ role: "model", parts: [{ functionCall: call }] });
 

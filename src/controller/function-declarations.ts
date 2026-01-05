@@ -186,7 +186,15 @@ export const ACTION_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
         actions: {
           type: "array",
           description: "実行するアクションの配列。各要素はほかの関数ツールの引数構造に従います。",
-          items: { type: "object" },
+          items: {
+            type: "object",
+            description: "個々のアクション。action名とparamsを含みます。",
+            properties: {
+              action: { type: "string", description: "実行する関数ツール名" },
+              params: { type: "object", description: "各ツールに対応する引数オブジェクト" },
+            },
+            required: ["action"],
+          },
         },
       },
       required: ["actions"],
