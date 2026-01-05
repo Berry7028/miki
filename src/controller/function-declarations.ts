@@ -4,7 +4,8 @@ import { SchemaType } from "@google/generative-ai";
 export const ACTION_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
   {
     name: "click",
-    description: "指定した正規化座標(0-1000)を単一の左クリックで操作します（本システムは0-1000で正規化）。クリック先のUIを確実にアクティブ化する際に使用します。",
+    description:
+      "指定した正規化座標(0-1000)を単一の左クリックで操作します（本システムは0-1000で正規化）。クリック先のUIを確実にアクティブ化する際に使用します。",
     parameters: {
       type: SchemaType.OBJECT,
       properties: {
@@ -16,7 +17,8 @@ export const ACTION_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
   },
   {
     name: "move",
-    description: "マウスカーソルを指定した正規化座標(0-1000)へ移動します。クリック不要なホバー操作に使用します。",
+    description:
+      "マウスカーソルを指定した正規化座標(0-1000)へ移動します。クリック不要なホバー操作に使用します。",
     parameters: {
       type: SchemaType.OBJECT,
       properties: {
@@ -46,14 +48,18 @@ export const ACTION_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
     parameters: {
       type: SchemaType.OBJECT,
       properties: {
-        amount: { type: SchemaType.NUMBER, description: "スクロール量。例: 200で下方向、-200で上方向。" },
+        amount: {
+          type: SchemaType.NUMBER,
+          description: "スクロール量。例: 200で下方向、-200で上方向。",
+        },
       },
       required: ["amount"],
     },
   },
   {
     name: "type",
-    description: "フォーカス中の入力欄にテキストを入力します。事前にclick等でフォーカスを与えてください。",
+    description:
+      "フォーカス中の入力欄にテキストを入力します。事前にclick等でフォーカスを与えてください。",
     parameters: {
       type: SchemaType.OBJECT,
       properties: {
@@ -81,7 +87,7 @@ export const ACTION_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
       properties: {
         keys: {
           type: SchemaType.ARRAY,
-          description: "送信するキーの並び。例: [\"command\", \"t\"]",
+          description: '送信するキーの並び。例: ["command", "t"]',
           items: { type: SchemaType.STRING },
         },
       },
@@ -90,11 +96,15 @@ export const ACTION_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
   },
   {
     name: "elementsJson",
-    description: "macOSのアクセシビリティツリーを取得します。未知の画面では最初に実行してください。",
+    description:
+      "macOSのアクセシビリティツリーを取得します。未知の画面では最初に実行してください。",
     parameters: {
       type: SchemaType.OBJECT,
       properties: {
-        app_name: { type: SchemaType.STRING, description: "対象アプリ名。メニューバーに表示される名前を指定。" },
+        app_name: {
+          type: SchemaType.STRING,
+          description: "対象アプリ名。メニューバーに表示される名前を指定。",
+        },
         max_depth: {
           type: SchemaType.NUMBER,
           description: "探索の最大深さ (デフォルト3)。深すぎるとレスポンスが大きくなるため注意。",
@@ -105,12 +115,16 @@ export const ACTION_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
   },
   {
     name: "clickElement",
-    description: "アクセシビリティロールと名前で特定したUI要素をクリックします。座標よりも堅牢です。",
+    description:
+      "アクセシビリティロールと名前で特定したUI要素をクリックします。座標よりも堅牢です。",
     parameters: {
       type: SchemaType.OBJECT,
       properties: {
         app_name: { type: SchemaType.STRING, description: "対象アプリ名" },
-        role: { type: SchemaType.STRING, description: "アクセシビリティロール (例: AXButton, AXTextField)" },
+        role: {
+          type: SchemaType.STRING,
+          description: "アクセシビリティロール (例: AXButton, AXTextField)",
+        },
         name: { type: SchemaType.STRING, description: "要素の表示名" },
       },
       required: ["app_name", "role", "name"],
@@ -149,7 +163,7 @@ export const ACTION_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
     parameters: {
       type: SchemaType.OBJECT,
       properties: {
-        app_name: { type: SchemaType.STRING, description: "対象ブラウザアプリ名 (通常は \"Comet\")" },
+        app_name: { type: SchemaType.STRING, description: '対象ブラウザアプリ名 (通常は "Comet")' },
       },
       required: ["app_name"],
     },
@@ -160,7 +174,7 @@ export const ACTION_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
     parameters: {
       type: SchemaType.OBJECT,
       properties: {
-        app_name: { type: SchemaType.STRING, description: "対象ブラウザアプリ名 (通常は \"Comet\")" },
+        app_name: { type: SchemaType.STRING, description: '対象ブラウザアプリ名 (通常は "Comet")' },
         role: { type: SchemaType.STRING, description: "DOMロール (例: button, link)" },
         name: { type: SchemaType.STRING, description: "要素のラベルまたはテキスト" },
       },
@@ -180,7 +194,8 @@ export const ACTION_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
   },
   {
     name: "batch",
-    description: "複数のアクションを順番に実行します。各要素は他の関数ツールと同じ引数構造を持つ必要があり、コントローラー側でスキーマ検証されます。",
+    description:
+      "複数のアクションを順番に実行します。各要素は他の関数ツールと同じ引数構造を持つ必要があり、コントローラー側でスキーマ検証されます。",
     parameters: {
       type: SchemaType.OBJECT,
       properties: {
@@ -233,7 +248,10 @@ export const ACTION_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
     parameters: {
       type: SchemaType.OBJECT,
       properties: {
-        message: { type: SchemaType.STRING, description: "完了メッセージ。何を達成したか簡潔に記載。" },
+        message: {
+          type: SchemaType.STRING,
+          description: "完了メッセージ。何を達成したか簡潔に記載。",
+        },
       },
       required: ["message"],
     },
