@@ -8,6 +8,7 @@ export class GeminiCacheManager {
   private apiKey: string;
   private modelName: string = "gemini-3-flash-preview"; // Default model for caching
   private systemPromptCache: CacheMetadata | null = null;
+  private historyCache: CacheMetadata | null = null; // 履歴を含むキャッシュ
   private uiElementsCaches: Map<string, CacheMetadata> = new Map();
 
   constructor(apiKey: string) {
@@ -65,6 +66,46 @@ export class GeminiCacheManager {
 
   getSystemPromptCacheName(): string | null {
     return this.systemPromptCache?.cacheName || null;
+  }
+
+  /**
+   * 履歴を含むキャッシュを作成または更新する
+   */
+  async updateHistoryCache(contents: any[], model: string): Promise<CacheMetadata | null> {
+    if (!this.cacheManager) return null;
+
+    try {
+      this.modelName = model;
+      
+      // 古い履歴キャッシュを削除（オプション。Geminiは自動で消去するが明示的に管理）
+      if (this.historyCache) {
+        await this.deleteCache(this.historyCache.cacheName).catch(() => {});
+      }
+
+      const cache = await this.cacheManager.create({
+        model: model,
+        displayName: "miki-history-cache",
+        contents: contents,
+        ttlSeconds: 1800, // 30分
+      });
+
+      this.historyCache = {
+        cacheName: cache.name,
+        createdAt: cache.createTime,
+        expiresAt: cache.expireTime,
+        tokenCount: 0,
+      };
+
+      console.error(`History cache created/updated: ${cache.name}`);
+      return this.historyCache;
+    } catch (error: any) {
+      console.error("Failed to update history cache:", error);
+      return null;
+    }
+  }
+
+  getHistoryCacheName(): string | null {
+    return this.historyCache?.cacheName || null;
   }
 
   /**
@@ -131,6 +172,11 @@ export class GeminiCacheManager {
     if (this.systemPromptCache) {
       await this.deleteCache(this.systemPromptCache.cacheName);
       this.systemPromptCache = null;
+    }
+
+    if (this.historyCache) {
+      await this.deleteCache(this.historyCache.cacheName);
+      this.historyCache = null;
     }
 
     for (const [appName, metadata] of this.uiElementsCaches.entries()) {

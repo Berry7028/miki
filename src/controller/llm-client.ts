@@ -87,7 +87,7 @@ export class LLMClient {
     const normX = Math.round((mousePosition.x / (this.screenSize.width || 1)) * 1000);
     const normY = Math.round((mousePosition.y / (this.screenSize.height || 1)) * 1000);
 
-    const cacheName = this.cacheManager.getSystemPromptCacheName();
+    const cacheName = this.cacheManager.getHistoryCacheName() || this.cacheManager.getSystemPromptCacheName();
     let activeModel = this.model;
 
     if (cacheName) {
@@ -122,8 +122,17 @@ export class LLMClient {
     const contents: GeminiContent[] = [];
     if (!cacheName) {
       contents.push({ role: "user", parts: [{ text: formattedPrompt }] });
+      contents.push(...history);
+    } else {
+      // 履歴キャッシュがある場合、履歴のうちキャッシュに含まれていない「最近の分」だけを抽出する必要がある
+      // ここでは、Agent側で「どこまでキャッシュしたか」を管理し、それ以降の履歴を渡すようにする
+      // 暫定的に、historyの全件を渡す（SDKがキャッシュと重複する部分をうまく扱ってくれることを期待するか、
+      // あるいは呼び出し側で調整する）
+      // GeminiのContext Cachingは「プレフィックス」が一致する必要があるため、
+      // contents = [cached_content] + [new_history] という構造にする。
+      contents.push(...history);
     }
-    contents.push(...history);
+
     contents.push({
       role: "user",
       parts: [
@@ -234,5 +243,29 @@ export class LLMClient {
 
   async cacheUIElements(appName: string, uiData: any): Promise<void> {
     await this.cacheManager.cacheUIElements(appName, uiData, this.modelName);
+  }
+
+  /**
+   * 履歴をキャッシュする。KVキャッシュのヒット率を最大化するため、
+   * システムプロンプト + 履歴の一部をキャッシュに固める。
+   */
+  async cacheHistory(history: GeminiContent[]): Promise<void> {
+    const formattedPrompt = SYSTEM_PROMPT.replace("{SCREEN_WIDTH}", this.screenSize.width.toString()).replace(
+      "{SCREEN_HEIGHT}",
+      this.screenSize.height.toString(),
+    );
+
+    const contents = [{ role: "user" as const, parts: [{ text: formattedPrompt }] }, ...history];
+
+    try {
+      // 1024トークン以上の場合のみキャッシュ
+      const { totalTokens } = await this.model.countTokens({ contents });
+      if (totalTokens >= 1024) {
+        await this.cacheManager.updateHistoryCache(contents, this.modelName);
+        this.onLog("info", `履歴をキャッシュしました (${totalTokens} tokens)`);
+      }
+    } catch (e) {
+      console.error("Failed to count tokens or cache history:", e);
+    }
   }
 }
