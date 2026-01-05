@@ -7,7 +7,7 @@ import AppKit
 # 将来的に設定から切り替えやすくするため定数化
 # 環境や用途に応じて調整可能（高速化優先だが、UIが追いつかない場合は値を増やすこと）
 DEFAULT_SPEED_PROFILE = {
-    "PAUSE": 0.05,              # アクション間の基本待機時間（OSの負荷を考慮）
+    "PAUSE": 0.1,               # アクション間の基本待機時間（OSの負荷を考慮）
     "CLICK_DURATION": 0.1,      # クリック時のマウス移動時間（速度優先）
     "MOUSE_MOVE_DURATION": 0.1, # マウス移動時間
     "DRAG_DURATION": 0.2,       # ドラッグ操作時間
@@ -41,12 +41,12 @@ def type_text(text):
         return {"status": "error", "message": copy_result["message"]}
 
     try:
-        time.sleep(0.05)
+        time.sleep(0.1)
         # command + v で貼り付け
         pyautogui.keyDown('command')
         pyautogui.press('v')
         pyautogui.keyUp('command')
-        time.sleep(0.05)
+        time.sleep(0.2)
         return {"status": "success", "method": copy_result["method"]}
     except Exception as e:
         return {"status": "error", "message": f"Failed to type text: {str(e)}"}
