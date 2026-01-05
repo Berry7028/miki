@@ -294,6 +294,15 @@ export class MacOSAgent extends EventEmitter {
     this.log("info", "停止要求を受け付けました。");
   }
 
+  private async setCursorVisibility(visible: boolean) {
+    try {
+      await this.callPython("setCursorVisibility", { visible });
+      this.log("info", `マウスカーソルを${visible ? "表示" : "非表示"}にしました`);
+    } catch (e) {
+      console.error(`Failed to set cursor visibility: ${e}`);
+    }
+  }
+
   public destroy() {
     this.pythonProcess.kill();
     this.pythonReader.close();
@@ -721,8 +730,12 @@ export class MacOSAgent extends EventEmitter {
     this.stopRequested = false;
     this.emitStatus("running");
 
-    // システムプロンプトをキャッシュ (Phase 1)
-    const formattedPrompt = SYSTEM_PROMPT
+    // 実行開始時にマウスカーソルを非表示にする
+    await this.setCursorVisibility(false);
+
+    try {
+      // システムプロンプトをキャッシュ (Phase 1)
+      const formattedPrompt = SYSTEM_PROMPT
       .replace("{SCREEN_WIDTH}", this.screenSize.width.toString())
       .replace("{SCREEN_HEIGHT}", this.screenSize.height.toString());
     
@@ -863,5 +876,9 @@ export class MacOSAgent extends EventEmitter {
     }
 
     this.emit("runCompleted");
+    } finally {
+      // 終了時に必ずマウスカーソルを再表示する
+      await this.setCursorVisibility(true);
+    }
   }
 }

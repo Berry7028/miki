@@ -1,6 +1,7 @@
 """マウスとキーボード操作"""
 import pyautogui
 import time
+import AppKit
 
 # パフォーマンスプロファイル設定
 # 将来的に設定から切り替えやすくするため定数化
@@ -113,3 +114,24 @@ def drag(from_x, from_y, to_x, to_y, duration=None, button="left"):
         return {"status": "success"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+
+# カーソル表示状態の管理フラグ
+_cursor_hidden = False
+
+
+def set_cursor_visibility(visible):
+    """マウスカーソルの表示・非表示を切り替える (AppKitを使用)"""
+    global _cursor_hidden
+    try:
+        if visible:
+            if _cursor_hidden:
+                AppKit.NSCursor.unhide()
+                _cursor_hidden = False
+        else:
+            if not _cursor_hidden:
+                AppKit.NSCursor.hide()
+                _cursor_hidden = True
+        return {"status": "success", "visible": visible}
+    except Exception as e:
+        return {"status": "error", "message": f"Failed to set cursor visibility: {str(e)}"}

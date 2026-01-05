@@ -19,7 +19,7 @@ sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', line_bufferin
 from actions.screenshot import screenshot, get_screen_size
 from actions.mouse_keyboard import (
     click, type_text, press_key, hotkey,
-    mouse_move, scroll, drag
+    mouse_move, scroll, drag, set_cursor_visibility
 )
 from actions.applescript import run_osa
 from actions.ui_elements import (
@@ -42,6 +42,7 @@ ACTION_HANDLERS = {
     "move": mouse_move,
     "scroll": scroll,
     "drag": drag,
+    "setCursorVisibility": set_cursor_visibility,
     "osa": run_osa,
     "elements": get_ui_elements,
     "elementsJson": get_ui_elements_json,
