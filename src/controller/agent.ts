@@ -48,7 +48,7 @@ const SYSTEM_PROMPT = `
    - {"action": "scroll", "params": {"amount": number}}
 7. **drag**: 指定座標から指定座標へドラッグ
    - {"action": "drag", "params": {"from_x": number, "from_y": number, "to_x": number, "to_y": number}}
-8. **elementsJson**: UI要素構造を取得（新しいアプリで最初に実行を推奨）
+8. **elementsJson**: UI要素構造を取得（app_nameは必須です。メニューバー等で名前を確認してください。新しいアプリで最初に実行を推奨）
    - {"action": "elementsJson", "params": {"app_name": string, "max_depth": 3}}
 9. **clickElement**: 名前と役割でUI要素をクリック（座標より堅牢）
    - {"action": "clickElement", "params": {"app_name": string, "role": string, "name": string}}
@@ -515,7 +515,9 @@ export class MacOSAgent extends EventEmitter {
           "point": "click",
           "type_text": "type",
           "wait_seconds": "wait",
-          "search_google": "search"
+          "search_google": "search",
+          "get_element": "elementsJson",
+          "get_elements": "elementsJson"
         };
 
         if (actionMap[parsed.action]) {
@@ -590,6 +592,13 @@ export class MacOSAgent extends EventEmitter {
             break;
           case "done":
             finalAction.params = { message: String(rawParams.message || parsed.message || "Task completed") };
+            break;
+          case "elementsJson":
+            // app_name が欠落している場合の救済
+            finalAction.params = {
+              app_name: String(rawParams.app_name || parsed.app_name || ""),
+              max_depth: Number(rawParams.max_depth || parsed.max_depth || 3)
+            };
             break;
           case "batch":
             // batch の場合は再帰的に処理する必要があるが、一旦そのまま渡す (Schemaが検証する)
