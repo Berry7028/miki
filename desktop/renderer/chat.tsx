@@ -15,7 +15,7 @@ import {
 import {
   Send,
   Stop,
-  Close,
+  DeleteOutline,
   SmartToy,
   Person,
   AutoFixHigh,
@@ -134,8 +134,15 @@ const ChatApp = () => {
     }
   };
 
+  const handleClearChat = () => {
+    setMessages([]);
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
+      // IME composition check
+      if ((e.nativeEvent as any).isComposing) return;
+
       e.preventDefault();
       if (isProcessing) {
         handleStop();
@@ -196,13 +203,14 @@ const ChatApp = () => {
             </Stack>
             <IconButton
               size="small"
-              onClick={() => window.close()}
+              onClick={handleClearChat}
               sx={{
                 bgcolor: "rgba(255,255,255,0.06)",
-                "&:hover": { bgcolor: "rgba(255,255,255,0.12)" },
+                "&:hover": { bgcolor: "rgba(255,100,100,0.15)", color: "#ff6b6b" },
               }}
+              title="Clear Chat"
             >
-              <Close fontSize="small" />
+              <DeleteOutline fontSize="small" />
             </IconButton>
           </Stack>
         </Box>
