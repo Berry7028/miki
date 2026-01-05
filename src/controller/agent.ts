@@ -6,6 +6,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { GeminiCacheManager } from "./cache-manager";
 import { ActionSchema, type Action, type ActionBase, type PythonResponse } from "./types";
 import * as path from "node:path";
+import { ACTION_FUNCTION_DECLARATIONS } from "./function-declarations";
 
 // パフォーマンス最適化設定
 // Note: 環境に応じて調整可能。高速化優先だが、安定性に問題がある場合は値を増やすこと
@@ -29,67 +30,33 @@ const DEBUG_SCREENSHOT_PREVIEW_LENGTH = 50;
 
 const SYSTEM_PROMPT = `
 あなたはMacOSを精密に操作する自動化エージェントです。
-現在のスクリーンショット、マウス位置、履歴に基づき、目標達成のための次の一手を決定してください。
+提供された「関数ツール」（functionCall）だけを使い、現在のスクリーンショット、マウス位置、履歴を踏まえて目標達成のための次の一手を決定してください。
 
-### 利用可能なアクション (厳守)
-以下のアクションとパラメータのみを使用してください。これ以外のツール名や形式はパースエラーとなります。
-
-1. **click**: 特定の座標をクリック
-   - {"action": "click", "params": {"x": number, "y": number}}
-2. **type**: テキストを入力（事前にclickでフォーカスすること）
-   - {"action": "type", "params": {"text": string}}
-3. **press**: 単一のキー（Enter, Esc等）を押す
-   - {"action": "press", "params": {"key": string}}
-4. **hotkey**: 修飾キーを含む組み合わせ（command+t等）
-   - {"action": "hotkey", "params": {"keys": ["command", "t"]}}
-5. **move**: マウスを移動
-   - {"action": "move", "params": {"x": number, "y": number}}
-6. **scroll**: 垂直スクロール
-   - {"action": "scroll", "params": {"amount": number}}
-7. **drag**: 指定座標から指定座標へドラッグ
-   - {"action": "drag", "params": {"from_x": number, "from_y": number, "to_x": number, "to_y": number}}
-8. **elementsJson**: UI要素構造を取得（app_nameは必須です。メニューバー等で名前を確認してください。新しいアプリで最初に実行を推奨）
-   - {"action": "elementsJson", "params": {"app_name": string, "max_depth": 3}}
-9. **clickElement**: 名前と役割でUI要素をクリック（座標より堅牢）
-   - {"action": "clickElement", "params": {"app_name": string, "role": string, "name": string}}
-10. **typeToElement**: 指定要素にテキスト入力
-    - {"action": "typeToElement", "params": {"app_name": string, "role": string, "name": string, "text": string}}
-11. **webElements**: ブラウザ(Comet)内のWeb要素を取得
-    - {"action": "webElements", "params": {"app_name": "Comet"}}
-12. **clickWebElement**: ブラウザ内のWeb要素をクリック
-    - {"action": "clickWebElement", "params": {"app_name": "Comet", "role": string, "name": string}}
-13. **osa**: AppleScriptを実行（アプリ起動やウィンドウ操作に強力）
-    - {"action": "osa", "params": {"script": string}}
-14. **wait**: 指定秒数待機
-    - {"action": "wait", "params": {"seconds": number}}
-15. **batch**: 複数アクションを連続実行
-    - {"action": "batch", "params": {"actions": [ActionObjects]}}
-16. **done**: 全てのタスクが完了
-    - {"action": "done", "params": {"message": string}}
+### 利用可能なアクション
+- 用意された関数ツール (click, type, press, hotkey, move, scroll, drag, elementsJson, clickElement, typeToElement, focusElement, webElements, clickWebElement, osa, wait, search, done) のみを使用してください。
+- 必要に応じて複数の functionCall を一度に返して構いません（依存する順序に注意してください）。
 
 ### 座標系
 - **正規化座標**: X, Yともに **0から1000** の範囲を使用してください。
 - (0,0)は左上、(1000,1000)は右下です。
 - 実際の画面解像度: {SCREEN_WIDTH}x{SCREEN_HEIGHT}。
 
-### 回答の絶対ルール
-- **形式**: 出力は必ず単一のJSONオブジェクトのみにしてください。
-- **配列禁止**: [{"action": ...}] のように配列で囲まないでください。
-- **厳密な命名**: "move_mouse", "mouse_move", "left_click" といった独自のアクション名は使用せず、必ず上記「利用可能なアクション」に記載された通りの名前（click, move等）を使用してください。
-- **パラメータ構造**: パラメータは必ず "params" オブジェクトの中に含めてください。"point" や "x", "y" をトップレベルに置くことは禁止です。
-- **独自キー禁止**: "point": [x,y] や "key_tap" などの独自形式は絶対に使用せず、上記定義に従ってください。
-- **テキスト禁止**: JSON以外の解説文などは一切含めないでください。
-- **単一アクション**: batchを使用する場合を除き、一度の回答で実行するアクションは1つだけにしてください。
+### 回答ルール
+- JSONテキストを返さないでください。必ずfunctionCallとしてツールを呼び出してください。
+- 状態が不明なときは elementsJson / webElements などでUI構造を先に取得してください。
+- ウィンドウが非アクティブな場合は、まずフォーカスを与えてから操作してください。
 
 ### 成功のための戦略
 - **アクティブなアプリの確認**: 現在アクティブなアプリケーションの名前は、画面左上のリンゴマークのすぐ右隣にあるメニューバーに表示されます。操作対象のアプリがアクティブかどうかを判断する際の参考にしてください。
 - **macOSのウィンドウ操作**: 非アクティブなウィンドウ（タイトルバーの色が薄い、背後にある等）を操作する場合、最初のクリックはウィンドウを前面に出す（フォーカスする）ために使われ、要素はクリックされません。
-  - **確実な操作方法**: 対象が非アクティブな場合は、'batch' アクションを使用して、「1回目でウィンドウのタイトルバー等をクリックしてアクティブにする」と「2回目で実際のターゲットをクリックする」の2ステップを連続して実行することを強く推奨します。
   - **確認の徹底**: 各アクションの後、スクリーンショットを見て意図した通りに動いたか（メニューが開いたか、入力されたか等）を確認してください。変化がない場合はウィンドウが非アクティブだった可能性が高いです。
 - **ブラウザ操作**: ブラウザを起動する場合は osa アプリ名は Comet を使用します。
 - **UI把握**: 操作対象の座標が不明確な場合は、まず elementsJson または webElements を実行して位置を確認してください。
 - **堅牢性**: 可能な限り clickElement などの要素ベースの操作を優先してください。
 `;
+
+type GeminiContent = { role: "user" | "model"; parts: any[] };
+type GeminiFunctionCall = { name: string; args?: any };
 
 export class MacOSAgent extends EventEmitter {
   private pythonProcess!: ChildProcessWithoutNullStreams;
@@ -139,18 +106,14 @@ export class MacOSAgent extends EventEmitter {
     this.model = this.genAI.getGenerativeModel({
       model: this.modelName,
       generationConfig: {
-        responseMimeType: "application/json",
         // @ts-ignore
         thinkingConfig: {
           thinkingLevel: "minimal",
         },
       },
-      tools: [
-        {
-          // @ts-ignore
-          googleSearch: {},
-        },
-      ] as any,
+      tools: {
+        functionDeclarations: ACTION_FUNCTION_DECLARATIONS,
+      },
     });
 
     this.startPythonProcess();
@@ -310,19 +273,14 @@ export class MacOSAgent extends EventEmitter {
     this.removeAllListeners();
   }
 
-  private async getActionFromLLM(
-    history: any[],
+  private async getActionsFromLLM(
+    history: GeminiContent[],
     screenshotBase64: string,
     mousePosition: { x: number; y: number },
-  ): Promise<Action> {
+  ): Promise<{ calls: GeminiFunctionCall[]; actions: Action[] }> {
     const normX = Math.round((mousePosition.x / (this.screenSize.width || 1)) * 1000);
     const normY = Math.round((mousePosition.y / (this.screenSize.height || 1)) * 1000);
 
-    let retryCount = 0;
-    const maxRetries = 3;
-    let errorMessage = "";
-
-    // キャッシュの利用確認 (Phase 1)
     const cacheName = this.cacheManager.getSystemPromptCacheName();
     let activeModel = this.model;
 
@@ -332,312 +290,103 @@ export class MacOSAgent extends EventEmitter {
         { 
           model: this.modelName,
           generationConfig: {
-            responseMimeType: "application/json",
             // @ts-ignore
             thinkingConfig: {
               thinkingLevel: "minimal",
             },
           },
-          tools: [
-            {
-              // @ts-ignore
-              googleSearch: {},
-            },
-          ] as any,
+          tools: {
+            functionDeclarations: ACTION_FUNCTION_DECLARATIONS,
+          },
         },
         { cachedContent: cacheName }
       );
       this.log("info", `Using prompt cache: ${cacheName}`);
     }
 
-    while (retryCount < maxRetries) {
-      const geminiHistory = history.map((h) => {
-        if (typeof h.content === "string") {
-          return { role: h.role === "assistant" ? "model" : "user", parts: [{ text: h.content }] };
-        } else if (Array.isArray(h.content)) {
-          const parts = h.content.map((c: any) => {
-            if (c.type === "text") return { text: c.text };
-            if (c.type === "image_url") {
-              const url = c.image_url.url;
-              const base64Data = url.split(",")[1];
-              // 画像形式を自動検出（data:image/jpeg;base64, または data:image/png;base64,）
-              // 正規表現でMIMEタイプをキャプチャ（image/jpeg, image/png, image/webp等）
-              const mimeMatch = url.match(/^data:(image\/[a-z0-9.+-]+);base64,/i);
-              const mimeType = mimeMatch?.[1] ?? "image/jpeg";
-              return { inlineData: { data: base64Data, mimeType } };
-            }
-            return { text: "" };
-          });
-          return { role: h.role === "assistant" ? "model" : "user", parts };
-        }
-        return { role: "user", parts: [{ text: "" }] };
-      });
+    const formattedPrompt = SYSTEM_PROMPT
+      .replace("{SCREEN_WIDTH}", this.screenSize.width.toString())
+      .replace("{SCREEN_HEIGHT}", this.screenSize.height.toString());
 
-      const promptText =
-        retryCount === 0
-          ? `現在のマウスカーソル位置: (${normX}, ${normY}) [正規化座標]。
-目標を達成するための次のアクションは何ですか？スクリーンショットで位置を確認してください。`
-          : `前回の回答のパースに失敗しました。
-エラー: ${errorMessage}
+    const promptText = `現在のマウスカーソル位置: (${normX}, ${normY}) [正規化座標]。スクリーンショットを見て次のアクションをfunctionCallとして提案してください。必要に応じて複数提案して構いません。`;
 
-必ず有効なJSON形式で、指定されたスキーマに従って回答してください。
-余計な解説やJSON以外のテキストは一切含めないでください。
-現在のマウスカーソル位置: (${normX}, ${normY}) [正規化座標]。`;
-
-      const promptParts: any[] = [];
-      
-      // キャッシュがない場合のみシステムプロンプトを含める
-      if (!cacheName) {
-        const formattedPrompt = SYSTEM_PROMPT
-          .replace("{SCREEN_WIDTH}", this.screenSize.width.toString())
-          .replace("{SCREEN_HEIGHT}", this.screenSize.height.toString());
-        promptParts.push({ text: formattedPrompt });
-      }
-
-      promptParts.push(...geminiHistory.flatMap((h: any) => h.parts));
-      promptParts.push({ text: promptText });
-      promptParts.push({
-        inlineData: {
-          data: screenshotBase64,
-          mimeType: "image/jpeg",
+    const contents: GeminiContent[] = [];
+    if (!cacheName) {
+      contents.push({ role: "user", parts: [{ text: formattedPrompt }] });
+    }
+    contents.push(...history);
+    contents.push({
+      role: "user",
+      parts: [
+        { text: promptText },
+        {
+          inlineData: {
+            data: screenshotBase64,
+            mimeType: "image/jpeg",
+          },
         },
-      });
+      ],
+    });
 
-      // デバッグログ: AIに送る内容
-      if (this.debugMode) {
-        const historyDescription = geminiHistory.map((h, i) => {
-          const partsDescription = h.parts.map((p: any) => {
+    if (this.debugMode) {
+      const historyDescription = contents.map((h, i) => {
+        const partsDescription = h.parts
+          .map((p: any) => {
             if (p.text) return `text(${p.text.substring(0, 100)}...)`;
             if (p.inlineData) return `image(${p.inlineData.mimeType})`;
+            if (p.functionCall) return `functionCall(${p.functionCall.name})`;
+            if (p.functionResponse) return `functionResponse(${p.functionResponse.name})`;
             return "unknown";
-          }).join(", ");
-          return `History[${i}] (${h.role}): ${partsDescription}`;
-        }).join("\n[DEBUG]   ");
+          })
+          .join(", ");
+        return `History[${i}] (${h.role}): ${partsDescription}`;
+      }).join("\n[DEBUG]   ");
 
-        this.debugLogSection(`Sending to AI (Step ${this.currentStep}, Retry ${retryCount})`, {
-          "Using cache": cacheName || "No",
-          "Prompt text": promptText,
-          "History length": `${geminiHistory.length} messages`,
-          "Total prompt parts": promptParts.length,
-          "History details": `\n[DEBUG]   ${historyDescription}`,
-          "Screenshot": screenshotBase64.substring(0, DEBUG_SCREENSHOT_PREVIEW_LENGTH)
+      this.debugLogSection(`Sending to AI (Step ${this.currentStep})`, {
+        "Using cache": cacheName || "No",
+        "Prompt text": promptText,
+        "History length": `${history.length} messages`,
+        "Total contents": contents.length,
+        "History details": `\n[DEBUG]   ${historyDescription}`,
+        "Screenshot": screenshotBase64.substring(0, DEBUG_SCREENSHOT_PREVIEW_LENGTH)
+      });
+    }
+
+    try {
+      const response = await activeModel.generateContent({ contents });
+      const functionCalls: GeminiFunctionCall[] =
+        typeof response.response.functionCalls === "function"
+          ? response.response.functionCalls()
+          : [];
+
+      if (!functionCalls || functionCalls.length === 0) {
+        throw new Error("GeminiからfunctionCallが返されませんでした。");
+      }
+
+      const actions = functionCalls.map((call) => this.parseFunctionCall(call));
+
+      if (this.debugMode) {
+        this.debugLogSection(`AI functionCalls (Step ${this.currentStep})`, {
+          calls: functionCalls,
+          actions: actions,
         });
       }
 
-      let fullContent = "";
-      let thoughtProcess = "";
-      const thoughtId = `thought-${this.currentStep}-${retryCount}`;
-
-      try {
-        const resultStream = await activeModel.generateContentStream(promptParts);
-        for await (const chunk of resultStream.stream) {
-          // @ts-ignore
-          const parts = chunk.candidates?.[0]?.content?.parts || [];
-          for (const part of parts) {
-            // @ts-ignore
-            if (part.thought) {
-              // @ts-ignore
-              thoughtProcess += part.text;
-              this.emit("log", {
-                id: thoughtId,
-                type: "thought",
-                message: thoughtProcess,
-                timestamp: new Date(),
-                isComplete: false,
-              });
-            } else if (part.text) {
-              fullContent += part.text;
-            }
-          }
-        }
-
-        if (thoughtProcess) {
-          this.emit("log", {
-            id: thoughtId,
-            type: "thought",
-            message: thoughtProcess,
-            timestamp: new Date(),
-            isComplete: true,
-          });
-        }
-      } catch (error: any) {
-        this.log("error", `Geminiストリーミング失敗: ${error?.message || error}`);
-        this.log("info", "非ストリーミングで再試行します。");
-        try {
-          const response = await activeModel.generateContent(promptParts);
-          fullContent = response.response.text();
-        } catch (fallbackError: any) {
-          this.log(
-            "error",
-            `Gemini非ストリーミング失敗: ${fallbackError?.message || fallbackError}`,
-          );
-          throw fallbackError;
-        }
-      }
-
-      let content = fullContent;
-      const rawContent = content;
-
-      // デバッグログ: AIからの応答
-      if (this.debugMode) {
-        const debugInfo: Record<string, any> = { "Raw response": rawContent };
-        if (thoughtProcess) {
-          debugInfo["Thought process"] = thoughtProcess;
-        }
-        this.debugLogSection(`AI Response (Step ${this.currentStep}, Retry ${retryCount})`, debugInfo);
-      }
-
-      const jsonMatch =
-        content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/```\s*([\s\S]*?)\s*```/);
-      if (jsonMatch && jsonMatch[1]) {
-        content = jsonMatch[1].trim();
-      } else {
-        content = content.trim();
-      }
-
-      try {
-        let parsed = JSON.parse(content);
-        
-        // 配列で返ってきた場合は最初の要素を取得
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          parsed = parsed[0];
-        }
-
-        // Geminiがよく使うアクション名やパラメータの揺らぎを補正
-        const actionMap: Record<string, string> = {
-          "move_mouse": "move",
-          "mouse_move": "move",
-          "left_click": "click",
-          "right_click": "click",
-          "double_click": "click",
-          "key_tap": "hotkey",
-          "key_combination": "hotkey",
-          "point": "click",
-          "type_text": "type",
-          "wait_seconds": "wait",
-          "search_google": "search",
-          "get_element": "elementsJson",
-          "get_elements": "elementsJson"
-        };
-
-        if (actionMap[parsed.action]) {
-          parsed.action = actionMap[parsed.action];
-        }
-
-        // 座標指定の揺らぎを補完するためのヘルパー
-        const extractCoords = (obj: any) => {
-          if (!obj) return null;
-          if (obj.point && Array.isArray(obj.point) && obj.point.length === 2) return { x: obj.point[0], y: obj.point[1] };
-          if (obj.location && Array.isArray(obj.location) && obj.location.length === 2) return { x: obj.location[0], y: obj.location[1] };
-          if (obj.x !== undefined && obj.y !== undefined) return { x: obj.x, y: obj.y };
-          return null;
-        };
-
-        // --- 最終的な Action オブジェクトの厳密な再構築 ---
-        // AIが勝手に付け足した余計なプロパティ(memo, action_type等)を排除し、
-        // ActionSchema (Zod) が期待する形式に完全に整形する
-        const finalAction: any = { action: parsed.action };
-        const rawParams = parsed.params || {};
-
-        switch (parsed.action) {
-          case "click":
-          case "move": {
-            const c = extractCoords(parsed) || extractCoords(rawParams);
-            finalAction.params = { 
-              x: Number(c?.x ?? rawParams.x ?? 0), 
-              y: Number(c?.y ?? rawParams.y ?? 0) 
-            };
-            break;
-          }
-          case "type":
-            finalAction.params = { text: String(rawParams.text || parsed.text || "") };
-            break;
-          case "press":
-            finalAction.params = { key: String(rawParams.key || parsed.key || "") };
-            break;
-          case "hotkey": {
-            let keys = rawParams.keys || parsed.keys;
-            if (!keys && (rawParams.key_combination || parsed.key_combination)) {
-              keys = (rawParams.key_combination || parsed.key_combination).split("+");
-            }
-            if (!keys && rawParams.key && rawParams.modifiers) {
-              keys = [...rawParams.modifiers, rawParams.key];
-            }
-            finalAction.params = { keys: Array.isArray(keys) ? keys : [] };
-            break;
-          }
-          case "scroll":
-            finalAction.params = { 
-              amount: Number(rawParams.amount ?? parsed.amount ?? 0) 
-            };
-            break;
-          case "drag": {
-            const from = extractCoords(rawParams.from || parsed.from);
-            const to = extractCoords(rawParams.to || parsed.to);
-            finalAction.params = {
-              from_x: Number(from?.x ?? rawParams.from_x ?? 0),
-              from_y: Number(from?.y ?? rawParams.from_y ?? 0),
-              to_x: Number(to?.x ?? rawParams.to_x ?? 0),
-              to_y: Number(to?.y ?? rawParams.to_y ?? 0),
-            };
-            break;
-          }
-          case "wait":
-            finalAction.params = { 
-              seconds: Number(rawParams.seconds ?? parsed.seconds ?? 1) 
-            };
-            break;
-          case "search":
-            finalAction.params = { query: String(rawParams.query || parsed.query || "") };
-            break;
-          case "done":
-            finalAction.params = { message: String(rawParams.message || parsed.message || "Task completed") };
-            break;
-          case "elementsJson":
-            // app_name が欠落している場合の救済
-            finalAction.params = {
-              app_name: String(rawParams.app_name || parsed.app_name || ""),
-              max_depth: Number(rawParams.max_depth || parsed.max_depth || 3)
-            };
-            break;
-          case "batch":
-            // batch の場合は再帰的に処理する必要があるが、一旦そのまま渡す (Schemaが検証する)
-            finalAction.params = rawParams;
-            break;
-          default:
-            // その他のアクション (elementsJson, clickElement, webElements 等)
-            // これらは元々 params を持っているはずなのでそのまま活かす
-            finalAction.params = rawParams;
-            // params が空でトップレベルに情報がある場合の救済
-            if (Object.keys(rawParams).length === 0) {
-              const { action, ...rest } = parsed;
-              finalAction.params = rest;
-            }
-        }
-
-        // デバッグログ: パース・再構築結果
-        this.debugLog(`[DEBUG] Reconstructed action: ${JSON.stringify(finalAction, null, 2)}`);
-
-        return ActionSchema.parse(finalAction);
-      } catch (e: any) {
-        const errorDetail = e.errors ? JSON.stringify(e.errors, null, 2) : e.message;
-        this.log("error", `Geminiレスポンスのパース失敗 (試行 ${retryCount + 1}/${maxRetries})`);
-        this.log("error", `エラー詳細: ${errorDetail}`);
-        this.log("error", `生コンテンツ: ${rawContent}`);
-        errorMessage = errorDetail;
-
-        // 失敗した回答を履歴に追加して、次のリトライに活かす
-        history.push({ role: "assistant", content: rawContent });
-        retryCount++;
-      }
+      return { calls: functionCalls, actions };
+    } catch (e: any) {
+      this.log("error", `Geminiレスポンスの取得に失敗: ${e?.message || e}`);
+      throw e;
     }
+  }
 
-    throw new Error(`Failed to get valid action from Gemini after ${maxRetries} retries.`);
+  private parseFunctionCall(call: GeminiFunctionCall): Action {
+    const candidate: any = { action: call.name, params: call.args || {} };
+    return ActionSchema.parse(candidate);
   }
 
   private async executeAction(
     action: ActionBase,
-  ): Promise<{ result: PythonResponse; observationContent: any[] }> {
+  ): Promise<{ result: PythonResponse; functionResponse: { name: string; response: any } }> {
     let execParams = { ...(action as any).params };
     let highlightPos: { x: number; y: number } | null = null;
 
@@ -707,31 +456,32 @@ export class MacOSAgent extends EventEmitter {
       this.log("info", `  アクション ${action.action}: ${result.execution_time_ms}ms`);
     }
 
-    let observationContent: any[] = [
-      {
-        type: "text",
-        text: `Action ${action.action} performed. Result: ${JSON.stringify(result)}`,
-      },
-    ];
-
+    let screenshotBase64: string | undefined;
     if (highlightPos) {
       const hRes = await this.callPython("screenshot", { 
         highlight_pos: highlightPos,
         quality: PERFORMANCE_CONFIG.SCREENSHOT_QUALITY 
       });
       if (hRes.status === "success" && hRes.data) {
-        observationContent.push({
-          type: "image_url",
-          image_url: { url: `data:image/jpeg;base64,${hRes.data}` },
-        });
-        observationContent.push({
-          type: "text",
-          text: "The red dot in the screenshot above shows where the action was performed.",
-        });
+        screenshotBase64 = hRes.data;
       }
     }
 
-    return { result, observationContent };
+    const responsePayload: any = {
+      status: result.status,
+      message: result.message,
+      execution_time_ms: result.execution_time_ms,
+      data: result.data,
+      ui_data: result.ui_data,
+      elements: result.elements,
+      mouse_position: result.mouse_position,
+    };
+
+    if (screenshotBase64) {
+      responsePayload.screenshot = screenshotBase64;
+    }
+
+    return { result, functionResponse: { name: action.action, response: responsePayload } };
   }
 
   async run(goal: string) {
@@ -769,23 +519,18 @@ export class MacOSAgent extends EventEmitter {
       return;
     }
 
-    const history: any[] = [
-      { role: "user", content: `私の目標は次の通りです: ${goal}` },
+    const history: GeminiContent[] = [
+      { role: "user", parts: [{ text: `私の目標は次の通りです: ${goal}` }] },
       {
         role: "user",
-        content: [
-          {
-            type: "text",
-            text: "これが現在のデスクトップの初期状態です。この画面から操作を開始してください。",
-          },
-          {
-            type: "image_url",
-            image_url: { url: `data:image/jpeg;base64,${initRes.data}` },
-          },
+        parts: [
+          { text: "これが現在のデスクトップの初期状態です。この画面から操作を開始してください。" },
+          { inlineData: { data: initRes.data, mimeType: "image/jpeg" } },
         ],
       },
     ];
     this.currentStep = 0;
+    let completed = false;
 
     while (this.currentStep < PERFORMANCE_CONFIG.MAX_STEPS) {
       if (this.stopRequested) {
@@ -802,7 +547,7 @@ export class MacOSAgent extends EventEmitter {
         if (hint) {
           history.push({
             role: "user",
-            content: `[ユーザーからの追加指示/ヒント]: ${hint}`,
+            parts: [{ text: `[ユーザーからの追加指示/ヒント]: ${hint}` }],
           });
           this.log("hint", `ヒントを履歴に追加: ${hint}`);
         }
@@ -831,54 +576,81 @@ export class MacOSAgent extends EventEmitter {
       }
 
       this.emitStatus("thinking");
-      const action = await this.getActionFromLLM(history, screenshot, mousePosition);
+      const { actions, calls } = await this.getActionsFromLLM(history, screenshot, mousePosition);
       this.emitStatus("running");
-      this.log("action", `アクション: ${JSON.stringify(action)}`);
+      actions.forEach((action) => this.log("action", `アクション: ${JSON.stringify(action)}`));
 
-      if (action.action === "done") {
-        this.log("success", `完了: ${action.params.message}`);
-        this.emit("completed", action.params.message);
+      for (let i = 0; i < actions.length; i++) {
+        const action = actions[i];
+        const call = calls[i];
+
+        history.push({ role: "model", parts: [{ functionCall: call }] });
+
+        if (action.action === "done") {
+          this.log("success", `完了: ${action.params.message}`);
+          history.push({
+            role: "user",
+            parts: [{ functionResponse: { name: call.name, response: { status: "success", message: action.params.message } } }],
+          });
+          this.emit("completed", action.params.message);
+          completed = true;
+          break;
+        }
+
+        if (action.action === "wait") {
+          this.log("info", `${action.params.seconds}秒待機中...`);
+          await new Promise((r) => setTimeout(r, action.params.seconds * 1000));
+          history.push({
+            role: "user",
+            parts: [{ functionResponse: { name: call.name, response: { status: "success", waited_seconds: action.params.seconds } } }],
+          });
+          continue;
+        }
+
+        if (action.action === "search") {
+          this.log("info", `AI検索実行: ${action.params.query}`);
+          history.push({
+            role: "user",
+            parts: [
+              {
+                functionResponse: {
+                  name: call.name,
+                  response: {
+                    status: "success",
+                    query: action.params.query,
+                    note: "検索は内部知識で処理されました。結果をもとに次の操作を決定してください。",
+                  },
+                },
+              },
+            ],
+          });
+          continue;
+        }
+
+        if (action.action === "batch") {
+          this.log("info", `バッチ実行: ${action.params.actions.length}個のアクション`);
+          const batchResults: any[] = [];
+          for (const subAction of action.params.actions) {
+            const { functionResponse } = await this.executeAction(subAction);
+            batchResults.push(functionResponse);
+            await new Promise((r) => setTimeout(r, PERFORMANCE_CONFIG.BATCH_ACTION_DELAY_MS));
+          }
+          history.push({
+            role: "user",
+            parts: [
+              { functionResponse: { name: call.name, response: { status: "success", results: batchResults } } },
+            ],
+          });
+          continue;
+        }
+
+        const { functionResponse } = await this.executeAction(action as ActionBase);
+        history.push({ role: "user", parts: [{ functionResponse }] });
+      }
+
+      if (completed) {
         break;
       }
-
-      if (action.action === "wait") {
-        this.log("info", `${action.params.seconds}秒待機中...`);
-        await new Promise((r) => setTimeout(r, action.params.seconds * 1000));
-        history.push({
-          role: "assistant",
-          content: `I waited for ${action.params.seconds} seconds.`,
-        });
-        this.currentStep++;
-        continue;
-      }
-
-      if (action.action === "search") {
-        this.log("info", `AI検索実行: ${action.params.query}`);
-        history.push({ role: "assistant", content: JSON.stringify(action) });
-        history.push({
-          role: "user",
-          content: `[System]: Google検索「${action.params.query}」の結果、必要な情報はあなたの知識ベースまたは内部ツールを通じて収集されました。得られた知見を元に、次のアクションを実行してください。`,
-        });
-        this.currentStep++;
-        continue;
-      }
-
-      let finalObservationContent: any[] = [];
-
-      if (action.action === "batch") {
-        this.log("info", `バッチ実行: ${action.params.actions.length}個のアクション`);
-        for (const subAction of action.params.actions) {
-          const { observationContent } = await this.executeAction(subAction);
-          finalObservationContent.push(...observationContent);
-          await new Promise((r) => setTimeout(r, PERFORMANCE_CONFIG.BATCH_ACTION_DELAY_MS));
-        }
-      } else {
-        const { observationContent } = await this.executeAction(action as ActionBase);
-        finalObservationContent.push(...observationContent);
-      }
-
-      history.push({ role: "assistant", content: JSON.stringify(action) });
-      history.push({ role: "user", content: finalObservationContent });
 
       this.currentStep++;
       await new Promise((r) => setTimeout(r, PERFORMANCE_CONFIG.STEP_DELAY_MS));
