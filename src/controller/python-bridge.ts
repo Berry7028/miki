@@ -96,9 +96,33 @@ export class PythonBridge {
   }
 
   async call(action: string, params: any = {}): Promise<PythonResponse> {
-    return new Promise((resolve) => {
-      this.pendingResolvers.push(resolve);
-      this.pythonProcess.stdin.write(JSON.stringify({ action, params }) + "\n");
+    return new Promise((resolve, reject) => {
+      // Add timeout to prevent hanging
+      const timeout = setTimeout(() => {
+        const index = this.pendingResolvers.indexOf(resolve);
+        if (index > -1) {
+          this.pendingResolvers.splice(index, 1);
+        }
+        reject(new Error(`Python call timeout for action: ${action}`));
+      }, 30000); // 30 second timeout
+
+      const wrappedResolve = (value: any) => {
+        clearTimeout(timeout);
+        resolve(value);
+      };
+
+      this.pendingResolvers.push(wrappedResolve);
+      
+      try {
+        this.pythonProcess.stdin.write(JSON.stringify({ action, params }) + "\n");
+      } catch (e) {
+        clearTimeout(timeout);
+        const index = this.pendingResolvers.indexOf(wrappedResolve);
+        if (index > -1) {
+          this.pendingResolvers.splice(index, 1);
+        }
+        reject(new Error(`Failed to write to Python process: ${e}`));
+      }
     });
   }
 
@@ -111,7 +135,37 @@ export class PythonBridge {
   }
 
   destroy() {
-    this.pythonProcess.kill();
-    this.pythonReader.close();
+    this.isRestarting = true; // Prevent restart on exit
+    
+    // Reject all pending resolvers
+    const error = new Error("PythonBridge is being destroyed");
+    while (this.pendingResolvers.length > 0) {
+      const resolver = this.pendingResolvers.shift();
+      if (resolver) {
+        // We can't reject since these are resolve-only, but we can clear them
+        // In the improved call() method, we handle this better
+      }
+    }
+    
+    try {
+      this.pythonReader.close();
+    } catch (e) {
+      // Ignore errors during cleanup
+    }
+    
+    try {
+      this.pythonProcess.kill("SIGTERM");
+      
+      // Force kill after 2 seconds if still running
+      setTimeout(() => {
+        try {
+          this.pythonProcess.kill("SIGKILL");
+        } catch (e) {
+          // Process already terminated
+        }
+      }, 2000);
+    } catch (e) {
+      // Process already terminated
+    }
   }
 }

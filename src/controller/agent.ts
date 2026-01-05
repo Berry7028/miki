@@ -43,11 +43,24 @@ export class MacOSAgent extends EventEmitter {
     if (!apiKey) {
       throw new Error("GEMINI_API_KEY環境変数が設定されていません。");
     }
-    const nonAsciiIndex = [...apiKey].findIndex((char) => char.codePointAt(0)! > 255);
+    
+    // API key validation
+    const trimmedKey = apiKey.trim();
+    if (trimmedKey.length === 0) {
+      throw new Error("GEMINI_API_KEYが空です。設定画面で正しいAPIキーを保存してください。");
+    }
+    if (trimmedKey.length < 20) {
+      throw new Error("GEMINI_API_KEYが短すぎます。正しいAPIキーを設定してください。");
+    }
+    const nonAsciiIndex = [...trimmedKey].findIndex((char) => char.codePointAt(0)! > 127);
     if (nonAsciiIndex !== -1) {
       throw new Error(
         `GEMINI_API_KEYに非ASCII文字が含まれています (index ${nonAsciiIndex})。設定画面で正しいAPIキーを保存してください。`,
       );
+    }
+    // Check for common invalid patterns
+    if (/\s/.test(trimmedKey)) {
+      throw new Error("GEMINI_API_KEYに空白文字が含まれています。設定画面で正しいAPIキーを保存してください。");
     }
 
     // PythonBridge初期化

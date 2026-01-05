@@ -57,6 +57,17 @@ ACTION_HANDLERS = {
 
 def dispatch_action(action, params):
     """アクションをディスパッチして実行する"""
+    # Validate action name
+    if not isinstance(action, str):
+        return {"status": "error", "message": "Invalid action type"}
+    
+    if not action or len(action) > 100:
+        return {"status": "error", "message": "Invalid action name"}
+    
+    # Validate params
+    if not isinstance(params, dict):
+        return {"status": "error", "message": "Invalid params type"}
+    
     handler = ACTION_HANDLERS.get(action)
     if handler:
         return handler(**params)
@@ -72,6 +83,12 @@ def main():
             break
 
         try:
+            # Prevent processing extremely large inputs
+            if len(line) > 100000:
+                print(json.dumps({"status": "error", "message": "Input too large"}, ensure_ascii=False))
+                sys.stdout.flush()
+                continue
+            
             start_time = time.time()
             command_data = json.loads(line)
             action = command_data.get("action")
@@ -89,6 +106,9 @@ def main():
             result["execution_time_ms"] = int((end_time - start_time) * 1000)
 
             print(json.dumps(result, ensure_ascii=False))
+            sys.stdout.flush()
+        except json.JSONDecodeError as e:
+            print(json.dumps({"status": "error", "message": f"Invalid JSON: {str(e)}"}, ensure_ascii=False))
             sys.stdout.flush()
         except Exception as e:
             print(json.dumps({"status": "error", "message": str(e)}, ensure_ascii=False))

@@ -315,6 +315,21 @@ function readApiKey() {
 function writeApiKey(apiKey) {
   const envPath = envFilePath();
   const value = (apiKey || "").trim();
+  
+  // Validate API key before writing
+  if (value.length > 0) {
+    if (value.length < 20) {
+      throw new Error("API key is too short");
+    }
+    if (/\s/.test(value)) {
+      throw new Error("API key contains whitespace");
+    }
+    // Check for non-ASCII characters
+    if (!/^[\x00-\x7F]*$/.test(value)) {
+      throw new Error("API key contains non-ASCII characters");
+    }
+  }
+  
   fs.writeFileSync(envPath, `GEMINI_API_KEY=${value}\n`, "utf-8");
 }
 
@@ -438,8 +453,12 @@ ipcMain.handle("miki:reset", () => {
 ipcMain.handle("miki:getApiKey", () => readApiKey());
 
 ipcMain.handle("miki:setApiKey", (_event, apiKey) => {
-  writeApiKey(apiKey);
-  return true;
+  try {
+    writeApiKey(apiKey);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 });
 
 ipcMain.handle("miki:getSetupStatus", () => getSetupStatus());
