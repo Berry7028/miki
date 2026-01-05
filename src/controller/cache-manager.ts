@@ -6,7 +6,7 @@ import type { CacheMetadata } from "./types";
 export class GeminiCacheManager {
   private cacheManager: any;
   private apiKey: string;
-  private modelName: string = "gemini-1.5-flash-001"; // Default model for caching
+  private modelName: string = "gemini-3-flash-preview"; // Default model for caching
   private systemPromptCache: CacheMetadata | null = null;
   private uiElementsCaches: Map<string, CacheMetadata> = new Map();
 
@@ -22,7 +22,7 @@ export class GeminiCacheManager {
   /**
    * システムプロンプトをキャッシュに保存する
    * @param systemPrompt キャッシュするシステムプロンプト
-   * @param model モデル名 (例: "models/gemini-1.5-flash-001")
+   * @param model モデル名 (例: "models/gemini-3-flash-preview")
    */
   async createSystemPromptCache(systemPrompt: string, model: string): Promise<CacheMetadata | null> {
     if (!this.cacheManager) return null;
