@@ -356,10 +356,10 @@ export class MacOSAgent extends EventEmitter {
       const response = await activeModel.generateContent({ contents });
       const rawFunctionCalls = (response as any).response?.functionCalls;
       const functionCalls: GeminiFunctionCall[] =
-        typeof rawFunctionCalls === "function"
-          ? rawFunctionCalls()
-          : Array.isArray(rawFunctionCalls)
-            ? rawFunctionCalls
+        Array.isArray(rawFunctionCalls)
+          ? rawFunctionCalls
+          : typeof rawFunctionCalls === "function"
+            ? rawFunctionCalls()
             : [];
 
       if (!functionCalls || functionCalls.length === 0) {
@@ -369,10 +369,9 @@ export class MacOSAgent extends EventEmitter {
       const actions = functionCalls.map((call) => this.parseFunctionCall(call));
 
       if (actions.length !== functionCalls.length) {
-        this.log(
-          "error",
-          `functionCallの数とパース済みアクションの数が一致しません (calls=${functionCalls.length}, actions=${actions.length})`,
-        );
+        const mismatchMessage = `functionCallの数とパース済みアクションの数が一致しません (calls=${functionCalls.length}, actions=${actions.length})`;
+        this.log("error", mismatchMessage);
+        throw new Error(mismatchMessage);
       }
 
       if (this.debugMode) {

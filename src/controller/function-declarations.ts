@@ -179,7 +179,7 @@ export const ACTION_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
   },
   {
     name: "batch",
-    description: "複数のアクションを順番に実行します。各要素は他の関数ツールと同じ引数構造（ActionSchemaで検証）を持つ必要があります。",
+    description: "複数のアクションを順番に実行します。各要素は他の関数ツールと同じ引数構造を持つ必要があり、コントローラー側でスキーマ検証されます。",
     parameters: {
       type: "object",
       properties: {
