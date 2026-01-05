@@ -387,7 +387,7 @@ export class MacOSAgent extends EventEmitter {
     const fnCalls = response?.response?.functionCalls;
     if (Array.isArray(fnCalls)) return fnCalls;
 
-    // 一部のSDK実装では functionCalls() がメソッドとして提供されるため、そのケースも許容する
+    // Gemini JS SDK (v0.24系) では response.functionCalls() ヘルパーが用意されているため、そのケースも許容する
     if (typeof fnCalls === "function") {
       try {
         const maybe = fnCalls();
@@ -600,6 +600,12 @@ export class MacOSAgent extends EventEmitter {
       const { actions, calls } = await this.getActionsFromLLM(history, screenshot, mousePosition);
       this.emitStatus("running");
       actions.forEach((action) => this.log("action", `アクション: ${JSON.stringify(action)}`));
+
+      if (actions.length !== calls.length) {
+        const mismatchMsg = `functionCall配列とアクション配列の長さが一致しません (calls=${calls.length}, actions=${actions.length})`;
+        this.log("error", mismatchMsg);
+        throw new Error(mismatchMsg);
+      }
 
       for (let i = 0; i < actions.length; i++) {
         const action = actions[i];

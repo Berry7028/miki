@@ -3,7 +3,7 @@ import type { FunctionDeclaration } from "@google/generative-ai";
 export const ACTION_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
   {
     name: "click",
-    description: "指定した正規化座標(0-1000)を単一の左クリックで操作します。クリック先のUIを確実にアクティブ化する際に使用します。",
+    description: "指定した正規化座標(0-1000)を単一の左クリックで操作します（本システムは0-1000で正規化）。クリック先のUIを確実にアクティブ化する際に使用します。",
     parameters: {
       type: "object",
       properties: {
