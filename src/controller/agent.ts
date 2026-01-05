@@ -57,6 +57,7 @@ const SYSTEM_PROMPT = `
 
 type GeminiContent = { role: "user" | "model"; parts: any[] };
 type GeminiFunctionCall = { name: string; args?: any };
+type GeminiResponse = { response?: { functionCalls?: GeminiFunctionCall[] | (() => GeminiFunctionCall[]) } };
 
 export class MacOSAgent extends EventEmitter {
   private pythonProcess!: ChildProcessWithoutNullStreams;
@@ -354,7 +355,7 @@ export class MacOSAgent extends EventEmitter {
 
     try {
       const response = await activeModel.generateContent({ contents });
-      const functionCalls = this.extractFunctionCalls(response);
+      const functionCalls = this.extractFunctionCalls(response as GeminiResponse);
 
       if (!functionCalls || functionCalls.length === 0) {
         throw new Error("GeminiからfunctionCallが返されませんでした。");
@@ -382,10 +383,11 @@ export class MacOSAgent extends EventEmitter {
     }
   }
 
-  private extractFunctionCalls(response: any): GeminiFunctionCall[] {
-    const fnCalls = (response as any)?.response?.functionCalls;
+  private extractFunctionCalls(response: GeminiResponse): GeminiFunctionCall[] {
+    const fnCalls = response?.response?.functionCalls;
     if (Array.isArray(fnCalls)) return fnCalls;
 
+    // 一部のSDK実装では functionCalls() がメソッドとして提供されるため、そのケースも許容する
     if (typeof fnCalls === "function") {
       try {
         const maybe = fnCalls();
