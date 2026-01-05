@@ -175,43 +175,19 @@ const ChatApp = () => {
           }}
         >
           <Stack direction="row" alignItems="center" justifyContent="space-between">
-            <Stack direction="row" spacing={1.5} alignItems="center">
-              <Avatar
+            <Box sx={{ ml: "auto" }}>
+              <IconButton
+                size="small"
+                onClick={handleClearChat}
                 sx={{
-                  bgcolor: "rgba(230,214,184,0.2)",
-                  color: "#e6d6b8",
-                  width: 28,
-                  height: 28,
+                  bgcolor: "rgba(255,255,255,0.06)",
+                  "&:hover": { bgcolor: "rgba(255,100,100,0.15)", color: "#ff6b6b" },
                 }}
+                title="Clear Chat"
               >
-                <SmartToy sx={{ fontSize: 16 }} />
-              </Avatar>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                MIKI DESKTOP
-              </Typography>
-              <Box
-                sx={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: "50%",
-                  bgcolor: isProcessing ? "#f0a54a" : "#4fd08a",
-                  boxShadow: isProcessing
-                    ? "0 0 8px rgba(240,165,74,0.7)"
-                    : "0 0 8px rgba(79,208,138,0.6)",
-                }}
-              />
-            </Stack>
-            <IconButton
-              size="small"
-              onClick={handleClearChat}
-              sx={{
-                bgcolor: "rgba(255,255,255,0.06)",
-                "&:hover": { bgcolor: "rgba(255,100,100,0.15)", color: "#ff6b6b" },
-              }}
-              title="Clear Chat"
-            >
-              <DeleteOutline fontSize="small" />
-            </IconButton>
+                <DeleteOutline fontSize="small" />
+              </IconButton>
+            </Box>
           </Stack>
         </Box>
 

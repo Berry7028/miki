@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, systemPreferences, globalShortcut, screen } = require("electron");
+const { app, BrowserWindow, ipcMain, shell, systemPreferences, globalShortcut, screen, Tray, Menu, nativeImage } = require("electron");
 const { spawn, execSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -7,8 +7,10 @@ const readline = require("node:readline");
 let mainWindow;
 let chatWindow;
 let overlayWindow;
+let tray;
 let controllerProcess;
 let controllerReader;
+let isQuitting = false;
 
 // デバッグモードフラグ (コマンドライン引数 --debug で有効化)
 const debugMode = process.argv.includes("--debug");
@@ -32,7 +34,55 @@ function createWindow() {
   win.setAlwaysOnTop(true, "screen-saver");
 
   win.loadFile(path.join(__dirname, "renderer", "index.html"));
+
+  win.on("close", (event) => {
+    if (!isQuitting) {
+      event.preventDefault();
+      win.hide();
+    }
+  });
+
   return win;
+}
+
+function createTray() {
+  const iconPath = path.join(__dirname, "renderer", "icon.png");
+  let icon;
+  if (fs.existsSync(iconPath)) {
+    icon = nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 });
+    icon.setTemplateImage(true);
+    tray = new Tray(icon);
+  } else {
+    icon = nativeImage.createEmpty();
+    tray = new Tray(icon);
+    tray.setTitle("miki");
+  }
+
+  tray.setToolTip("miki");
+
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: "Settings",
+      click: () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.show();
+          mainWindow.focus();
+        } else {
+          mainWindow = createWindow();
+        }
+      }
+    },
+    { type: "separator" },
+    {
+      label: "Quit",
+      click: () => {
+        isQuitting = true;
+        app.quit();
+      }
+    }
+  ]);
+
+  tray.setContextMenu(contextMenu);
 }
 
 function createOverlayWindow() {
@@ -392,6 +442,10 @@ function getSetupStatus() {
 }
 
 app.whenReady().then(() => {
+  if (process.platform === "darwin") {
+    app.dock.hide();
+  }
+  createTray();
   mainWindow = createWindow();
   ensureController();
 
@@ -414,9 +468,7 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-  }
+  // メニューバーアプリとして動作させるため、ウィンドウが閉じても終了しない
 });
 
 app.on("before-quit", () => {
