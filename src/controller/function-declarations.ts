@@ -193,7 +193,7 @@ export const ACTION_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
               action: { type: "string", description: "実行する関数ツール名" },
               params: { type: "object", description: "各ツールに対応する引数オブジェクト" },
             },
-            required: ["action"],
+            required: ["action", "params"],
           },
         },
       },

@@ -354,13 +354,7 @@ export class MacOSAgent extends EventEmitter {
 
     try {
       const response = await activeModel.generateContent({ contents });
-      const rawFunctionCalls = (response as any).response?.functionCalls;
-      const functionCalls: GeminiFunctionCall[] =
-        Array.isArray(rawFunctionCalls)
-          ? rawFunctionCalls
-          : Array.isArray(rawFunctionCalls?.())
-            ? rawFunctionCalls()
-            : [];
+      const functionCalls = this.extractFunctionCalls(response);
 
       if (!functionCalls || functionCalls.length === 0) {
         throw new Error("GeminiからfunctionCallが返されませんでした。");
@@ -386,6 +380,20 @@ export class MacOSAgent extends EventEmitter {
       this.log("error", `Geminiレスポンスの取得に失敗: ${e?.message || e}`);
       throw e;
     }
+  }
+
+  private extractFunctionCalls(response: any): GeminiFunctionCall[] {
+    const fnCalls = (response as any)?.response?.functionCalls;
+    if (Array.isArray(fnCalls)) return fnCalls;
+
+    try {
+      const maybe = fnCalls?.();
+      if (Array.isArray(maybe)) return maybe;
+    } catch (e) {
+      this.debugLog(`[DEBUG] functionCalls extraction failed: ${e}`);
+    }
+
+    return [];
   }
 
   private parseFunctionCall(call: GeminiFunctionCall): Action {
@@ -591,7 +599,7 @@ export class MacOSAgent extends EventEmitter {
 
       for (let i = 0; i < actions.length; i++) {
         const action = actions[i];
-        const call = calls[i] ?? { name: action.action, args: action.params ?? {} };
+        const call = calls[i];
 
         history.push({ role: "model", parts: [{ functionCall: call }] });
 
