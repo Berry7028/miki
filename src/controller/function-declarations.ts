@@ -178,6 +178,21 @@ export const ACTION_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
     },
   },
   {
+    name: "batch",
+    description: "複数のアクションを順番に実行します。依存関係がある連続操作をまとめたい場合に使用します。",
+    parameters: {
+      type: "object",
+      properties: {
+        actions: {
+          type: "array",
+          description: "実行するアクションの配列。各要素はほかの関数ツールの引数構造に従います。",
+          items: { type: "object" },
+        },
+      },
+      required: ["actions"],
+    },
+  },
+  {
     name: "wait",
     description: "指定秒数待機します。UI更新を待つ際に使用します。",
     parameters: {
