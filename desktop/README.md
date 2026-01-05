@@ -5,21 +5,21 @@ macOS向けElectronアプリの最小構成スターターです。
 ## セットアップ
 
 ```sh
-npm install
+bun install
 ```
 
 ## 起動
 
 ```sh
-npm run dev
+bun run dev
 ```
 
 ## バックエンドのビルド
 
-Controller は Node 向けにバンドルし、Executor は PyInstaller で同梱します。
+Controller は Bun 向けにバンドルし、Executor は PyInstaller で同梱します。
 
 ```sh
-npm run build:backend
+bun run build:backend
 ```
 
 Python Executor の例（親リポジトリで実行）:
@@ -34,7 +34,7 @@ pyinstaller --name miki-executor --onedir src/executor/main.py --distpath deskto
 ## 配布ビルド
 
 ```sh
-npm run dist
+bun run dist
 ```
 
 `.env` はアプリのユーザーデータ配下に置きます:
