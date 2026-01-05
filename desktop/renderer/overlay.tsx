@@ -6,6 +6,7 @@ const TRAIL_LENGTH = 8;
 const Overlay = () => {
   const [visible, setVisible] = useState(false);
   const [status, setStatus] = useState<string>("idle");
+  const [currentAction, setCurrentAction] = useState<any>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [trail, setTrail] = useState<{ x: number; y: number }[]>([]);
   const requestRef = useRef<number>();
@@ -21,9 +22,13 @@ const Overlay = () => {
           setVisible(true);
         } else if (payload.state === "idle") {
           setVisible(false);
+          setCurrentAction(null);
         }
+      } else if (payload.event === "action_update") {
+        setCurrentAction(payload);
       } else if (payload.event === "fadeout" || payload.event === "completed") {
         setVisible(false);
+        setCurrentAction(null);
       }
     });
 
@@ -129,7 +134,7 @@ const Overlay = () => {
         </div>
       ))}
 
-      {/* Main Cursor */}
+      {/* Main Cursor & Status Label */}
       <div
         style={{
           position: "absolute",
@@ -144,8 +149,8 @@ const Overlay = () => {
         <div style={{ display: "flex", alignItems: "center" }}>
           <CursorSVG color="#FFB040" />
           
-          {/* Thinking Label */}
-          {status === "thinking" && (
+          {/* Status Label (Simplified) */}
+          {(status === "thinking" || status === "running") && (
             <div
               style={{
                 marginLeft: 8,
@@ -157,13 +162,16 @@ const Overlay = () => {
                 alignItems: "center",
                 gap: 6,
                 fontSize: 13,
-                fontWeight: 500,
+                fontWeight: 600,
                 color: "#333",
                 animation: "fadeIn 0.2s ease-out",
               }}
             >
               <LoadingSpinner />
-              Thinking...
+              {currentAction?.action 
+                ? `${currentAction.action.charAt(0).toUpperCase() + currentAction.action.slice(1)}...`
+                : (currentAction?.message || "Thinking...")
+              }
             </div>
           )}
         </div>

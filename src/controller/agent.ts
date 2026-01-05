@@ -458,6 +458,7 @@ export class MacOSAgent extends EventEmitter {
         }
 
         this.emitStatus("thinking");
+        this.emit("action_update", { phase: "thinking", message: "Thinking..." });
 
         // 定期的に履歴をキャッシュ (例: 3ステップごと)
         // KVキャッシュを更新することで、次回以降のTTFTとコストを抑える
@@ -477,7 +478,10 @@ export class MacOSAgent extends EventEmitter {
           this.currentStep,
         );
         this.emitStatus("running");
-        actions.forEach((action) => this.log("action", `アクション: ${JSON.stringify(action)}`));
+        
+        actions.forEach((action) => {
+          this.log("action", `アクション: ${JSON.stringify(action)}`);
+        });
 
         if (actions.length !== calls.length) {
           const mismatchMsg = `functionCall配列とアクション配列の長さが一致しません (calls=${calls.length}, actions=${actions.length})`;
@@ -490,6 +494,12 @@ export class MacOSAgent extends EventEmitter {
           const call = calls[i];
 
           if (!action || !call) continue;
+
+          this.emit("action_update", { 
+            phase: "running", 
+            action: action.action, 
+            params: action.params 
+          });
 
           this.appendHistory(history, { role: "model", parts: [{ functionCall: call }] });
 

@@ -14,6 +14,7 @@ import {
 } from "@mui/material";
 import {
   Send,
+  Stop,
   Close,
   SmartToy,
   Person,
@@ -121,10 +122,26 @@ const ChatApp = () => {
     }
   };
 
+  const handleStop = async () => {
+    try {
+      await window.miki?.stop();
+    } catch (error: any) {
+      addMessage({
+        type: "error",
+        content: "Error stopping agent: " + error.message,
+        timestamp: Date.now(),
+      });
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSend();
+      if (isProcessing) {
+        handleStop();
+      } else {
+        handleSend();
+      }
     }
   };
 
@@ -324,17 +341,25 @@ const ChatApp = () => {
               }}
             />
             <IconButton
-              onClick={handleSend}
-              disabled={!inputText.trim() || isProcessing}
+              onClick={isProcessing ? handleStop : handleSend}
+              disabled={!isProcessing && !inputText.trim()}
               sx={{
-                bgcolor: inputText.trim() && !isProcessing ? "primary.main" : "transparent",
-                color: inputText.trim() && !isProcessing ? "#1f242c" : "text.secondary",
+                bgcolor: isProcessing
+                  ? "error.main"
+                  : inputText.trim()
+                  ? "primary.main"
+                  : "transparent",
+                color: isProcessing || inputText.trim() ? "#1f242c" : "text.secondary",
                 "&:hover": {
-                  bgcolor: inputText.trim() && !isProcessing ? "primary.light" : "transparent",
+                  bgcolor: isProcessing
+                    ? "error.light"
+                    : inputText.trim()
+                    ? "primary.light"
+                    : "transparent",
                 },
               }}
             >
-              <Send fontSize="small" />
+              {isProcessing ? <Stop fontSize="small" /> : <Send fontSize="small" />}
             </IconButton>
           </Paper>
           <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
