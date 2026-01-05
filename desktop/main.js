@@ -20,7 +20,6 @@ function createWindow() {
     backgroundColor: "#0e0f12",
     titleBarStyle: "hiddenInset",
     alwaysOnTop: true,
-    visibleOnAllWorkspaces: true,
     contentProtection: true,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
@@ -28,6 +27,9 @@ function createWindow() {
       nodeIntegration: false
     }
   });
+
+  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  win.setAlwaysOnTop(true, "screen-saver");
 
   win.loadFile(path.join(__dirname, "renderer", "index.html"));
   return win;
@@ -118,12 +120,18 @@ function createChatWindow() {
     vibrancy: "under-window",
     visualEffectState: "active",
     roundedCorners: true,
+    skipTaskbar: true, // タスクバーに表示しない（パネル的な振る舞い）
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false
     }
   });
+
+  // 全てのワークスペース（全画面アプリを含む）で表示されるように設定
+  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  // 最前面のレベルを高く設定
+  win.setAlwaysOnTop(true, "screen-saver");
 
   win.loadFile(path.join(__dirname, "renderer", "chat.html"));
 
