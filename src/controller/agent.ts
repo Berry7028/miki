@@ -1,11 +1,11 @@
 import * as fs from "node:fs";
 import { EventEmitter } from "node:events";
-import type { Action, ActionBase } from "./types";
+import type { Action, ActionBase, UIElement, UIElementsResponse } from "./types";
 import * as path from "node:path";
 import { PythonBridge } from "./python-bridge";
 import { ActionExecutor } from "./action-executor";
 import { LLMClient } from "./llm-client";
-import { PERFORMANCE_CONFIG, SYSTEM_PROMPT } from "./constants";
+import { HISTORY_CONFIG, PERFORMANCE_CONFIG, SYSTEM_PROMPT } from "./constants";
 
 type GeminiContent = { role: "user" | "model"; parts: any[] };
 type GeminiFunctionCall = { name: string; args?: any };
@@ -86,6 +86,199 @@ export class MacOSAgent extends EventEmitter {
     return `step-${String(step).padStart(3, "0")}-${timestamp}.png`;
   }
 
+  private truncateText(value: string, maxChars: number): string {
+    if (value.length <= maxChars) return value;
+    return `${value.slice(0, maxChars)}... (truncated, ${value.length} chars)`;
+  }
+
+  private summarizeValue(value: unknown): unknown {
+    if (value === null || value === undefined) return value;
+    if (typeof value === "string") {
+      return this.truncateText(value, HISTORY_CONFIG.MAX_TEXT_CHARS);
+    }
+    if (typeof value === "number" || typeof value === "boolean") return value;
+    try {
+      return this.truncateText(JSON.stringify(value), HISTORY_CONFIG.MAX_TEXT_CHARS);
+    } catch (e) {
+      return "[unserializable]";
+    }
+  }
+
+  private summarizeUiElement(
+    element: UIElement,
+    depth: number,
+    state: { remaining: number; total: number; truncated: boolean },
+  ): Record<string, any> | null {
+    if (state.remaining <= 0) {
+      state.truncated = true;
+      return null;
+    }
+
+    state.remaining -= 1;
+    state.total += 1;
+
+    const summary: Record<string, any> = {
+      role: element.role,
+      name: this.truncateText(element.name || "", HISTORY_CONFIG.MAX_TEXT_CHARS),
+    };
+
+    if (element.subrole) {
+      summary.subrole = this.truncateText(element.subrole, HISTORY_CONFIG.MAX_TEXT_CHARS);
+    }
+    if (element.value !== undefined) {
+      summary.value = this.summarizeValue(element.value);
+    }
+    if (element.position) summary.position = element.position;
+    if (element.size) summary.size = element.size;
+    if (element.enabled !== undefined) summary.enabled = element.enabled;
+    if (element.focused !== undefined) summary.focused = element.focused;
+    if (element.selected !== undefined) summary.selected = element.selected;
+    if (element.actions && element.actions.length > 0) {
+      summary.actions = element.actions.slice(0, HISTORY_CONFIG.MAX_ACTIONS);
+      if (element.actions.length > HISTORY_CONFIG.MAX_ACTIONS) {
+        summary.actions_truncated = element.actions.length - HISTORY_CONFIG.MAX_ACTIONS;
+      }
+    }
+
+    const children = element.children || [];
+    if (children.length > 0) {
+      if (depth >= HISTORY_CONFIG.MAX_UI_DEPTH) {
+        summary.children_omitted = children.length;
+        state.truncated = true;
+        return summary;
+      }
+
+      const limit = Math.min(children.length, HISTORY_CONFIG.MAX_UI_CHILDREN);
+      const summarizedChildren: Record<string, any>[] = [];
+      for (let i = 0; i < limit; i++) {
+        const child = children[i];
+        if (!child) continue;
+        const childSummary = this.summarizeUiElement(child, depth + 1, state);
+        if (childSummary) {
+          summarizedChildren.push(childSummary);
+        } else {
+          break;
+        }
+      }
+
+      if (summarizedChildren.length > 0) {
+        summary.children = summarizedChildren;
+      }
+      if (children.length > summarizedChildren.length) {
+        summary.children_omitted = children.length - summarizedChildren.length;
+        state.truncated = true;
+      }
+    }
+
+    return summary;
+  }
+
+  private summarizeUiData(uiData: UIElementsResponse): Record<string, any> {
+    const state = { remaining: HISTORY_CONFIG.MAX_UI_NODES, total: 0, truncated: false };
+    const windows = Array.isArray(uiData?.windows) ? uiData.windows : [];
+    const summarizedWindows: Record<string, any>[] = [];
+
+    for (const window of windows) {
+      const summary = this.summarizeUiElement(window, 0, state);
+      if (summary) {
+        summarizedWindows.push(summary);
+      }
+      if (state.remaining <= 0) break;
+    }
+
+    if (windows.length > summarizedWindows.length) {
+      state.truncated = true;
+    }
+
+    return {
+      windows: summarizedWindows,
+      truncated: state.truncated,
+      total_nodes: state.total,
+      depth_limit: HISTORY_CONFIG.MAX_UI_DEPTH,
+      node_limit: HISTORY_CONFIG.MAX_UI_NODES,
+    };
+  }
+
+  private compactFunctionResponsePayload(payload: any): Record<string, any> {
+    const compact: Record<string, any> = {
+      status: payload?.status,
+    };
+
+    if (payload?.message !== undefined) {
+      compact.message =
+        typeof payload.message === "string"
+          ? this.truncateText(payload.message, HISTORY_CONFIG.MAX_TEXT_CHARS)
+          : payload.message;
+    }
+
+    if (payload?.execution_time_ms !== undefined) {
+      compact.execution_time_ms = payload.execution_time_ms;
+    }
+
+    if (payload?.mouse_position) {
+      compact.mouse_position = payload.mouse_position;
+    }
+
+    if (payload?.data !== undefined) {
+      if (typeof payload.data === "string") {
+        compact.data = this.truncateText(payload.data, HISTORY_CONFIG.MAX_DATA_CHARS);
+        if (payload.data.length > HISTORY_CONFIG.MAX_DATA_CHARS) {
+          compact.data_truncated = true;
+        }
+      } else {
+        compact.data = payload.data;
+      }
+    }
+
+    if (payload?.ui_data) {
+      compact.ui_data = this.summarizeUiData(payload.ui_data as UIElementsResponse);
+    }
+
+    if (Array.isArray(payload?.elements)) {
+      const trimmed = payload.elements
+        .slice(0, HISTORY_CONFIG.MAX_WEB_ELEMENTS)
+        .map((element: any) =>
+          typeof element === "string" ? this.truncateText(element, HISTORY_CONFIG.MAX_TEXT_CHARS) : element,
+        );
+      compact.elements = trimmed;
+      if (payload.elements.length > trimmed.length) {
+        compact.elements_truncated = payload.elements.length - trimmed.length;
+      }
+    }
+
+    if (payload?.screenshot) {
+      compact.screenshot_omitted = true;
+    }
+
+    return compact;
+  }
+
+  private compactFunctionResponse(functionResponse: { name: string; response: any }): {
+    name: string;
+    response: any;
+  } {
+    return {
+      name: functionResponse.name,
+      response: this.compactFunctionResponsePayload(functionResponse.response),
+    };
+  }
+
+  private pruneHistory(history: GeminiContent[]) {
+    if (history.length <= HISTORY_CONFIG.MAX_MESSAGES) return;
+    const first = history[0];
+    const head: GeminiContent[] = first ? [first] : [];
+    const keep = Math.max(HISTORY_CONFIG.MAX_MESSAGES - head.length, 0);
+    const tail: GeminiContent[] = keep > 0 ? (history.slice(-keep).filter(Boolean) as GeminiContent[]) : [];
+    history.splice(0, history.length, ...head, ...tail);
+  }
+
+  private appendHistory(history: GeminiContent[], entry: GeminiContent) {
+    const parts = entry.parts.filter((part) => !part.inlineData);
+    if (parts.length === 0) return;
+    history.push({ role: entry.role, parts });
+    this.pruneHistory(history);
+  }
+
   public addHint(hint: string) {
     this.userPromptQueue.push(hint);
     this.log("hint", `ヒントを追加: ${hint}`);
@@ -149,10 +342,7 @@ export class MacOSAgent extends EventEmitter {
         { role: "user", parts: [{ text: `私の目標は次の通りです: ${goal}` }] },
         {
           role: "user",
-          parts: [
-            { text: "これが現在のデスクトップの初期状態です。この画面から操作を開始してください。" },
-            { inlineData: { data: initRes.data, mimeType: "image/jpeg" } },
-          ],
+          parts: [{ text: "初期スクリーンショットは取得済みです。この画面から操作を開始してください。" }],
         },
       ];
       this.currentStep = 0;
@@ -171,7 +361,7 @@ export class MacOSAgent extends EventEmitter {
         while (this.userPromptQueue.length > 0) {
           const hint = this.userPromptQueue.shift();
           if (hint) {
-            history.push({
+            this.appendHistory(history, {
               role: "user",
               parts: [{ text: `[ユーザーからの追加指示/ヒント]: ${hint}` }],
             });
@@ -227,11 +417,11 @@ export class MacOSAgent extends EventEmitter {
 
           if (!action || !call) continue;
 
-          history.push({ role: "model", parts: [{ functionCall: call }] });
+          this.appendHistory(history, { role: "model", parts: [{ functionCall: call }] });
 
           if (action.action === "done") {
             this.log("success", `完了: ${action.params.message}`);
-            history.push({
+            this.appendHistory(history, {
               role: "user",
               parts: [
                 {
@@ -250,7 +440,7 @@ export class MacOSAgent extends EventEmitter {
           if (action.action === "wait") {
             this.log("info", `${action.params.seconds}秒待機中...`);
             await new Promise((r) => setTimeout(r, action.params.seconds * 1000));
-            history.push({
+            this.appendHistory(history, {
               role: "user",
               parts: [
                 {
@@ -266,7 +456,7 @@ export class MacOSAgent extends EventEmitter {
 
           if (action.action === "search") {
             this.log("info", `AI検索実行: ${action.params.query}`);
-            history.push({
+            this.appendHistory(history, {
               role: "user",
               parts: [
                 {
@@ -289,10 +479,10 @@ export class MacOSAgent extends EventEmitter {
             const batchResults: any[] = [];
             for (const subAction of action.params.actions) {
               const { functionResponse } = await this.actionExecutor.execute(subAction);
-              batchResults.push(functionResponse);
+              batchResults.push(this.compactFunctionResponse(functionResponse));
               await new Promise((r) => setTimeout(r, PERFORMANCE_CONFIG.BATCH_ACTION_DELAY_MS));
             }
-            history.push({
+            this.appendHistory(history, {
               role: "user",
               parts: [
                 { functionResponse: { name: call.name, response: { status: "success", results: batchResults } } },
@@ -302,6 +492,7 @@ export class MacOSAgent extends EventEmitter {
           }
 
           const { result, functionResponse } = await this.actionExecutor.execute(action as ActionBase);
+          const compactFunctionResponse = this.compactFunctionResponse(functionResponse);
 
           // UI要素のキャッシュ (Phase 2)
           if (action.action === "elementsJson" && result.status === "success" && result.ui_data) {
@@ -312,7 +503,7 @@ export class MacOSAgent extends EventEmitter {
             this.log("info", `  アクション ${action.action}: ${result.execution_time_ms}ms`);
           }
 
-          history.push({ role: "user", parts: [{ functionResponse }] });
+          this.appendHistory(history, { role: "user", parts: [{ functionResponse: compactFunctionResponse }] });
         }
 
         if (completed) {
