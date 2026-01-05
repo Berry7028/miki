@@ -7,6 +7,22 @@ import { GeminiCacheManager } from "./cache-manager";
 import { ActionSchema, type Action, type ActionBase, type PythonResponse } from "./types";
 import * as path from "node:path";
 
+// パフォーマンス最適化設定
+// Note: 環境に応じて調整可能。高速化優先だが、安定性に問題がある場合は値を増やすこと
+const PERFORMANCE_CONFIG = {
+  // 最大ステップ数: 通常タスクは10-20ステップだが、リトライやエラー対応の余裕を見て30に設定
+  MAX_STEPS: 30,
+  // ステップ間の遅延: 1秒だと体感が重いため、UIが追いつく最低ラインとして500msに設定
+  // システムが不安定な場合は1000msに戻すことを推奨
+  STEP_DELAY_MS: 500,
+  // バッチアクション間の遅延: OSに負荷をかけすぎない程度の100msに設定
+  // 一部の環境で安定しない場合は200-300msに増やすこと
+  BATCH_ACTION_DELAY_MS: 100,
+  // JPEG品質: 85で視覚品質を維持しつつファイルサイズを削減（1-100）
+  // AIの認識精度に問題がある場合は90-95に上げることを検討
+  SCREENSHOT_QUALITY: 85,
+};
+
 // デバッグログ用定数
 const DEBUG_TEXT_TRUNCATE_LENGTH = 200;
 const DEBUG_SCREENSHOT_PREVIEW_LENGTH = 50;
@@ -330,8 +346,13 @@ export class MacOSAgent extends EventEmitter {
           const parts = h.content.map((c: any) => {
             if (c.type === "text") return { text: c.text };
             if (c.type === "image_url") {
-              const base64Data = c.image_url.url.split(",")[1];
-              return { inlineData: { data: base64Data, mimeType: "image/png" } };
+              const url = c.image_url.url;
+              const base64Data = url.split(",")[1];
+              // 画像形式を自動検出（data:image/jpeg;base64, または data:image/png;base64,）
+              // 正規表現でMIMEタイプをキャプチャ（image/jpeg, image/png, image/webp等）
+              const mimeMatch = url.match(/^data:(image\/[a-z0-9.+-]+);base64,/i);
+              const mimeType = mimeMatch?.[1] ?? "image/jpeg";
+              return { inlineData: { data: base64Data, mimeType } };
             }
             return { text: "" };
           });
@@ -366,7 +387,7 @@ export class MacOSAgent extends EventEmitter {
       promptParts.push({
         inlineData: {
           data: screenshotBase64,
-          mimeType: "image/png",
+          mimeType: "image/jpeg",
         },
       });
 
@@ -600,11 +621,14 @@ export class MacOSAgent extends EventEmitter {
     ];
 
     if (highlightPos) {
-      const hRes = await this.callPython("screenshot", { highlight_pos: highlightPos });
+      const hRes = await this.callPython("screenshot", { 
+        highlight_pos: highlightPos,
+        quality: PERFORMANCE_CONFIG.SCREENSHOT_QUALITY 
+      });
       if (hRes.status === "success" && hRes.data) {
         observationContent.push({
           type: "image_url",
-          image_url: { url: `data:image/png;base64,${hRes.data}` },
+          image_url: { url: `data:image/jpeg;base64,${hRes.data}` },
         });
         observationContent.push({
           type: "text",
@@ -639,7 +663,9 @@ export class MacOSAgent extends EventEmitter {
       await this.cacheManager.createSystemPromptCache(formattedPrompt, this.modelName);
     }
 
-    const initRes = await this.callPython("screenshot");
+    const initRes = await this.callPython("screenshot", { 
+      quality: PERFORMANCE_CONFIG.SCREENSHOT_QUALITY 
+    });
     if (initRes.status !== "success" || !initRes.data || !initRes.mouse_position) {
       this.log("error", `初期観察失敗: ${initRes.message}`);
       return;
@@ -656,14 +682,14 @@ export class MacOSAgent extends EventEmitter {
           },
           {
             type: "image_url",
-            image_url: { url: `data:image/png;base64,${initRes.data}` },
+            image_url: { url: `data:image/jpeg;base64,${initRes.data}` },
           },
         ],
       },
     ];
     this.currentStep = 0;
 
-    while (this.currentStep < 20) {
+    while (this.currentStep < PERFORMANCE_CONFIG.MAX_STEPS) {
       if (this.stopRequested) {
         this.log("info", "停止しました。");
         this.emit("stopped");
@@ -684,7 +710,9 @@ export class MacOSAgent extends EventEmitter {
         }
       }
 
-      const res = await this.callPython("screenshot");
+      const res = await this.callPython("screenshot", { 
+        quality: PERFORMANCE_CONFIG.SCREENSHOT_QUALITY 
+      });
       if (res.status !== "success" || !res.data || !res.mouse_position) {
         this.log("error", `スクリーンショット取得失敗: ${res.message}`);
         break;
@@ -744,7 +772,7 @@ export class MacOSAgent extends EventEmitter {
         for (const subAction of action.params.actions) {
           const { observationContent } = await this.executeAction(subAction);
           finalObservationContent.push(...observationContent);
-          await new Promise((r) => setTimeout(r, 500));
+          await new Promise((r) => setTimeout(r, PERFORMANCE_CONFIG.BATCH_ACTION_DELAY_MS));
         }
       } else {
         const { observationContent } = await this.executeAction(action as ActionBase);
@@ -755,7 +783,7 @@ export class MacOSAgent extends EventEmitter {
       history.push({ role: "user", content: finalObservationContent });
 
       this.currentStep++;
-      await new Promise((r) => setTimeout(r, 1000));
+      await new Promise((r) => setTimeout(r, PERFORMANCE_CONFIG.STEP_DELAY_MS));
     }
 
     this.emit("runCompleted");
