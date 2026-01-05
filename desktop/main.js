@@ -35,6 +35,14 @@ function createWindow() {
 
   win.loadFile(path.join(__dirname, "renderer", "index.html"));
 
+  // macOSでのスクリーンショット/画面共有対策 (setContentProtection)
+  // NSWindowのsharingTypeをNSWindowSharingNoneに設定します。
+  // 注意: macOS 15以降のScreenCaptureKitを使用するキャプチャ等、一部の環境では
+  // OSの制限により完全に防げない場合があります。
+  if (process.platform === "darwin") {
+    win.setContentProtection(true);
+  }
+
   win.on("close", (event) => {
     if (!isQuitting) {
       event.preventDefault();
@@ -123,6 +131,11 @@ function createOverlayWindow() {
 
   win.loadFile(path.join(__dirname, "renderer", "overlay.html"));
 
+  // macOSでのスクリーンショット/画面共有対策
+  if (process.platform === "darwin") {
+    win.setContentProtection(true);
+  }
+
   // マウス位置の同期を開始
   const positionTimer = setInterval(() => {
     if (win.isDestroyed()) {
@@ -184,6 +197,12 @@ function createChatWindow() {
   win.setAlwaysOnTop(true, "screen-saver");
 
   win.loadFile(path.join(__dirname, "renderer", "chat.html"));
+
+  // macOSでのスクリーンショット/画面共有対策 (Chat Widget)
+  // ユーザーの機密情報が含まれる可能性があるため、キャプチャを防止します。
+  if (process.platform === "darwin") {
+    win.setContentProtection(true);
+  }
 
   win.webContents.on("did-finish-load", () => {
     win.webContents.send("miki:focus-input");
