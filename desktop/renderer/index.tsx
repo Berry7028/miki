@@ -180,7 +180,7 @@ const App = () => {
 
           <Grid container spacing={4}>
             {/* Main Dashboard Area */}
-            <Grid item xs={12} lg={8}>
+            <Grid size={{ xs: 12, lg: 8 }}>
               <Stack spacing={3}>
                 {/* System Status Card */}
                 <Paper sx={{ p: 4, position: "relative", overflow: "hidden" }}>
@@ -202,7 +202,7 @@ const App = () => {
                     <Terminal fontSize="small" /> システムステータス
                   </Typography>
                   <Grid container spacing={3}>
-                    <Grid item xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                       <Box
                         sx={{
                           p: 2,
@@ -240,7 +240,7 @@ const App = () => {
                         </Stack>
                       </Box>
                     </Grid>
-                    <Grid item xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                       <Box
                         sx={{
                           p: 2,
@@ -262,7 +262,7 @@ const App = () => {
                       </Box>
                     </Grid>
                     {status.goal && (
-                      <Grid item xs={12}>
+                      <Grid size={{ xs: 12 }}>
                         <Box
                           sx={{
                             p: 2.5,
@@ -539,7 +539,7 @@ const App = () => {
             </Grid>
 
             {/* Sidebar - Execution Log */}
-            <Grid item xs={12} lg={4}>
+            <Grid size={{ xs: 12, lg: 4 }}>
               <Paper
                 sx={{
                   p: 4,
