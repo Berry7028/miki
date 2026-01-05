@@ -185,6 +185,10 @@ function createChatWindow() {
 
   win.loadFile(path.join(__dirname, "renderer", "chat.html"));
 
+  win.webContents.on("did-finish-load", () => {
+    win.webContents.send("miki:focus-input");
+  });
+
   win.on("closed", () => {
     chatWindow = null;
   });
@@ -199,6 +203,7 @@ function toggleChatWindow() {
     } else {
       chatWindow.show();
       chatWindow.focus();
+      chatWindow.webContents.send("miki:focus-input");
     }
   } else {
     chatWindow = createChatWindow();

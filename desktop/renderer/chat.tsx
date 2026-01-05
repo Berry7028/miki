@@ -41,6 +41,7 @@ const ChatApp = () => {
   const [currentTool, setCurrentTool] = useState<string>("");
   const [thinkingText, setThinkingText] = useState<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -101,6 +102,13 @@ const ChatApp = () => {
 
     return () => unsubscribe?.();
   }, [addMessage]);
+
+  useEffect(() => {
+    const unsubscribe = window.miki?.onFocusInput(() => {
+      inputRef.current?.focus();
+    });
+    return () => unsubscribe?.();
+  }, []);
 
   const handleSend = async () => {
     const text = inputText.trim();
@@ -315,6 +323,7 @@ const ChatApp = () => {
               fullWidth
               multiline
               maxRows={3}
+              inputRef={inputRef}
               placeholder="Ask Miki to automate a task..."
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
