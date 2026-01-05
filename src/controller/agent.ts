@@ -112,9 +112,11 @@ export class MacOSAgent extends EventEmitter {
           thinkingLevel: "minimal",
         },
       },
-      tools: {
-        functionDeclarations: ACTION_FUNCTION_DECLARATIONS,
-      },
+      tools: [
+        {
+          functionDeclarations: ACTION_FUNCTION_DECLARATIONS,
+        },
+      ],
     });
 
     this.startPythonProcess();
@@ -296,9 +298,11 @@ export class MacOSAgent extends EventEmitter {
               thinkingLevel: "minimal",
             },
           },
-          tools: {
-            functionDeclarations: ACTION_FUNCTION_DECLARATIONS,
-          },
+          tools: [
+            {
+              functionDeclarations: ACTION_FUNCTION_DECLARATIONS,
+            },
+          ],
         },
         { cachedContent: cacheName }
       );
@@ -610,6 +614,8 @@ export class MacOSAgent extends EventEmitter {
       for (let i = 0; i < actions.length; i++) {
         const action = actions[i];
         const call = calls[i];
+
+        if (!action || !call) continue;
 
         history.push({ role: "model", parts: [{ functionCall: call }] });
 
