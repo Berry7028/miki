@@ -33,7 +33,9 @@ export class MacOSAgent extends EventEmitter {
       if (!fs.existsSync(this.screenshotDir)) {
         fs.mkdirSync(this.screenshotDir, { recursive: true });
       }
-      console.error(`[Agent] Debug mode enabled. Screenshots will be saved to: ${this.screenshotDir}`);
+      console.error(
+        `[Agent] Debug mode enabled. Screenshots will be saved to: ${this.screenshotDir}`,
+      );
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
@@ -57,11 +59,8 @@ export class MacOSAgent extends EventEmitter {
     this.actionExecutor = new ActionExecutor(this.pythonBridge, this.screenSize, this.debugMode);
 
     // LLMClient初期化
-    this.llmClient = new LLMClient(
-      apiKey,
-      this.screenSize,
-      this.debugMode,
-      (type, message) => this.log(type as "info" | "success" | "error" | "hint" | "action", message),
+    this.llmClient = new LLMClient(apiKey, this.screenSize, this.debugMode, (type, message) =>
+      this.log(type as "info" | "success" | "error" | "hint" | "action", message),
     );
   }
 
@@ -238,7 +237,9 @@ export class MacOSAgent extends EventEmitter {
       const trimmed = payload.elements
         .slice(0, HISTORY_CONFIG.MAX_WEB_ELEMENTS)
         .map((element: any) =>
-          typeof element === "string" ? this.truncateText(element, HISTORY_CONFIG.MAX_TEXT_CHARS) : element,
+          typeof element === "string"
+            ? this.truncateText(element, HISTORY_CONFIG.MAX_TEXT_CHARS)
+            : element,
         );
       compact.elements = trimmed;
       if (payload.elements.length > trimmed.length) {
@@ -268,7 +269,8 @@ export class MacOSAgent extends EventEmitter {
     const first = history[0];
     const head: GeminiContent[] = first ? [first] : [];
     const keep = Math.max(HISTORY_CONFIG.MAX_MESSAGES - head.length, 0);
-    const tail: GeminiContent[] = keep > 0 ? (history.slice(-keep).filter(Boolean) as GeminiContent[]) : [];
+    const tail: GeminiContent[] =
+      keep > 0 ? (history.slice(-keep).filter(Boolean) as GeminiContent[]) : [];
     history.splice(0, history.length, ...head, ...tail);
   }
 
@@ -323,10 +325,10 @@ export class MacOSAgent extends EventEmitter {
 
     try {
       // システムプロンプトをキャッシュ (Phase 1)
-      const formattedPrompt = SYSTEM_PROMPT.replace("{SCREEN_WIDTH}", this.screenSize.width.toString()).replace(
-        "{SCREEN_HEIGHT}",
-        this.screenSize.height.toString(),
-      );
+      const formattedPrompt = SYSTEM_PROMPT.replace(
+        "{SCREEN_WIDTH}",
+        this.screenSize.width.toString(),
+      ).replace("{SCREEN_HEIGHT}", this.screenSize.height.toString());
 
       await this.llmClient.createSystemPromptCache(formattedPrompt);
 
@@ -342,7 +344,9 @@ export class MacOSAgent extends EventEmitter {
         { role: "user", parts: [{ text: `私の目標は次の通りです: ${goal}` }] },
         {
           role: "user",
-          parts: [{ text: "初期スクリーンショットは取得済みです。この画面から操作を開始してください。" }],
+          parts: [
+            { text: "初期スクリーンショットは取得済みです。この画面から操作を開始してください。" },
+          ],
         },
       ];
       this.currentStep = 0;
@@ -485,13 +489,20 @@ export class MacOSAgent extends EventEmitter {
             this.appendHistory(history, {
               role: "user",
               parts: [
-                { functionResponse: { name: call.name, response: { status: "success", results: batchResults } } },
+                {
+                  functionResponse: {
+                    name: call.name,
+                    response: { status: "success", results: batchResults },
+                  },
+                },
               ],
             });
             continue;
           }
 
-          const { result, functionResponse } = await this.actionExecutor.execute(action as ActionBase);
+          const { result, functionResponse } = await this.actionExecutor.execute(
+            action as ActionBase,
+          );
           const compactFunctionResponse = this.compactFunctionResponse(functionResponse);
 
           // UI要素のキャッシュ (Phase 2)
@@ -503,7 +514,10 @@ export class MacOSAgent extends EventEmitter {
             this.log("info", `  アクション ${action.action}: ${result.execution_time_ms}ms`);
           }
 
-          this.appendHistory(history, { role: "user", parts: [{ functionResponse: compactFunctionResponse }] });
+          this.appendHistory(history, {
+            role: "user",
+            parts: [{ functionResponse: compactFunctionResponse }],
+          });
         }
 
         if (completed) {
