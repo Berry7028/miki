@@ -75,8 +75,11 @@ const SYSTEM_PROMPT = `
 ### 回答の絶対ルール
 - **形式**: 出力は必ず単一のJSONオブジェクトのみにしてください。
 - **配列禁止**: [{"action": ...}] のように配列で囲まないでください。
+- **厳密な命名**: "move_mouse", "mouse_move", "left_click" といった独自のアクション名は使用せず、必ず上記「利用可能なアクション」に記載された通りの名前（click, move等）を使用してください。
+- **パラメータ構造**: パラメータは必ず "params" オブジェクトの中に含めてください。"point" や "x", "y" をトップレベルに置くことは禁止です。
 - **独自キー禁止**: "point": [x,y] や "key_tap" などの独自形式は絶対に使用せず、上記定義に従ってください。
 - **テキスト禁止**: JSON以外の解説文などは一切含めないでください。
+- **単一アクション**: batchを使用する場合を除き、一度の回答で実行するアクションは1つだけにしてください。
 
 ### 成功のための戦略
 - **アクティブなアプリの確認**: 現在アクティブなアプリケーションの名前は、画面左上のリンゴマークのすぐ右隣にあるメニューバーに表示されます。操作対象のアプリがアクティブかどうかを判断する際の参考にしてください。
@@ -491,46 +494,119 @@ export class MacOSAgent extends EventEmitter {
           parsed = parsed[0];
         }
 
-        // Geminiがよく使う 'point' キーや 'params' 欠落を補正
-        if (parsed.action === "point") parsed.action = "click";
-        if (parsed.action === "key_tap" || parsed.action === "key_combination") {
-          parsed.action = "hotkey";
-          parsed.params = parsed.params || {};
-          if (parsed.key && parsed.modifiers) {
-            parsed.params.keys = [...parsed.modifiers, parsed.key];
-          } else if (parsed.key_combination) {
-            parsed.params.keys = parsed.key_combination.split("+");
+        // Geminiがよく使うアクション名やパラメータの揺らぎを補正
+        const actionMap: Record<string, string> = {
+          "move_mouse": "move",
+          "mouse_move": "move",
+          "left_click": "click",
+          "right_click": "click",
+          "double_click": "click",
+          "key_tap": "hotkey",
+          "key_combination": "hotkey",
+          "point": "click",
+          "type_text": "type",
+          "wait_seconds": "wait",
+          "search_google": "search"
+        };
+
+        if (actionMap[parsed.action]) {
+          parsed.action = actionMap[parsed.action];
+        }
+
+        // 座標指定の揺らぎを補完するためのヘルパー
+        const extractCoords = (obj: any) => {
+          if (!obj) return null;
+          if (obj.point && Array.isArray(obj.point) && obj.point.length === 2) return { x: obj.point[0], y: obj.point[1] };
+          if (obj.location && Array.isArray(obj.location) && obj.location.length === 2) return { x: obj.location[0], y: obj.location[1] };
+          if (obj.x !== undefined && obj.y !== undefined) return { x: obj.x, y: obj.y };
+          return null;
+        };
+
+        // --- 最終的な Action オブジェクトの厳密な再構築 ---
+        // AIが勝手に付け足した余計なプロパティ(memo, action_type等)を排除し、
+        // ActionSchema (Zod) が期待する形式に完全に整形する
+        const finalAction: any = { action: parsed.action };
+        const rawParams = parsed.params || {};
+
+        switch (parsed.action) {
+          case "click":
+          case "move": {
+            const c = extractCoords(parsed) || extractCoords(rawParams);
+            finalAction.params = { 
+              x: Number(c?.x ?? rawParams.x ?? 0), 
+              y: Number(c?.y ?? rawParams.y ?? 0) 
+            };
+            break;
           }
-        }
-        
-        if (parsed.point && Array.isArray(parsed.point) && parsed.point.length === 2) {
-          parsed.params = parsed.params || {};
-          parsed.params.x = parsed.point[0];
-          parsed.params.y = parsed.point[1];
-          delete parsed.point;
+          case "type":
+            finalAction.params = { text: String(rawParams.text || parsed.text || "") };
+            break;
+          case "press":
+            finalAction.params = { key: String(rawParams.key || parsed.key || "") };
+            break;
+          case "hotkey": {
+            let keys = rawParams.keys || parsed.keys;
+            if (!keys && (rawParams.key_combination || parsed.key_combination)) {
+              keys = (rawParams.key_combination || parsed.key_combination).split("+");
+            }
+            if (!keys && rawParams.key && rawParams.modifiers) {
+              keys = [...rawParams.modifiers, rawParams.key];
+            }
+            finalAction.params = { keys: Array.isArray(keys) ? keys : [] };
+            break;
+          }
+          case "scroll":
+            finalAction.params = { 
+              amount: Number(rawParams.amount ?? parsed.amount ?? 0) 
+            };
+            break;
+          case "drag": {
+            const from = extractCoords(rawParams.from || parsed.from);
+            const to = extractCoords(rawParams.to || parsed.to);
+            finalAction.params = {
+              from_x: Number(from?.x ?? rawParams.from_x ?? 0),
+              from_y: Number(from?.y ?? rawParams.from_y ?? 0),
+              to_x: Number(to?.x ?? rawParams.to_x ?? 0),
+              to_y: Number(to?.y ?? rawParams.to_y ?? 0),
+            };
+            break;
+          }
+          case "wait":
+            finalAction.params = { 
+              seconds: Number(rawParams.seconds ?? parsed.seconds ?? 1) 
+            };
+            break;
+          case "search":
+            finalAction.params = { query: String(rawParams.query || parsed.query || "") };
+            break;
+          case "done":
+            finalAction.params = { message: String(rawParams.message || parsed.message || "Task completed") };
+            break;
+          case "batch":
+            // batch の場合は再帰的に処理する必要があるが、一旦そのまま渡す (Schemaが検証する)
+            finalAction.params = rawParams;
+            break;
+          default:
+            // その他のアクション (elementsJson, clickElement, webElements 等)
+            // これらは元々 params を持っているはずなのでそのまま活かす
+            finalAction.params = rawParams;
+            // params が空でトップレベルに情報がある場合の救済
+            if (Object.keys(rawParams).length === 0) {
+              const { action, ...rest } = parsed;
+              finalAction.params = rest;
+            }
         }
 
-        if (parsed.params && parsed.params.point && Array.isArray(parsed.params.point) && parsed.params.point.length === 2) {
-          parsed.params.x = parsed.params.point[0];
-          parsed.params.y = parsed.params.point[1];
-          delete parsed.params.point;
-        }
+        // デバッグログ: パース・再構築結果
+        this.debugLog(`[DEBUG] Reconstructed action: ${JSON.stringify(finalAction, null, 2)}`);
 
-        // params が欠落しているがトップレベルに座標がある場合
-        if (!parsed.params && parsed.x !== undefined && parsed.y !== undefined) {
-          parsed.params = { x: parsed.x, y: parsed.y };
-          delete parsed.x;
-          delete parsed.y;
-        }
-
-        // デバッグログ: パース成功
-        this.debugLog(`[DEBUG] Parsed action: ${JSON.stringify(parsed, null, 2)}`);
-
-        return ActionSchema.parse(parsed);
+        return ActionSchema.parse(finalAction);
       } catch (e: any) {
+        const errorDetail = e.errors ? JSON.stringify(e.errors, null, 2) : e.message;
         this.log("error", `Geminiレスポンスのパース失敗 (試行 ${retryCount + 1}/${maxRetries})`);
+        this.log("error", `エラー詳細: ${errorDetail}`);
         this.log("error", `生コンテンツ: ${rawContent}`);
-        errorMessage = e.message;
+        errorMessage = errorDetail;
 
         // 失敗した回答を履歴に追加して、次のリトライに活かす
         history.push({ role: "assistant", content: rawContent });
