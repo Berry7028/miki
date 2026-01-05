@@ -134,8 +134,13 @@ const ChatApp = () => {
     }
   };
 
-  const handleClearChat = () => {
+  const handleClearChat = async () => {
     setMessages([]);
+    try {
+      await window.miki?.reset();
+    } catch (error: any) {
+      console.error("Failed to reset agent context:", error);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

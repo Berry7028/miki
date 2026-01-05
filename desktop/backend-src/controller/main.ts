@@ -109,7 +109,7 @@ function handleCommand(command: Command) {
       break;
     case "reset":
       if (agent) {
-        agent.reset();
+        void agent.reset();
       }
       sendStatus("idle");
       break;

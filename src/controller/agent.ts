@@ -343,14 +343,16 @@ export class MacOSAgent extends EventEmitter {
     this.log("hint", `ヒントを追加: ${hint}`);
   }
 
-  public reset() {
+  public async reset() {
     this.userPromptQueue = [];
-    this.stopRequested = false;
+    this.stopRequested = true; // 実行中なら停止させる
     this.lastCachedStep = -1;
-    this.llmClient
-      .getCacheManager()
-      .clearAllCaches()
-      .catch((e) => console.error("Failed to clear caches:", e));
+    try {
+      await this.llmClient.getCacheManager().clearAllCaches();
+      this.log("info", "コンテキストキャッシュをすべて削除しました。");
+    } catch (e) {
+      console.error("Failed to clear caches:", e);
+    }
     this.emit("reset");
   }
 
