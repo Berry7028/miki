@@ -3,7 +3,7 @@ import type { FunctionDeclaration } from "@google/generative-ai";
 export const ACTION_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
   {
     name: "click",
-    description: "指定した正規化座標(0-1000)を単一クリックします。クリック先のUIを確実にアクティブ化する際に使用します。",
+    description: "指定した正規化座標(0-1000)を単一の左クリックで操作します。クリック先のUIを確実にアクティブ化する際に使用します。",
     parameters: {
       type: "object",
       properties: {
@@ -179,7 +179,7 @@ export const ACTION_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
   },
   {
     name: "batch",
-    description: "複数のアクションを順番に実行します。依存関係がある連続操作をまとめたい場合に使用します。",
+    description: "複数のアクションを順番に実行します。各要素は他の関数ツールと同じ引数構造（ActionSchemaで検証）を持つ必要があります。",
     parameters: {
       type: "object",
       properties: {

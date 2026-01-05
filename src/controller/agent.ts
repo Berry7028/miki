@@ -354,16 +354,26 @@ export class MacOSAgent extends EventEmitter {
 
     try {
       const response = await activeModel.generateContent({ contents });
+      const rawFunctionCalls = (response as any).response?.functionCalls;
       const functionCalls: GeminiFunctionCall[] =
-        typeof response.response.functionCalls === "function"
-          ? response.response.functionCalls()
-          : [];
+        typeof rawFunctionCalls === "function"
+          ? rawFunctionCalls()
+          : Array.isArray(rawFunctionCalls)
+            ? rawFunctionCalls
+            : [];
 
       if (!functionCalls || functionCalls.length === 0) {
         throw new Error("GeminiからfunctionCallが返されませんでした。");
       }
 
       const actions = functionCalls.map((call) => this.parseFunctionCall(call));
+
+      if (actions.length !== functionCalls.length) {
+        this.log(
+          "error",
+          `functionCallの数とパース済みアクションの数が一致しません (calls=${functionCalls.length}, actions=${actions.length})`,
+        );
+      }
 
       if (this.debugMode) {
         this.debugLogSection(`AI functionCalls (Step ${this.currentStep})`, {
@@ -582,7 +592,7 @@ export class MacOSAgent extends EventEmitter {
 
       for (let i = 0; i < actions.length; i++) {
         const action = actions[i];
-        const call = calls[i];
+        const call = calls[i] ?? { name: action.action, args: (action as any).params };
 
         history.push({ role: "model", parts: [{ functionCall: call }] });
 
