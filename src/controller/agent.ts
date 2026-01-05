@@ -272,10 +272,11 @@ export class MacOSAgent extends EventEmitter {
     let messageCount = 0;
     // 後ろから数えて、一定数以上のターンに含まれる画像を削除
     for (let i = history.length - 1; i >= 0; i--) {
-      if (history[i].role === "user") {
+      const entry = history[i];
+      if (entry && entry.role === "user") {
         messageCount++;
         if (messageCount > STEP_THRESHOLD) {
-          history[i].parts = history[i].parts.filter((part) => !part.inlineData);
+          entry.parts = entry.parts.filter((part: any) => !part.inlineData);
         }
       }
     }
@@ -312,7 +313,10 @@ export class MacOSAgent extends EventEmitter {
     
     // まず失敗したメッセージを全部入れる
     for (const idx of Array.from(failedIndices).sort((a, b) => a - b)) {
-      filteredCandidates.push(candidates[idx]);
+      const candidate = candidates[idx];
+      if (candidate) {
+        filteredCandidates.push(candidate);
+      }
     }
 
     // まだ余裕があれば、成功したメッセージも「新しい順」に入れる
@@ -500,7 +504,7 @@ export class MacOSAgent extends EventEmitter {
           this.emit("action_update", { 
             phase: "running", 
             action: action.action, 
-            params: action.params 
+            params: "params" in action ? (action as any).params : undefined 
           });
 
           this.appendHistory(history, { role: "model", parts: [{ functionCall: call }] });
