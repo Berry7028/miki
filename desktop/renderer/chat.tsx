@@ -71,11 +71,9 @@ const ChatApp = () => {
           setIsThinking(false);
         }
       } else if (payload.event === "thinking") {
-        // 思考過程の更新
         setIsThinking(true);
         setThinkingText(payload.message || "");
       } else if (payload.event === "tool") {
-        // ツール実行の記録
         setCurrentTool(payload.toolName || "");
         addMessage({
           type: "tool",
@@ -158,7 +156,6 @@ const ChatApp = () => {
           boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
         }}
       >
-        {/* Header with Status */}
         <Box
           sx={{
             background:
@@ -214,7 +211,6 @@ const ChatApp = () => {
             </IconButton>
           </Box>
 
-          {/* Current Tool Indicator */}
           {currentTool && (
             <Fade in>
               <Box
@@ -244,7 +240,6 @@ const ChatApp = () => {
           )}
         </Box>
 
-        {/* Thinking Process Area */}
         <Collapse in={isThinking && showThinking}>
           <Box
             sx={{
@@ -300,7 +295,6 @@ const ChatApp = () => {
           </Box>
         </Collapse>
 
-        {/* Messages */}
         <Box
           sx={{
             flexGrow: 1,
@@ -455,7 +449,6 @@ const ChatApp = () => {
           <div ref={messagesEndRef} />
         </Box>
 
-        {/* Input */}
         <Box sx={{ p: 2, borderTop: "1px solid rgba(255,255,255,0.08)" }}>
           <Paper
             elevation={0}

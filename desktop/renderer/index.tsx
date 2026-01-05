@@ -137,7 +137,6 @@ const App = () => {
       <CssBaseline />
       <Box sx={{ minHeight: "100vh", bgcolor: "background.default", py: 6 }}>
         <Container maxWidth="xl">
-          {/* Header Area */}
           <Box sx={{ mb: 6 }}>
             <Typography
               variant="overline"
@@ -179,10 +178,8 @@ const App = () => {
           </Box>
 
           <Grid container spacing={4}>
-            {/* Main Dashboard Area */}
             <Grid size={{ xs: 12, lg: 8 }}>
               <Stack spacing={3}>
-                {/* System Status Card */}
                 <Paper sx={{ p: 4, position: "relative", overflow: "hidden" }}>
                   <Box
                     sx={{
@@ -291,7 +288,6 @@ const App = () => {
                   )}
                 </Paper>
 
-                {/* API Key Card */}
                 <Paper sx={{ p: 4 }}>
                   <Stack
                     direction="row"
@@ -385,7 +381,6 @@ const App = () => {
                   )}
                 </Paper>
 
-                {/* Permissions Status Card */}
                 <Paper sx={{ p: 4 }}>
                   <Typography
                     variant="h6"
@@ -472,7 +467,6 @@ const App = () => {
                   </Stack>
                 </Paper>
 
-                {/* Usage Guide Card */}
                 <Paper
                   sx={{
                     p: 4,
@@ -538,7 +532,6 @@ const App = () => {
               </Stack>
             </Grid>
 
-            {/* Sidebar - Execution Log */}
             <Grid size={{ xs: 12, lg: 4 }}>
               <Paper
                 sx={{
@@ -630,7 +623,6 @@ const App = () => {
           </Grid>
         </Container>
 
-        {/* Setup Wizard */}
         <Dialog
           open={!!setupStatus?.needsSetup}
           maxWidth="sm"
