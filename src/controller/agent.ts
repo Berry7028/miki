@@ -386,11 +386,13 @@ export class MacOSAgent extends EventEmitter {
     const fnCalls = (response as any)?.response?.functionCalls;
     if (Array.isArray(fnCalls)) return fnCalls;
 
-    try {
-      const maybe = fnCalls?.();
-      if (Array.isArray(maybe)) return maybe;
-    } catch (e) {
-      this.debugLog(`[DEBUG] functionCalls extraction failed: ${e}`);
+    if (typeof fnCalls === "function") {
+      try {
+        const maybe = fnCalls();
+        if (Array.isArray(maybe)) return maybe;
+      } catch (e) {
+        this.debugLog(`[DEBUG] functionCalls extraction failed: ${e}`);
+      }
     }
 
     return [];
