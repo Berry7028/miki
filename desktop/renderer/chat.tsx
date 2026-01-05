@@ -9,11 +9,8 @@ import {
   IconButton,
   Paper,
   Avatar,
-  Fade,
-  CircularProgress,
+  Stack,
   Chip,
-  LinearProgress,
-  Collapse,
 } from "@mui/material";
 import {
   Send,
@@ -21,10 +18,8 @@ import {
   SmartToy,
   Person,
   AutoFixHigh,
-  Psychology,
   Build,
-  ExpandMore,
-  ExpandLess,
+  AttachFile,
 } from "@mui/icons-material";
 import { theme } from "./theme";
 import type { BackendEvent } from "./types";
@@ -44,8 +39,6 @@ const ChatApp = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentTool, setCurrentTool] = useState<string>("");
   const [thinkingText, setThinkingText] = useState<string>("");
-  const [isThinking, setIsThinking] = useState(false);
-  const [showThinking, setShowThinking] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -68,18 +61,14 @@ const ChatApp = () => {
           setIsProcessing(false);
           setCurrentTool("");
           setThinkingText("");
-          setIsThinking(false);
         }
       } else if (payload.event === "thinking") {
-        // 思考過程の更新
-        setIsThinking(true);
-        setThinkingText(payload.message || "");
+        setThinkingText(payload.message || "Thinking...");
       } else if (payload.event === "tool") {
-        // ツール実行の記録
         setCurrentTool(payload.toolName || "");
         addMessage({
           type: "tool",
-          content: payload.message || `${payload.toolName}を実行中...`,
+          content: payload.message || `${payload.toolName} running...`,
           timestamp: payload.timestamp || Date.now(),
           toolName: payload.toolName,
           toolInput: payload.toolInput,
@@ -94,20 +83,18 @@ const ChatApp = () => {
       } else if (payload.event === "completed") {
         addMessage({
           type: "result",
-          content: payload.message || payload.result || "完了しました",
+          content: payload.message || payload.result || "Done.",
           timestamp: payload.timestamp || Date.now(),
         });
         setIsProcessing(false);
-        setIsThinking(false);
         setThinkingText("");
       } else if (payload.event === "error") {
         addMessage({
           type: "error",
-          content: payload.message || "エラーが発生しました",
+          content: payload.message || "An error occurred.",
           timestamp: payload.timestamp || Date.now(),
         });
         setIsProcessing(false);
-        setIsThinking(false);
       }
     });
 
@@ -127,7 +114,7 @@ const ChatApp = () => {
     } catch (error: any) {
       addMessage({
         type: "error",
-        content: "エラー: " + error.message,
+        content: "Error: " + error.message,
         timestamp: Date.now(),
       });
       setIsProcessing(false);
@@ -149,337 +136,180 @@ const ChatApp = () => {
           height: "100vh",
           display: "flex",
           flexDirection: "column",
-          bgcolor: "rgba(11, 14, 20, 0.85)",
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
-          border: "1px solid rgba(255,255,255,0.1)",
-          borderRadius: "16px",
+          bgcolor: "#1f252d",
+          borderRadius: "18px",
+          border: "1px solid rgba(255,255,255,0.08)",
           overflow: "hidden",
-          boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+          boxShadow: "0 20px 50px rgba(0,0,0,0.45)",
         }}
       >
-        {/* Header with Status */}
         <Box
           sx={{
-            background:
-              "linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(16, 185, 129, 0.1) 100%)",
-            borderBottom: "1px solid rgba(255,255,255,0.08)",
             p: 2,
+            borderBottom: "1px solid rgba(255,255,255,0.06)",
+            background: "linear-gradient(180deg, rgba(40,46,56,0.9) 0%, rgba(31,37,45,0.9) 100%)",
           }}
         >
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              mb: currentTool ? 1.5 : 0,
-            }}
-          >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between">
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <Avatar
+                sx={{
+                  bgcolor: "rgba(230,214,184,0.2)",
+                  color: "#e6d6b8",
+                  width: 28,
+                  height: 28,
+                }}
+              >
+                <SmartToy sx={{ fontSize: 16 }} />
+              </Avatar>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                MIKI DESKTOP
+              </Typography>
               <Box
                 sx={{
-                  width: 10,
-                  height: 10,
+                  width: 8,
+                  height: 8,
                   borderRadius: "50%",
-                  bgcolor: isProcessing ? "warning.main" : "success.main",
+                  bgcolor: isProcessing ? "#f0a54a" : "#4fd08a",
                   boxShadow: isProcessing
-                    ? "0 0 8px rgba(251, 191, 36, 0.6)"
-                    : "0 0 8px rgba(16, 185, 129, 0.6)",
+                    ? "0 0 8px rgba(240,165,74,0.7)"
+                    : "0 0 8px rgba(79,208,138,0.6)",
                 }}
               />
-              <Typography variant="subtitle2" fontWeight={700}>
-                miki
-              </Typography>
-              <Chip
-                label={isProcessing ? "実行中" : "待機中"}
-                size="small"
-                sx={{
-                  height: 20,
-                  fontSize: "0.7rem",
-                  bgcolor: isProcessing ? "rgba(251, 191, 36, 0.15)" : "rgba(16, 185, 129, 0.15)",
-                  color: isProcessing ? "warning.light" : "success.light",
-                  border: `1px solid ${isProcessing ? "rgba(251, 191, 36, 0.3)" : "rgba(16, 185, 129, 0.3)"}`,
-                }}
-              />
-            </Box>
+            </Stack>
             <IconButton
               size="small"
               onClick={() => window.close()}
               sx={{
-                bgcolor: "rgba(255,255,255,0.05)",
-                "&:hover": { bgcolor: "rgba(255,255,255,0.1)" },
+                bgcolor: "rgba(255,255,255,0.06)",
+                "&:hover": { bgcolor: "rgba(255,255,255,0.12)" },
               }}
             >
               <Close fontSize="small" />
             </IconButton>
-          </Box>
-
-          {/* Current Tool Indicator */}
-          {currentTool && (
-            <Fade in>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                  p: 1,
-                  bgcolor: "rgba(99, 102, 241, 0.1)",
-                  borderRadius: 2,
-                  border: "1px solid rgba(99, 102, 241, 0.2)",
-                }}
-              >
-                <Build sx={{ fontSize: 16, color: "primary.light" }} />
-                <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                  実行中のツール:
-                </Typography>
-                <Chip
-                  label={currentTool}
-                  size="small"
-                  color="primary"
-                  sx={{ height: 20, fontSize: "0.7rem" }}
-                />
-                <CircularProgress size={14} sx={{ ml: "auto" }} />
-              </Box>
-            </Fade>
-          )}
+          </Stack>
         </Box>
 
-        {/* Thinking Process Area */}
-        <Collapse in={isThinking && showThinking}>
-          <Box
-            sx={{
-              p: 2,
-              bgcolor: "rgba(139, 92, 246, 0.08)",
-              borderBottom: "1px solid rgba(139, 92, 246, 0.2)",
-            }}
-          >
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                mb: 1,
-              }}
-            >
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <Psychology sx={{ fontSize: 18, color: "secondary.light" }} />
-                <Typography variant="caption" fontWeight={700} color="secondary.light">
-                  思考過程
-                </Typography>
-              </Box>
-              <IconButton
-                size="small"
-                onClick={() => setShowThinking(!showThinking)}
-                sx={{ opacity: 0.7 }}
-              >
-                {showThinking ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
-              </IconButton>
-            </Box>
-            <LinearProgress
-              sx={{
-                mb: 1.5,
-                borderRadius: 1,
-                height: 3,
-                bgcolor: "rgba(139, 92, 246, 0.1)",
-                "& .MuiLinearProgress-bar": {
-                  bgcolor: "secondary.light",
-                },
-              }}
-            />
-            <Typography
-              variant="body2"
-              sx={{
-                color: "text.secondary",
-                fontStyle: "italic",
-                lineHeight: 1.6,
-                fontSize: "0.8rem",
-              }}
-            >
-              {thinkingText || "AIが考えています..."}
-            </Typography>
-          </Box>
-        </Collapse>
-
-        {/* Messages */}
         <Box
           sx={{
             flexGrow: 1,
             overflowY: "auto",
             p: 2,
             "&::-webkit-scrollbar": { width: "6px" },
-            "&::-webkit-scrollbar-track": {
-              bgcolor: "rgba(255,255,255,0.02)",
-              borderRadius: 1,
-            },
             "&::-webkit-scrollbar-thumb": {
-              bgcolor: "rgba(255,255,255,0.1)",
-              borderRadius: 1,
-              "&:hover": { bgcolor: "rgba(255,255,255,0.15)" },
+              bgcolor: "rgba(255,255,255,0.08)",
+              borderRadius: 3,
             },
           }}
         >
           {messages.map((msg, i) => (
-            <Fade in key={i}>
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: msg.type === "user" ? "flex-end" : "flex-start",
-                  mb: 2,
-                }}
-              >
-                <Box
-                  sx={{
-                    display: "flex",
-                    flexDirection: msg.type === "user" ? "row-reverse" : "row",
-                    gap: 1.5,
-                    maxWidth: "85%",
-                  }}
-                >
+            <Box
+              key={i}
+              sx={{
+                display: "flex",
+                justifyContent: msg.type === "user" ? "flex-end" : "flex-start",
+                mb: 2,
+              }}
+            >
+              <Stack direction="row" spacing={1.5} sx={{ maxWidth: "85%" }}>
+                {msg.type !== "user" && (
                   <Avatar
                     sx={{
-                      width: 32,
-                      height: 32,
-                      bgcolor:
-                        msg.type === "user"
-                          ? "primary.main"
-                          : msg.type === "action"
-                            ? "secondary.main"
-                            : msg.type === "tool"
-                              ? "info.main"
-                              : msg.type === "thinking"
-                                ? "secondary.light"
-                                : "rgba(255,255,255,0.1)",
-                      boxShadow:
-                        msg.type === "user"
-                          ? "0 0 12px rgba(99, 102, 241, 0.4)"
-                          : msg.type === "action"
-                            ? "0 0 12px rgba(16, 185, 129, 0.4)"
-                            : "none",
+                      width: 28,
+                      height: 28,
+                      bgcolor: "rgba(255,255,255,0.08)",
+                      color: "#d6cec1",
                     }}
                   >
-                    {msg.type === "user" ? (
-                      <Person sx={{ fontSize: 18 }} />
-                    ) : msg.type === "action" ? (
-                      <AutoFixHigh sx={{ fontSize: 18 }} />
+                    {msg.type === "action" ? (
+                      <AutoFixHigh sx={{ fontSize: 16 }} />
                     ) : msg.type === "tool" ? (
-                      <Build sx={{ fontSize: 18 }} />
-                    ) : msg.type === "thinking" ? (
-                      <Psychology sx={{ fontSize: 18 }} />
+                      <Build sx={{ fontSize: 16 }} />
                     ) : (
-                      <SmartToy sx={{ fontSize: 18 }} />
+                      <SmartToy sx={{ fontSize: 16 }} />
                     )}
                   </Avatar>
-                  <Box sx={{ flexGrow: 1 }}>
-                    <Paper
-                      elevation={0}
+                )}
+                <Paper
+                  sx={{
+                    p: 2,
+                    background:
+                      msg.type === "user"
+                        ? "rgba(230, 214, 184, 0.15)"
+                        : msg.type === "action" || msg.type === "tool"
+                        ? "rgba(0, 0, 0, 0.25)"
+                        : "rgba(255,255,255,0.04)",
+                    color: msg.type === "user" ? "#ffffff" : "text.primary",
+                    borderRadius: msg.type === "user" ? "16px 4px 16px 16px" : "4px 16px 16px 16px",
+                    border:
+                      msg.type === "user"
+                        ? "1px solid rgba(230, 214, 184, 0.3)"
+                        : msg.type === "action" || msg.type === "tool"
+                        ? "1px solid rgba(121, 184, 255, 0.2)"
+                        : "1px solid rgba(255,255,255,0.08)",
+                  }}
+                >
+                  {(msg.type === "action" || msg.type === "tool") && (
+                    <Typography
+                      variant="caption"
                       sx={{
-                        p: 2,
-                        bgcolor:
-                          msg.type === "user"
-                            ? "linear-gradient(135deg, rgba(99, 102, 241, 0.9) 0%, rgba(79, 70, 229, 0.9) 100%)"
-                            : msg.type === "action"
-                              ? "rgba(16, 185, 129, 0.1)"
-                              : msg.type === "tool"
-                                ? "rgba(59, 130, 246, 0.1)"
-                                : msg.type === "thinking"
-                                  ? "rgba(139, 92, 246, 0.08)"
-                                  : "rgba(255,255,255,0.04)",
-                        borderRadius:
-                          msg.type === "user" ? "18px 4px 18px 18px" : "4px 18px 18px 18px",
-                        border:
-                          msg.type === "action"
-                            ? "1px solid rgba(16, 185, 129, 0.3)"
-                            : msg.type === "tool"
-                              ? "1px solid rgba(59, 130, 246, 0.3)"
-                              : msg.type === "thinking"
-                                ? "1px solid rgba(139, 92, 246, 0.2)"
-                                : msg.type === "error"
-                                  ? "1px solid rgba(239, 68, 68, 0.4)"
-                                  : "1px solid rgba(255,255,255,0.05)",
-                        backdropFilter: "blur(8px)",
+                        display: "block",
+                        mb: 1,
+                        color: "#79b8ff",
+                        fontWeight: 700,
+                        letterSpacing: "0.05em",
+                        fontSize: "0.65rem",
                       }}
                     >
-                      {msg.toolName && (
-                        <Box sx={{ mb: 1 }}>
-                          <Chip
-                            label={msg.toolName}
-                            size="small"
-                            icon={<Build sx={{ fontSize: "14px !important" }} />}
-                            sx={{
-                              height: 22,
-                              fontSize: "0.7rem",
-                              bgcolor: "rgba(59, 130, 246, 0.2)",
-                              border: "1px solid rgba(59, 130, 246, 0.3)",
-                            }}
-                          />
-                        </Box>
-                      )}
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          whiteSpace: "pre-wrap",
-                          color:
-                            msg.type === "user"
-                              ? "#fff"
-                              : msg.type === "action"
-                                ? "secondary.light"
-                                : msg.type === "error"
-                                  ? "error.light"
-                                  : "text.primary",
-                          lineHeight: 1.6,
-                        }}
-                      >
-                        {msg.content}
-                      </Typography>
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          display: "block",
-                          mt: 1,
-                          opacity: 0.6,
-                          textAlign: msg.type === "user" ? "right" : "left",
-                          fontSize: "0.7rem",
-                        }}
-                      >
-                        {new Date(msg.timestamp).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </Typography>
-                    </Paper>
-                  </Box>
-                </Box>
-              </Box>
-            </Fade>
+                      {msg.type === "tool" ? `TOOL: ${msg.toolName}` : "ACTION"}
+                    </Typography>
+                  )}
+                  <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", lineHeight: 1.6, fontFamily: msg.type === "action" || msg.type === "tool" ? "monospace" : "inherit" }}>
+                    {msg.content}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      display: "block",
+                      mt: 1,
+                      opacity: 0.6,
+                      textAlign: msg.type === "user" ? "right" : "left",
+                      fontSize: "0.7rem",
+                    }}
+                  >
+                    {new Date(msg.timestamp).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </Typography>
+                </Paper>
+              </Stack>
+            </Box>
           ))}
           <div ref={messagesEndRef} />
         </Box>
 
-        {/* Input */}
         <Box sx={{ p: 2, borderTop: "1px solid rgba(255,255,255,0.08)" }}>
           <Paper
             elevation={0}
             sx={{
-              p: "6px 10px",
+              p: 1,
               display: "flex",
               alignItems: "center",
-              borderRadius: "24px",
-              bgcolor: "rgba(255,255,255,0.05)",
-              border: "1px solid rgba(255,255,255,0.1)",
-              backdropFilter: "blur(8px)",
-              transition: "all 0.2s",
-              "&:focus-within": {
-                bgcolor: "rgba(255,255,255,0.08)",
-                border: "1px solid rgba(99, 102, 241, 0.5)",
-                boxShadow: "0 0 16px rgba(99, 102, 241, 0.2)",
-              },
+              gap: 1,
+              borderRadius: 2,
+              bgcolor: "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,255,255,0.08)",
             }}
           >
+            <IconButton size="small" sx={{ color: "text.secondary" }}>
+              <AttachFile fontSize="small" />
+            </IconButton>
             <TextField
               fullWidth
               multiline
-              maxRows={4}
-              placeholder="質問してみましょう..."
+              maxRows={3}
+              placeholder="Ask Miki to automate a task..."
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -487,33 +317,29 @@ const ChatApp = () => {
               InputProps={{
                 disableUnderline: true,
                 sx: {
-                  px: 2,
-                  py: 1,
-                  fontSize: "0.875rem",
-                  color: "text.primary",
+                  px: 1,
+                  py: 0.5,
+                  fontSize: "0.85rem",
                 },
               }}
             />
             <IconButton
-              color="primary"
               onClick={handleSend}
               disabled={!inputText.trim() || isProcessing}
               sx={{
-                p: 1.5,
                 bgcolor: inputText.trim() && !isProcessing ? "primary.main" : "transparent",
+                color: inputText.trim() && !isProcessing ? "#1f242c" : "text.secondary",
                 "&:hover": {
-                  bgcolor: inputText.trim() && !isProcessing ? "primary.dark" : "transparent",
+                  bgcolor: inputText.trim() && !isProcessing ? "primary.light" : "transparent",
                 },
-                transition: "all 0.2s",
               }}
             >
-              {isProcessing ? (
-                <CircularProgress size={20} color="inherit" />
-              ) : (
-                <Send sx={{ fontSize: 20 }} />
-              )}
+              <Send fontSize="small" />
             </IconButton>
           </Paper>
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
+            Enter to send, Shift+Enter for new line
+          </Typography>
         </Box>
       </Box>
     </ThemeProvider>

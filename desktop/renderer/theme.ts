@@ -4,29 +4,39 @@ export const theme = createTheme({
   palette: {
     mode: "dark",
     primary: {
-      main: "#6366f1", // Indigo 500
-      light: "#818cf8",
-      dark: "#4f46e5",
+      main: "#e6d6b8",
+      light: "#f1e6cf",
+      dark: "#d3c2a2",
     },
     secondary: {
-      main: "#10b981", // Emerald 500
+      main: "#67d6a1",
+    },
+    success: {
+      main: "#4fd08a",
+      light: "#7fe0ad",
+    },
+    warning: {
+      main: "#f0a54a",
+    },
+    info: {
+      main: "#79b8ff",
     },
     background: {
-      default: "#0b0e14", // Deep dark
-      paper: "#161b22", // Slightly lighter dark
+      default: "#212833",
+      paper: "#2c333d",
     },
     text: {
-      primary: "#f8fafc",
-      secondary: "#94a3b8",
+      primary: "#ece7dd",
+      secondary: "#a9a399",
     },
     divider: "rgba(255, 255, 255, 0.08)",
   },
   shape: {
-    borderRadius: 16,
+    borderRadius: 18,
   },
   typography: {
     fontFamily: [
-      "Inter",
+      '"Plus Jakarta Sans"',
       "-apple-system",
       "BlinkMacSystemFont",
       '"Segoe UI"',
@@ -34,16 +44,21 @@ export const theme = createTheme({
       "sans-serif",
     ].join(","),
     h1: {
-      fontSize: "2.5rem",
-      fontWeight: 800,
-      letterSpacing: "-0.02em",
+      fontSize: "2.6rem",
+      fontWeight: 700,
+      letterSpacing: "-0.01em",
+    },
+    h2: {
+      fontSize: "1.6rem",
+      fontWeight: 700,
+      letterSpacing: "-0.01em",
     },
     h6: {
       fontWeight: 700,
-      fontSize: "1rem",
-      letterSpacing: "0.02em",
+      fontSize: "0.95rem",
+      letterSpacing: "0.08em",
       textTransform: "uppercase",
-      color: "#94a3b8",
+      color: "#b8b2a7",
     },
     button: {
       textTransform: "none",
@@ -51,18 +66,31 @@ export const theme = createTheme({
     },
   },
   components: {
+    MuiCssBaseline: {
+      styleOverrides: {
+        body: {
+          backgroundColor: "#212833",
+        },
+      },
+    },
     MuiButton: {
       styleOverrides: {
         root: {
           borderRadius: 12,
-          padding: "8px 20px",
+          padding: "8px 18px",
           boxShadow: "none",
-          "&:hover": {
-            boxShadow: "0 4px 12px rgba(99, 102, 241, 0.2)",
-          },
         },
         containedPrimary: {
-          background: "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)",
+          color: "#1f242c",
+          background: "linear-gradient(180deg, #f1e5cb 0%, #e1d0af 100%)",
+          border: "1px solid rgba(255, 255, 255, 0.2)",
+          "&:hover": {
+            background: "linear-gradient(180deg, #f7ead4 0%, #e4d4b6 100%)",
+          },
+        },
+        outlined: {
+          borderColor: "rgba(255, 255, 255, 0.18)",
+          color: "#d7c8ac",
         },
       },
     },
@@ -70,8 +98,8 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           backgroundImage: "none",
-          border: "1px solid rgba(255, 255, 255, 0.08)",
-          boxShadow: "0 4px 24px rgba(0, 0, 0, 0.4)",
+          border: "1px solid rgba(255, 255, 255, 0.06)",
+          boxShadow: "0 16px 40px rgba(0, 0, 0, 0.35)",
         },
       },
     },
@@ -79,9 +107,9 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           "& .MuiOutlinedInput-root": {
-            backgroundColor: "rgba(255, 255, 255, 0.03)",
+            backgroundColor: "rgba(17, 21, 26, 0.55)",
             "& fieldset": {
-              borderColor: "rgba(255, 255, 255, 0.1)",
+              borderColor: "rgba(255, 255, 255, 0.12)",
             },
             "&:hover fieldset": {
               borderColor: "rgba(255, 255, 255, 0.2)",

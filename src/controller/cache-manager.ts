@@ -24,8 +24,9 @@ export class GeminiCacheManager {
    * システムプロンプトをキャッシュに保存する
    * @param systemPrompt キャッシュするシステムプロンプト
    * @param model モデル名 (例: "models/gemini-3-flash-preview")
+   * @param tools ツール定義 (オプション)
    */
-  async createSystemPromptCache(systemPrompt: string, model: string): Promise<CacheMetadata | null> {
+  async createSystemPromptCache(systemPrompt: string, model: string, tools?: any[]): Promise<CacheMetadata | null> {
     if (!this.cacheManager) return null;
 
     try {
@@ -41,6 +42,7 @@ export class GeminiCacheManager {
             parts: [{ text: systemPrompt }],
           },
         ],
+        tools: tools ? [{ functionDeclarations: tools }] : undefined,
         ttlSeconds: 3600, // 1時間キャッシュ
       });
 
@@ -71,7 +73,7 @@ export class GeminiCacheManager {
   /**
    * 履歴を含むキャッシュを作成または更新する
    */
-  async updateHistoryCache(contents: any[], model: string): Promise<CacheMetadata | null> {
+  async updateHistoryCache(contents: any[], model: string, tools?: any[]): Promise<CacheMetadata | null> {
     if (!this.cacheManager) return null;
 
     try {
@@ -86,6 +88,7 @@ export class GeminiCacheManager {
         model: model,
         displayName: "miki-history-cache",
         contents: contents,
+        tools: tools ? [{ functionDeclarations: tools }] : undefined,
         ttlSeconds: 1800, // 30分
       });
 
@@ -99,7 +102,11 @@ export class GeminiCacheManager {
       console.error(`History cache created/updated: ${cache.name}`);
       return this.historyCache;
     } catch (error: any) {
-      console.error("Failed to update history cache:", error);
+      if (error?.message?.includes("too small") || error?.status === 400) {
+        console.error("History is too small for caching. Skipping.");
+      } else {
+        console.error("Failed to update history cache:", error);
+      }
       return null;
     }
   }

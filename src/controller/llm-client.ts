@@ -226,9 +226,12 @@ export class LLMClient {
 
   async createSystemPromptCache(systemPrompt: string): Promise<void> {
     try {
-      const { totalTokens } = await this.model.countTokens(systemPrompt);
+      const { totalTokens } = await this.model.countTokens({
+        contents: [{ role: "user", parts: [{ text: systemPrompt }] }],
+        tools: [{ functionDeclarations: ACTION_FUNCTION_DECLARATIONS }],
+      });
       if (totalTokens >= 1024) {
-        await this.cacheManager.createSystemPromptCache(systemPrompt, this.modelName);
+        await this.cacheManager.createSystemPromptCache(systemPrompt, this.modelName, ACTION_FUNCTION_DECLARATIONS);
       } else {
         this.onLog(
           "info",
@@ -237,7 +240,7 @@ export class LLMClient {
       }
     } catch (e) {
       console.error("Token count failed, attempting cache anyway:", e);
-      await this.cacheManager.createSystemPromptCache(systemPrompt, this.modelName);
+      await this.cacheManager.createSystemPromptCache(systemPrompt, this.modelName, ACTION_FUNCTION_DECLARATIONS);
     }
   }
 
@@ -259,13 +262,23 @@ export class LLMClient {
 
     try {
       // 1024トークン以上の場合のみキャッシュ
-      const { totalTokens } = await this.model.countTokens({ contents });
+      // countTokens に渡す形式に tools も含める
+      const { totalTokens } = await this.model.countTokens({
+        contents,
+        tools: [{ functionDeclarations: ACTION_FUNCTION_DECLARATIONS }],
+      });
+      
+      this.debugLog(`[DEBUG] Token count for history cache: ${totalTokens}`);
+      
       if (totalTokens >= 1024) {
-        await this.cacheManager.updateHistoryCache(contents, this.modelName);
+        await this.cacheManager.updateHistoryCache(contents, this.modelName, ACTION_FUNCTION_DECLARATIONS);
         this.onLog("info", `履歴をキャッシュしました (${totalTokens} tokens)`);
+      } else {
+        this.debugLog(`[DEBUG] History too small to cache: ${totalTokens} < 1024`);
       }
     } catch (e) {
-      console.error("Failed to count tokens or cache history:", e);
+      // キャッシュマネージャー側でエラーハンドリングしているが、ここでも一応キャッチする
+      this.debugLog(`[DEBUG] Failed to count tokens or cache history: ${e}`);
     }
   }
 }
