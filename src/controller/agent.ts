@@ -26,10 +26,7 @@ export class MacOSAgent extends EventEmitter {
     super();
     this.debugMode = debugMode;
 
-    // デバッグモード時にスクリーンショットディレクトリを設定
     if (this.debugMode) {
-      // Note: process.cwd() はコントローラープロセスが起動された作業ディレクトリ（プロジェクトルート）を指す
-      // desktop/main.js から spawn されるため、プロジェクトルート/.screenshot に保存される
       this.screenshotDir = path.join(process.cwd(), ".screenshot");
       if (!fs.existsSync(this.screenshotDir)) {
         fs.mkdirSync(this.screenshotDir, { recursive: true });
@@ -50,16 +47,13 @@ export class MacOSAgent extends EventEmitter {
       );
     }
 
-    // PythonBridge初期化
     this.pythonBridge = new PythonBridge(
       (message) => this.emit("error", message),
       () => this.init(),
     );
 
-    // ActionExecutor初期化
     this.actionExecutor = new ActionExecutor(this.pythonBridge, this.screenSize, this.debugMode);
 
-    // LLMClient初期化
     this.llmClient = new LLMClient(apiKey, this.screenSize, this.debugMode, (type, message) =>
       this.log(type as "info" | "success" | "error" | "hint" | "action", message),
     );
@@ -266,11 +260,8 @@ export class MacOSAgent extends EventEmitter {
   }
 
   private pruneHistory(history: GeminiContent[]) {
-    // 1. 画像データの削除 (直近3ステップより前)
-    // 画像はトークン消費が激しいため、古いターンの画像は削除してテキスト(操作履歴)のみにする
     const STEP_THRESHOLD = 3;
     let messageCount = 0;
-    // 後ろから数えて、一定数以上のターンに含まれる画像を削除
     for (let i = history.length - 1; i >= 0; i--) {
       const entry = history[i];
       if (entry && entry.role === "user") {
@@ -281,21 +272,15 @@ export class MacOSAgent extends EventEmitter {
       }
     }
 
-    // 2. メッセージ数の削減
     if (history.length <= HISTORY_CONFIG.MAX_MESSAGES) return;
 
-    // Manusの方針: 失敗した履歴は「何がダメだったか」を学習するために残す
-    // 成功したターンや中間的なUI取得ターンは優先的に削除対象にする
-    const first = history[0]; // 目標メッセージ
+    const first = history[0];
     const head: GeminiContent[] = first ? [first] : [];
 
-    // 削除候補を選別
-    // インデックス 1 から (最後 - 4) までの範囲で削る (直近4メッセージは必ず残す)
     const preserveLastN = 4;
     const candidates = history.slice(1, -preserveLastN);
     const recent = history.slice(-preserveLastN);
 
-    // 失敗した(status: "error")メッセージを特定
     const failedIndices = new Set<number>();
     candidates.forEach((msg, idx) => {
       const hasError = msg.parts.some(
@@ -306,12 +291,9 @@ export class MacOSAgent extends EventEmitter {
       }
     });
 
-    // 削除しても良いメッセージをフィルタリング
-    // 失敗したものは残し、それ以外を古い順に削る
     const maxToKeep = HISTORY_CONFIG.MAX_MESSAGES - head.length - recent.length;
     const filteredCandidates: GeminiContent[] = [];
     
-    // まず失敗したメッセージを全部入れる
     for (const idx of Array.from(failedIndices).sort((a, b) => a - b)) {
       const candidate = candidates[idx];
       if (candidate) {
@@ -319,14 +301,11 @@ export class MacOSAgent extends EventEmitter {
       }
     }
 
-    // まだ余裕があれば、成功したメッセージも「新しい順」に入れる
     const remainingCount = maxToKeep - filteredCandidates.length;
     if (remainingCount > 0) {
       const successCandidates = candidates.filter((_, idx) => !failedIndices.has(idx));
-      // 新しいものを優先して残す
       const toAdd = successCandidates.slice(-remainingCount);
       filteredCandidates.push(...toAdd);
-      // インデックス順に並び替え
       filteredCandidates.sort((a, b) => {
         return history.indexOf(a) - history.indexOf(b);
       });
@@ -336,8 +315,6 @@ export class MacOSAgent extends EventEmitter {
   }
 
   private appendHistory(history: GeminiContent[], entry: GeminiContent) {
-    // ここでは inlineData (画像) も含めて一旦追加する
-    // pruneHistory の方で古い画像のパージを行う
     history.push(entry);
     this.pruneHistory(history);
   }
@@ -349,7 +326,7 @@ export class MacOSAgent extends EventEmitter {
 
   public async reset() {
     this.userPromptQueue = [];
-    this.stopRequested = true; // 実行中なら停止させる
+    this.stopRequested = true;
     this.lastCachedStep = -1;
     try {
       await this.llmClient.getCacheManager().clearAllCaches();
@@ -384,11 +361,9 @@ export class MacOSAgent extends EventEmitter {
     this.stopRequested = false;
     this.emitStatus("running");
 
-    // 実行開始時にマウスカーソルを非表示にする
     await this.setCursorVisibility(false);
 
     try {
-      // システムプロンプトをキャッシュ (Phase 1)
       const formattedPrompt = SYSTEM_PROMPT.replace(
         "{SCREEN_WIDTH}",
         this.screenSize.width.toString(),
@@ -447,29 +422,21 @@ export class MacOSAgent extends EventEmitter {
         const screenshot = res.data;
         const mousePosition = res.mouse_position;
 
-        // デバッグモード: スクリーンショットを保存
         if (this.debugMode && this.screenshotDir) {
           try {
             const filename = this.getScreenshotFilename(this.currentStep + 1);
             const filepath = path.join(this.screenshotDir, filename);
             fs.writeFileSync(filepath, Buffer.from(screenshot, "base64"));
-            if (this.debugMode) {
-              console.error(`[DEBUG] Screenshot saved: ${filepath}`);
-            }
+            console.error(`[DEBUG] Screenshot saved: ${filepath}`);
           } catch (e) {
-            if (this.debugMode) {
-              console.error(`[DEBUG] Failed to save screenshot: ${e}`);
-            }
+            console.error(`[DEBUG] Failed to save screenshot: ${e}`);
           }
         }
 
         this.emitStatus("thinking");
         this.emit("action_update", { phase: "thinking", message: "Thinking..." });
 
-        // 定期的に履歴をキャッシュ (例: 3ステップごと)
-        // KVキャッシュを更新することで、次回以降のTTFTとコストを抑える
         if (this.currentStep > 0 && this.currentStep % 3 === 0 && this.currentStep !== this.lastCachedStep) {
-          // 直近1ターンを除いた履歴をキャッシュ
           const historyToCache = history.slice(0, -2);
           if (historyToCache.length > 0) {
             await this.llmClient.cacheHistory(historyToCache);
@@ -591,7 +558,6 @@ export class MacOSAgent extends EventEmitter {
           );
           const compactFunctionResponse = this.compactFunctionResponse(functionResponse);
 
-          // UI要素のキャッシュ (Phase 2)
           if (action.action === "elementsJson" && result.status === "success" && result.ui_data) {
             await this.llmClient.cacheUIElements((action as any).params.app_name, result.ui_data);
           }
@@ -616,7 +582,6 @@ export class MacOSAgent extends EventEmitter {
 
       this.emit("runCompleted");
     } finally {
-      // 終了時に必ずマウスカーソルを再表示する
       await this.setCursorVisibility(true);
     }
   }

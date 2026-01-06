@@ -12,7 +12,6 @@ let controllerProcess;
 let controllerReader;
 let isQuitting = false;
 
-// デバッグモードフラグ (コマンドライン引数 --debug で有効化)
 const debugMode = process.argv.includes("--debug");
 
 function createWindow() {
@@ -35,10 +34,6 @@ function createWindow() {
 
   win.loadFile(path.join(__dirname, "renderer", "index.html"));
 
-  // macOSでのスクリーンショット/画面共有対策 (setContentProtection)
-  // NSWindowのsharingTypeをNSWindowSharingNoneに設定します。
-  // 注意: macOS 15以降のScreenCaptureKitを使用するキャプチャ等、一部の環境では
-  // OSの制限により完全に防げない場合があります。
   if (process.platform === "darwin") {
     win.setContentProtection(true);
   }
@@ -131,12 +126,10 @@ function createOverlayWindow() {
 
   win.loadFile(path.join(__dirname, "renderer", "overlay.html"));
 
-  // macOSでのスクリーンショット/画面共有対策
   if (process.platform === "darwin") {
     win.setContentProtection(true);
   }
 
-  // マウス位置の同期を開始
   const positionTimer = setInterval(() => {
     if (win.isDestroyed()) {
       clearInterval(positionTimer);
@@ -144,7 +137,7 @@ function createOverlayWindow() {
     }
     const point = screen.getCursorScreenPoint();
     win.webContents.send("miki:mouse-pos", point);
-  }, 16); // ~60fps
+  }, 16);
 
   win.on("closed", () => {
     clearInterval(positionTimer);
@@ -183,7 +176,7 @@ function createChatWindow() {
     vibrancy: "under-window",
     visualEffectState: "active",
     roundedCorners: true,
-    skipTaskbar: true, // タスクバーに表示しない（パネル的な振る舞い）
+    skipTaskbar: true,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -191,15 +184,11 @@ function createChatWindow() {
     }
   });
 
-  // 全てのワークスペース（全画面アプリを含む）で表示されるように設定
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-  // 最前面のレベルを高く設定
   win.setAlwaysOnTop(true, "screen-saver");
 
   win.loadFile(path.join(__dirname, "renderer", "chat.html"));
 
-  // macOSでのスクリーンショット/画面共有対策 (Chat Widget)
-  // ユーザーの機密情報が含まれる可能性があるため、キャプチャを防止します。
   if (process.platform === "darwin") {
     win.setContentProtection(true);
   }
@@ -271,7 +260,6 @@ function ensureController() {
     DOTENV_CONFIG_QUIET: "true"
   };
 
-  // デバッグモードの環境変数を設定
   if (debugMode) {
     env.MIKI_DEBUG = "1";
     console.log("[DEBUG MODE ENABLED]");
@@ -303,7 +291,6 @@ function ensureController() {
     const trimmedLine = line.trim();
     if (!trimmedLine) return;
     
-    // JSONでない可能性が高い行（ログなど）はスキップ
     if (!trimmedLine.startsWith("{") && !trimmedLine.startsWith("[")) {
       console.log(`Controller info: ${trimmedLine}`);
       return;
@@ -321,7 +308,6 @@ function ensureController() {
         overlayWindow.webContents.send("miki:backend", payload);
       }
 
-      // オーバーレイの表示・非表示制御
       if (payload.event === "status") {
         console.log("Status event received:", payload.state);
         if (payload.state === "running" || payload.state === "thinking") {
@@ -473,9 +459,6 @@ app.whenReady().then(() => {
   mainWindow = createWindow();
   ensureController();
 
-  // グローバルショートカット登録
-  // Note: macOSで左右のCommandキーを区別するのは困難なため、
-  // Command+Shift+Spaceを使用（カスタマイズ可能）
   const shortcutRegistered = globalShortcut.register("CommandOrControl+Shift+Space", () => {
     toggleChatWindow();
   });
@@ -492,7 +475,6 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
-  // メニューバーアプリとして動作させるため、ウィンドウが閉じても終了しない
 });
 
 app.on("before-quit", () => {

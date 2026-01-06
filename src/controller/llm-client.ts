@@ -124,12 +124,6 @@ export class LLMClient {
       contents.push({ role: "user", parts: [{ text: formattedPrompt }] });
       contents.push(...history);
     } else {
-      // 履歴キャッシュがある場合、履歴のうちキャッシュに含まれていない「最近の分」だけを抽出する必要がある
-      // ここでは、Agent側で「どこまでキャッシュしたか」を管理し、それ以降の履歴を渡すようにする
-      // 暫定的に、historyの全件を渡す（SDKがキャッシュと重複する部分をうまく扱ってくれることを期待するか、
-      // あるいは呼び出し側で調整する）
-      // GeminiのContext Cachingは「プレフィックス」が一致する必要があるため、
-      // contents = [cached_content] + [new_history] という構造にする。
       contents.push(...history);
     }
 
@@ -206,7 +200,6 @@ export class LLMClient {
     const fnCalls = response?.response?.functionCalls;
     if (Array.isArray(fnCalls)) return fnCalls;
 
-    // Gemini JS SDK (v0.24系) では response.functionCalls() ヘルパーが用意されているため、そのケースも許容する
     if (typeof fnCalls === "function") {
       try {
         const maybe = fnCalls();
@@ -261,8 +254,6 @@ export class LLMClient {
     const contents = [{ role: "user" as const, parts: [{ text: formattedPrompt }] }, ...history];
 
     try {
-      // 1024トークン以上の場合のみキャッシュ
-      // countTokens に渡す形式に tools も含める
       const { totalTokens } = await this.model.countTokens({
         contents,
         tools: [{ functionDeclarations: ACTION_FUNCTION_DECLARATIONS }],
@@ -277,7 +268,6 @@ export class LLMClient {
         this.debugLog(`[DEBUG] History too small to cache: ${totalTokens} < 1024`);
       }
     } catch (e) {
-      // キャッシュマネージャー側でエラーハンドリングしているが、ここでも一応キャッチする
       this.debugLog(`[DEBUG] Failed to count tokens or cache history: ${e}`);
     }
   }

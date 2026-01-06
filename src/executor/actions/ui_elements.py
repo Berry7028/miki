@@ -8,25 +8,17 @@ from actions.clipboard_utils import copy_text
 
 
 def _type_text(text):
-    """
-    テキストを入力する（クリップボード経由でより確実に）
-    Note: This is duplicated from mouse_keyboard to avoid circular dependency
-    """
-    # 特殊な文字や日本語入力の不安定さを避けるため、クリップボード経由での貼り付けを試みる
+    """テキストを入力する（クリップボード経由でより確実に）"""
     copy_result = copy_text(text)
     if copy_result["status"] == "success":
         try:
-            # 貼り付け前の短い待機
             time.sleep(0.1)
-            # command + v で貼り付け
             pyautogui.hotkey('command', 'v')
-            # 貼り付けがOS側で完了するのを待つ
             time.sleep(0.2)
             return {"status": "success", "method": copy_result["method"]}
         except Exception as e:
             return {"status": "error", "message": f"Failed to paste text: {str(e)}"}
 
-    # クリップボードが使えない場合は通常のタイピング
     try:
         pyautogui.write(text, interval=0.05)
         return {"status": "success", "method": "write"}
@@ -35,10 +27,7 @@ def _type_text(text):
 
 
 def get_ui_elements(app_name):
-    """
-    AppleScriptのGUI Scriptingを使用して、指定されたアプリのGUI要素一覧を効率的に取得する。
-    entire contentsを使用せず、一括プロパティ取得を利用することで高速化。
-    """
+    """AppleScriptのGUI Scriptingを使用してGUI要素一覧を取得する"""
     script = f'''
     tell application "System Events"
         if not (exists application process "{app_name}") then return "ERROR: Process not found"
@@ -86,7 +75,6 @@ def get_ui_elements(app_name):
             output = result.stdout.strip()
             if output.startswith("ERROR"):
                 return {"status": "error", "message": output}
-            # osascriptの戻り値はカンマ区切り
             if not output:
                 return {"status": "success", "elements": []}
             elements = output.split(", ")
@@ -98,10 +86,7 @@ def get_ui_elements(app_name):
 
 
 def get_ui_elements_json(app_name, max_depth=3):
-    """
-    UI要素をJSON形式で詳細に取得（JXA使用）
-    properties()とactions()を使って、UI要素の詳細情報を再帰的に取得する
-    """
+    """UI要素をJSON形式で詳細に取得（JXA使用）"""
     jxa_script = f'''
     ObjC.import('stdlib');
 
@@ -132,13 +117,11 @@ def get_ui_elements_json(app_name, max_depth=3):
             children: []
           }};
 
-          // アクション一覧を取得
           try {{
             const actions = elem.actions();
             result.actions = actions.map(a => a.name());
           }} catch (e) {{}}
 
-          // 子要素取得（depth制限）
           if (depth < {max_depth}) {{
             try {{
               const children = elem.uiElements();
@@ -178,9 +161,7 @@ def get_ui_elements_json(app_name, max_depth=3):
 
 
 def click_element(app_name, role, name):
-    """
-    UI要素をroleとnameで検索してクリック
-    """
+    """UI要素をroleとnameで検索してクリック"""
     jxa_script = f'''
     const se = Application("System Events");
     const proc = se.processes["{app_name}"];
@@ -233,7 +214,6 @@ def click_element(app_name, role, name):
         if output.startswith("{"):
             data = json.loads(output)
             if data.get("status") == "success":
-                # pyautoguiを使用して移動アニメーション付きでクリック
                 pyautogui.click(x=data["x"], y=data["y"], duration=0.5,
                                 tween=pyautogui.easeInOutQuad)
                 return {"status": "success"}
@@ -249,9 +229,7 @@ def click_element(app_name, role, name):
 
 
 def focus_element(app_name, role, name):
-    """
-    UI要素にフォーカスを当てる
-    """
+    """UI要素にフォーカスを当てる"""
     jxa_script = f'''
     const se = Application("System Events");
     const proc = se.processes["{app_name}"];
@@ -305,14 +283,10 @@ def focus_element(app_name, role, name):
 
 
 def type_to_element(app_name, role, name, text):
-    """
-    UI要素をフォーカスしてテキスト入力
-    """
-    # まずフォーカス
+    """UI要素をフォーカスしてテキスト入力"""
     focus_result = focus_element(app_name, role, name)
     if focus_result["status"] != "success":
         return focus_result
 
-    # テキスト入力
     time.sleep(0.2)
     return _type_text(text=text)

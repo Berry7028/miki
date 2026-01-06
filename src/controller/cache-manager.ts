@@ -1,14 +1,13 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-// @ts-ignore - Note: GoogleAICacheManager might be in @google/generative-ai/server
 import { GoogleAICacheManager } from "@google/generative-ai/server";
 import type { CacheMetadata } from "./types";
 
 export class GeminiCacheManager {
   private cacheManager: any;
   private apiKey: string;
-  private modelName: string = "gemini-3-flash-preview"; // Default model for caching
+  private modelName: string = "gemini-3-flash-preview";
   private systemPromptCache: CacheMetadata | null = null;
-  private historyCache: CacheMetadata | null = null; // 履歴を含むキャッシュ
+  private historyCache: CacheMetadata | null = null;
   private uiElementsCaches: Map<string, CacheMetadata> = new Map();
 
   constructor(apiKey: string) {
@@ -22,9 +21,6 @@ export class GeminiCacheManager {
 
   /**
    * システムプロンプトをキャッシュに保存する
-   * @param systemPrompt キャッシュするシステムプロンプト
-   * @param model モデル名 (例: "models/gemini-3-flash-preview")
-   * @param tools ツール定義 (オプション)
    */
   async createSystemPromptCache(systemPrompt: string, model: string, tools?: any[]): Promise<CacheMetadata | null> {
     if (!this.cacheManager) return null;
@@ -50,13 +46,12 @@ export class GeminiCacheManager {
         cacheName: cache.name,
         createdAt: cache.createTime,
         expiresAt: cache.expireTime,
-        tokenCount: 0, // SDKから取得できない場合は0
+        tokenCount: 0,
       };
 
       console.error(`System prompt cache created: ${cache.name}`);
       return this.systemPromptCache;
     } catch (error: any) {
-      // 1024トークン未満などの理由でキャッシュに失敗した場合は無視する
       if (error?.message?.includes("too small") || error?.status === 400) {
         console.error("System prompt is too small for caching. Skipping.");
       } else {
@@ -79,7 +74,6 @@ export class GeminiCacheManager {
     try {
       this.modelName = model;
       
-      // 古い履歴キャッシュを削除（オプション。Geminiは自動で消去するが明示的に管理）
       if (this.historyCache) {
         await this.deleteCache(this.historyCache.cacheName).catch(() => {});
       }
@@ -89,7 +83,7 @@ export class GeminiCacheManager {
         displayName: "miki-history-cache",
         contents: contents,
         tools: tools ? [{ functionDeclarations: tools }] : undefined,
-        ttlSeconds: 1800, // 30分
+        ttlSeconds: 1800,
       });
 
       this.historyCache = {
@@ -133,7 +127,7 @@ export class GeminiCacheManager {
             parts: [{ text: `Below is the UI structure for the application: ${appName}\n\n${dataStr}` }],
           },
         ],
-        ttlSeconds: 300, // 5分キャッシュ
+        ttlSeconds: 300,
       });
 
       const metadata = {

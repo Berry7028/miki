@@ -54,7 +54,6 @@ export class PythonBridge {
       this.onError(`Pythonエラー: ${data}`);
     });
 
-    // プロセスクラッシュの検知と自動再起動
     this.pythonProcess.on("exit", (code, signal) => {
       if (!this.isRestarting) {
         console.error(`Pythonプロセスが終了しました (code: ${code}, signal: ${signal})`);
@@ -76,22 +75,18 @@ export class PythonBridge {
     this.isRestarting = true;
     console.error("Pythonプロセスを再起動しています...");
 
-    // 古いプロセスのクリーンアップ
     try {
       this.pythonReader.close();
       this.pythonProcess.kill();
     } catch (e) {
-      // 既に終了している場合は無視
     }
 
-    // 待機後に再起動
     await new Promise((resolve) => setTimeout(resolve, 1000));
     this.startPythonProcess();
     this.isRestarting = false;
 
     console.error("Pythonプロセスを再起動しました");
 
-    // 再初期化のコールバック
     this.onReady();
   }
 

@@ -1,8 +1,5 @@
 """
 Miki Executor - MacOS操作実行エンジン
-
-このモジュールはコマンドディスパッチャーとして機能し、
-実際の操作は各アクションモジュールに委譲されます。
 """
 import sys
 import json
@@ -10,12 +7,10 @@ import time
 import pyautogui
 import io
 
-# 標準入出力をUTF-8に設定
 sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8')
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', line_buffering=True)
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', line_buffering=True)
 
-# 各アクションモジュールをインポート
 from actions.screenshot import screenshot, get_screen_size
 from actions.mouse_keyboard import (
     click, type_text, press_key, hotkey,
@@ -28,11 +23,9 @@ from actions.ui_elements import (
 )
 from actions.web_elements import get_web_elements, click_web_element
 
-# 安全装置: マウスを画面の隅に移動させるとプログラムが停止する
 pyautogui.FAILSAFE = True
 
 
-# アクションディスパッチャー: アクション名から実装関数へのマッピング
 ACTION_HANDLERS = {
     "screenshot": screenshot,
     "click": click,
@@ -65,7 +58,7 @@ def dispatch_action(action, params):
 
 
 def main():
-    """メインループ: 標準入力からコマンドを読み取り、実行し、結果を返す"""
+    """メインループ"""
     while True:
         line = sys.stdin.readline()
         if not line:
@@ -77,14 +70,11 @@ def main():
             action = command_data.get("action")
             params = command_data.get("params", {})
 
-            # exitアクションは特別扱い
             if action == "exit":
                 break
 
-            # アクションを実行
             result = dispatch_action(action, params)
 
-            # 実行時間を追加
             end_time = time.time()
             result["execution_time_ms"] = int((end_time - start_time) * 1000)
 
