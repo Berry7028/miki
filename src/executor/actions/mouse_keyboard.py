@@ -90,7 +90,14 @@ def mouse_move(x, y, duration=None):
 
 def scroll(amount):
     """スクロールする"""
-    pyautogui.scroll(amount)
+    try:
+        scroll_amount = int(amount)
+    except (TypeError, ValueError):
+        return {"status": "error", "message": f"Invalid scroll amount: {amount}"}
+
+    # ツール仕様は「正の値で下方向」だが、pyautoguiは正の値で上方向
+    # 仕様と一致させるために符号を反転する
+    pyautogui.scroll(-scroll_amount)
     return {"status": "success"}
 
 
