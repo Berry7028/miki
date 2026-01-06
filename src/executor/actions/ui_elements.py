@@ -16,17 +16,13 @@ def _type_text(text):
     copy_result = copy_text(text)
     if copy_result["status"] == "success":
         try:
-            # 貼り付け前の短い待機
             time.sleep(0.1)
-            # command + v で貼り付け
             pyautogui.hotkey('command', 'v')
-            # 貼り付けがOS側で完了するのを待つ
             time.sleep(0.2)
             return {"status": "success", "method": copy_result["method"]}
         except Exception as e:
             return {"status": "error", "message": f"Failed to paste text: {str(e)}"}
 
-    # クリップボードが使えない場合は通常のタイピング
     try:
         pyautogui.write(text, interval=0.05)
         return {"status": "success", "method": "write"}

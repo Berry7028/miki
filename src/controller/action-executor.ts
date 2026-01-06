@@ -50,13 +50,11 @@ export class ActionExecutor {
     let execParams = { ...(action as any).params };
     let highlightPos: { x: number; y: number } | null = null;
 
-    // デバッグログ: アクション実行前
     this.debugLogSection("Executing Action", {
       Action: action.action,
       "Params (original)": execParams,
     });
 
-    // UI要素ベースの操作は座標変換不要
     const elementBasedActions = [
       "clickElement",
       "typeToElement",
@@ -76,13 +74,11 @@ export class ActionExecutor {
       }
     }
 
-    // dragアクションの座標変換
     if (action.action === "drag") {
       execParams.from_x = Math.round((execParams.from_x / 1000) * this.screenSize.width);
       execParams.from_y = Math.round((execParams.from_y / 1000) * this.screenSize.height);
       execParams.to_x = Math.round((execParams.to_x / 1000) * this.screenSize.width);
       execParams.to_y = Math.round((execParams.to_y / 1000) * this.screenSize.height);
-      // ドラッグの開始位置をハイライト
       highlightPos = { x: execParams.from_x, y: execParams.from_y };
     }
 
@@ -92,11 +88,9 @@ export class ActionExecutor {
 
     const result = await this.pythonBridge.call(action.action, execParams);
 
-    // デバッグログ: アクション実行結果
     if (this.debugMode) {
       const debugInfo: Record<string, any> = { Result: result };
 
-      // UI要素取得アクションの場合、詳細な結果を追加
       if (action.action === "elementsJson" && result.ui_data) {
         debugInfo["UI Elements Retrieved"] = result.ui_data;
       }

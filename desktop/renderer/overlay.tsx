@@ -60,7 +60,6 @@ const Overlay = () => {
 
   return (
     <div style={overlayStyle}>
-      {/* Edge Glow (Existing) */}
       <div
         style={{
           position: "absolute",
@@ -102,7 +101,6 @@ const Overlay = () => {
         }}
       />
 
-      {/* Glow Effect */}
       <div
         style={{
           position: "absolute",
@@ -117,7 +115,6 @@ const Overlay = () => {
         }}
       />
 
-      {/* Trail Effect */}
       {trail.slice(1).map((pos, i) => (
         <div
           key={i}
@@ -134,7 +131,6 @@ const Overlay = () => {
         </div>
       ))}
 
-      {/* Main Cursor & Status Label */}
       <div
         style={{
           position: "absolute",
@@ -149,7 +145,6 @@ const Overlay = () => {
         <div style={{ display: "flex", alignItems: "center" }}>
           <CursorSVG color="#FFB040" />
           
-          {/* Status Label (Simplified) */}
           {(status === "thinking" || status === "running") && (
             <div
               style={{
@@ -225,4 +220,3 @@ if (container) {
   const root = createRoot(container);
   root.render(<Overlay />);
 }
-

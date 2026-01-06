@@ -121,7 +121,6 @@ def click_web_element(app_name, role, name):
           const props = elem.properties();
           const pos = props.position;
           const size = props.size;
-          // 座標とサイズをJSONで返す
           JSON.stringify({{
             status: "success",
             x: pos[0] + size[0] / 2,
@@ -137,7 +136,6 @@ def click_web_element(app_name, role, name):
     '''
 
     try:
-        # pyautoguiをここでインポート（既存のインポートがないため）
         import pyautogui
         
         result = subprocess.run(
@@ -151,7 +149,6 @@ def click_web_element(app_name, role, name):
         if output.startswith("{"):
             data = json.loads(output)
             if data.get("status") == "success":
-                # pyautoguiを使用して移動アニメーション付きでクリック
                 pyautogui.click(x=data["x"], y=data["y"], duration=0.5,
                                 tween=pyautogui.easeInOutQuad)
                 return {"status": "success"}
