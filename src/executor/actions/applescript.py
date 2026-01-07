@@ -29,10 +29,10 @@ DANGEROUS_SHELL_PATTERNS = [
     r'kill\s+-9',
     r'mkfs',
     r'dd\s+if=',
-    r'[>]\s*/dev/',  # リダイレクトを /dev/ へ
+    r'>\s*/dev/',  # リダイレクトを /dev/ へ
     r'chmod\s+000',
     r'chown\s+-R',  # -R フラグのみ（-r は存在しない）
-    r':[(][)][{]:[|]:&[}];:',  # Fork bomb - より明示的な文字クラス使用
+    r':\(\)\{:\|:&\};:',  # Fork bomb
     r'format',
     r'del\s+/f',
     r'rmdir\s+/s',
