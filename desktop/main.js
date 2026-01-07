@@ -200,12 +200,6 @@ function createOverlayWindow() {
   win.setAlwaysOnTop(true, "screen-saver");
 
   win.loadFile(path.join(__dirname, "renderer", "overlay.html"));
-
-  // macOSでのスクリーンショット/画面共有対策
-  if (process.platform === "darwin") {
-    win.setContentProtection(true);
-  }
-
   // マウス位置の同期を開始
   const positionTimer = setInterval(() => {
     if (win.isDestroyed()) {
