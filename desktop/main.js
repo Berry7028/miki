@@ -14,10 +14,22 @@ let controllerReader;
 let isQuitting = false;
 
 // Generate nonces for CSP
-let styleNonces = new Map(); // Map to store nonces per window
+let styleNonces = new Map(); // Map to store nonces per webContents ID
 
 function generateNonce() {
   return crypto.randomBytes(16).toString("base64");
+}
+
+// Generate and store nonce for a window
+function setNonceForWindow(webContents) {
+  const nonce = generateNonce();
+  styleNonces.set(webContents.id, nonce);
+  return nonce;
+}
+
+// Get existing nonce for a webContents
+function getNonceForWindow(webContentsId) {
+  return styleNonces.get(webContentsId) || "";
 }
 
 // Set CSP headers with nonce support
@@ -29,8 +41,12 @@ function setupCSPHeaders() {
       return;
     }
     
-    const nonce = generateNonce();
-    styleNonces.set(details.webContents.id, nonce);
+    // Get or create nonce for this webContents (one nonce per window/page load)
+    let nonce = styleNonces.get(details.webContents.id);
+    if (!nonce) {
+      nonce = generateNonce();
+      styleNonces.set(details.webContents.id, nonce);
+    }
     
     // Define CSP based on the URL
     let csp;
@@ -41,8 +57,14 @@ function setupCSPHeaders() {
     } else if (details.url.includes('overlay.html')) {
       csp = `default-src 'self'; script-src 'self'; style-src 'self' 'nonce-${nonce}'; font-src 'self' data:; img-src 'self' data:; connect-src 'self';`;
     } else {
-      // Default strict CSP
-      csp = `default-src 'self'; script-src 'self'; style-src 'self' 'nonce-${nonce}'; font-src 'self'; img-src 'self' data:;`;
+      // Default strict CSP - only set for HTML files to avoid setting CSP on every resource
+      if (details.url.includes('.html') || details.resourceType === 'mainFrame') {
+        csp = `default-src 'self'; script-src 'self'; style-src 'self' 'nonce-${nonce}'; font-src 'self'; img-src 'self' data:;`;
+      } else {
+        // For non-HTML resources, don't set CSP headers
+        callback({ responseHeaders: details.responseHeaders });
+        return;
+      }
     }
 
     callback({
@@ -91,6 +113,11 @@ function createWindow() {
       event.preventDefault();
       win.hide();
     }
+  });
+
+  // Clean up nonce when window is destroyed
+  win.on("closed", () => {
+    styleNonces.delete(win.webContents.id);
   });
 
   return win;
@@ -191,6 +218,7 @@ function createOverlayWindow() {
 
   win.on("closed", () => {
     clearInterval(positionTimer);
+    styleNonces.delete(win.webContents.id);
     overlayWindow = null;
   });
 
@@ -252,6 +280,7 @@ function createChatWindow() {
   });
 
   win.on("closed", () => {
+    styleNonces.delete(win.webContents.id);
     chatWindow = null;
   });
 
