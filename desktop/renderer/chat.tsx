@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createRoot } from "react-dom/client";
+import createCache from "@emotion/cache";
+import { CacheProvider } from "@emotion/react";
 import {
   ThemeProvider,
   CssBaseline,
@@ -24,6 +26,17 @@ import {
 } from "@mui/icons-material";
 import { theme } from "./theme";
 import type { BackendEvent } from "./types";
+
+// Create Emotion cache with nonce for CSP
+const createEmotionCache = () => {
+  return createCache({
+    key: "miki-chat",
+    nonce: (window as any).miki?.getStyleNonce?.() || undefined,
+    prepend: true,
+  });
+};
+
+const cache = createEmotionCache();
 
 interface Message {
   type: "user" | "ai" | "action" | "result" | "error" | "thinking" | "tool";
@@ -170,9 +183,10 @@ const ChatApp = () => {
   };
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <Box
+    <CacheProvider value={cache}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Box
         sx={{
           height: "100vh",
           display: "flex",
@@ -370,6 +384,7 @@ const ChatApp = () => {
         </Box>
       </Box>
     </ThemeProvider>
+    </CacheProvider>
   );
 };
 

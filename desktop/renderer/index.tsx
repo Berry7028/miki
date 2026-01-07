@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { createRoot } from "react-dom/client";
+import createCache from "@emotion/cache";
+import { CacheProvider } from "@emotion/react";
 import {
   ThemeProvider,
   CssBaseline,
@@ -33,6 +35,17 @@ import {
 } from "@mui/icons-material";
 import { theme } from "./theme";
 import type { BackendEvent, SetupStatus } from "./types";
+
+// Create Emotion cache with nonce for CSP
+const createEmotionCache = () => {
+  return createCache({
+    key: "miki",
+    nonce: (window as any).miki?.getStyleNonce?.() || undefined,
+    prepend: true,
+  });
+};
+
+const cache = createEmotionCache();
 
 const setupSteps = [
   {
@@ -134,9 +147,10 @@ const App = () => {
   };
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <Box
+    <CacheProvider value={cache}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Box
         sx={{
           minHeight: "100vh",
           bgcolor: "background.default",
@@ -651,6 +665,7 @@ const App = () => {
         </Dialog>
       </Box>
     </ThemeProvider>
+    </CacheProvider>
   );
 };
 

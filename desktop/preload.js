@@ -1,7 +1,16 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
+// Get nonce from main process
+let styleNonce = "";
+ipcRenderer.invoke("miki:getStyleNonce").then(nonce => {
+  styleNonce = nonce;
+}).catch(() => {
+  console.warn("Failed to get style nonce");
+});
+
 contextBridge.exposeInMainWorld("miki", {
   appName: "miki-desktop",
+  getStyleNonce: () => styleNonce,
   start: (goal) => ipcRenderer.invoke("miki:start", goal),
   hint: (text) => ipcRenderer.invoke("miki:hint", text),
   stop: () => ipcRenderer.invoke("miki:stop"),

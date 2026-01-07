@@ -1,0 +1,10 @@
+body {
+  -webkit-app-region: drag;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+}
+#root {
+  -webkit-app-region: no-drag;
+}
