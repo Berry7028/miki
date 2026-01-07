@@ -199,6 +199,25 @@ export const ACTION_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
     },
   },
   {
+    name: "think",
+    description: "タスクの計画や実行後の検証を明示的に記録します。タスク開始時の分解、各フェーズ後の結果確認、次の手順の決定に使用します。",
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        thought: {
+          type: SchemaType.STRING,
+          description: "現在の思考内容。タスク分解、進捗確認、検証結果、次のステップの判断など。",
+        },
+        phase: {
+          type: SchemaType.STRING,
+          description: "思考のフェーズ。planning(計画), verification(検証), reflection(振り返り)のいずれか。",
+          enum: ["planning", "verification", "reflection"],
+        },
+      },
+      required: ["thought", "phase"],
+    },
+  },
+  {
     name: "done",
     description: "すべてのタスクが完了したことを報告します。次の操作は不要な場合に使用します。",
     parameters: {

@@ -541,6 +541,38 @@ export class MacOSAgent extends EventEmitter {
             break;
           }
 
+          if (action.action === "think") {
+            const phaseLabels = {
+              planning: "計画",
+              verification: "検証",
+              reflection: "振り返り",
+            };
+            const phaseLabel = phaseLabels[action.params.phase] || action.params.phase;
+            this.log("info", `[思考: ${phaseLabel}] ${action.params.thought}`);
+            this.emit("thinking", {
+              phase: action.params.phase,
+              thought: action.params.thought,
+              message: `[${phaseLabel}] ${action.params.thought}`,
+            });
+            this.appendHistory(history, {
+              role: "user",
+              parts: [
+                {
+                  functionResponse: {
+                    name: call.name,
+                    response: {
+                      status: "success",
+                      phase: action.params.phase,
+                      thought: action.params.thought,
+                      acknowledged: true,
+                    },
+                  },
+                },
+              ],
+            });
+            continue;
+          }
+
           if (action.action === "wait") {
             this.log("info", `${action.params.seconds}秒待機中...`);
             await new Promise((r) => setTimeout(r, action.params.seconds * 1000));

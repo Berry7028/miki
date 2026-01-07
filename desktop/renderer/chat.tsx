@@ -84,6 +84,11 @@ const ChatApp = () => {
         }
       } else if (payload.event === "thinking") {
         setThinkingText(payload.message || "Thinking...");
+        addMessage({
+          type: "thinking",
+          content: payload.message || payload.thought || "Thinking...",
+          timestamp: payload.timestamp || Date.now(),
+        });
       } else if (payload.event === "tool") {
         if (payload.toolName === "done") return;
         setCurrentTool(payload.toolName || "");
@@ -274,6 +279,8 @@ const ChatApp = () => {
                         ? "rgba(230, 214, 184, 0.15)"
                         : msg.type === "action" || msg.type === "tool"
                         ? "rgba(0, 0, 0, 0.25)"
+                        : msg.type === "thinking"
+                        ? "rgba(230, 214, 184, 0.1)"
                         : "rgba(255,255,255,0.04)",
                     color: msg.type === "user" ? "#ffffff" : "text.primary",
                     borderRadius: msg.type === "user" ? "16px 4px 16px 16px" : "4px 16px 16px 16px",
@@ -282,22 +289,24 @@ const ChatApp = () => {
                         ? "1px solid rgba(230, 214, 184, 0.3)"
                         : msg.type === "action" || msg.type === "tool"
                         ? "1px solid rgba(121, 184, 255, 0.2)"
+                        : msg.type === "thinking"
+                        ? "1px solid rgba(230, 214, 184, 0.3)"
                         : "1px solid rgba(255,255,255,0.08)",
                   }}
                 >
-                  {(msg.type === "action" || msg.type === "tool") && (
+                  {(msg.type === "action" || msg.type === "tool" || msg.type === "thinking") && (
                     <Typography
                       variant="caption"
                       sx={{
                         display: "block",
                         mb: 1,
-                        color: "#79b8ff",
+                        color: msg.type === "thinking" ? "#e6d6b8" : "#79b8ff",
                         fontWeight: 700,
                         letterSpacing: "0.05em",
                         fontSize: "0.65rem",
                       }}
                     >
-                      {msg.type === "tool" ? `TOOL: ${msg.toolName}` : "ACTION"}
+                      {msg.type === "tool" ? `TOOL: ${msg.toolName}` : msg.type === "thinking" ? "思考中" : "ACTION"}
                     </Typography>
                   )}
                   <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", lineHeight: 1.6, fontFamily: msg.type === "action" || msg.type === "tool" ? "monospace" : "inherit" }}>
