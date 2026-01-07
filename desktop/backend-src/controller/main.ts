@@ -71,11 +71,11 @@ async function startRun(goal: string) {
     running = false;
   }
   loadEnv();
-  ensureAgent();
   running = true;
   sendStatus("running", goal);
 
   try {
+    ensureAgent();
     await agent!.init();
     await agent!.run(goal);
   } catch (error) {
@@ -96,8 +96,16 @@ function handleCommand(command: Command) {
       void startRun(command.goal);
       break;
     case "hint":
-      ensureAgent();
-      agent!.addHint(command.text);
+      try {
+        ensureAgent();
+        agent!.addHint(command.text);
+      } catch (error) {
+        if (error instanceof Error) {
+          send("error", { message: error.stack || error.message });
+        } else {
+          send("error", { message: String(error) });
+        }
+      }
       break;
     case "stop":
       if (!agent || !running) {
