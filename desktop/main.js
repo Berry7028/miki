@@ -401,12 +401,15 @@ function readApiKey() {
   if (fs.existsSync(securePath)) {
     try {
       const encryptedData = fs.readFileSync(securePath);
-      if (safeStorage.isEncryptionAvailable()) {
-        const decrypted = safeStorage.decryptString(encryptedData);
-        return decrypted.trim();
+      if (!safeStorage.isEncryptionAvailable()) {
+        console.error("Encryption not available but encrypted key exists. Cannot decrypt.");
+        return "";
       }
+      const decrypted = safeStorage.decryptString(encryptedData);
+      return decrypted.trim();
     } catch (err) {
       console.error("Failed to decrypt API key:", err);
+      return "";
     }
   }
 
@@ -422,8 +425,21 @@ function readApiKey() {
         if (apiKey && safeStorage.isEncryptionAvailable()) {
           const encrypted = safeStorage.encryptString(apiKey);
           fs.writeFileSync(securePath, encrypted);
-          // Delete old plain text file after successful migration
-          fs.unlinkSync(envPath);
+          
+          // Verify the encrypted file can be read back before deleting plain text
+          try {
+            const verifyData = fs.readFileSync(securePath);
+            const verifyDecrypted = safeStorage.decryptString(verifyData);
+            if (verifyDecrypted.trim() === apiKey) {
+              // Migration successful, delete old plain text file
+              fs.unlinkSync(envPath);
+            } else {
+              console.error("Migration verification failed: decrypted value doesn't match");
+            }
+          } catch (verifyErr) {
+            console.error("Migration verification failed:", verifyErr);
+            // Don't delete the plain text file if verification fails
+          }
         }
         return apiKey;
       }
