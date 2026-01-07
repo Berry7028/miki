@@ -500,6 +500,7 @@ export class MacOSAgent extends EventEmitter {
         this.emitStatus("running");
         
         actions.forEach((action) => {
+          if (action.action === "think") return;
           this.log("action", `アクション: ${JSON.stringify(action)}`);
         });
 

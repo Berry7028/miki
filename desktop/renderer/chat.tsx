@@ -52,6 +52,166 @@ interface Message {
   toolOutput?: any;
 }
 
+const ActionContent = ({ msg }: { msg: Message }) => {
+  const { content, type, toolName, toolInput } = msg;
+
+  if (type === "action" && content.startsWith("アクション: ")) {
+    try {
+      const jsonStr = content.substring(6);
+      const actionObj = JSON.parse(jsonStr);
+
+      const renderAction = (action: any, isSub = false) => {
+        if (!action) return null;
+
+        if (action.action === "batch" && action.params?.actions) {
+          return (
+            <Box sx={{ mt: isSub ? 0.5 : 0 }}>
+              <Typography
+                variant="caption"
+                sx={{ fontWeight: "bold", color: "#79b8ff", display: "block", mb: 0.5 }}
+              >
+                BATCH
+              </Typography>
+              <Box sx={{ ml: 1.5, borderLeft: "1px solid rgba(121, 184, 255, 0.2)", pl: 1.5 }}>
+                {action.params.actions.map((subAction: any, idx: number) => (
+                  <Box key={idx} sx={{ mb: idx === action.params.actions.length - 1 ? 0 : 1 }}>
+                    {renderAction(subAction, true)}
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          );
+        }
+
+        if (action.action === "think" && action.params?.thought) {
+          return (
+            <Box sx={{ py: 0.5 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  fontStyle: "italic",
+                  color: "#e6d6b8",
+                  fontSize: "0.85rem",
+                  borderLeft: "2px solid rgba(230, 214, 184, 0.3)",
+                  pl: 1.5,
+                  py: 0.5,
+                }}
+              >
+                {action.params.thought}
+              </Typography>
+              {action.params.phase && (
+                <Typography
+                  variant="caption"
+                  sx={{ mt: 0.5, display: "block", opacity: 0.7, fontSize: "0.65rem" }}
+                >
+                  Phase: {action.params.phase}
+                </Typography>
+              )}
+            </Box>
+          );
+        }
+
+        const paramsEntries = action.params ? Object.entries(action.params) : [];
+
+        return (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+              <Chip
+                label={action.action}
+                size="small"
+                sx={{
+                  height: 18,
+                  fontSize: "0.65rem",
+                  bgcolor: "rgba(121, 184, 255, 0.15)",
+                  color: "#79b8ff",
+                  fontWeight: 800,
+                  borderRadius: "4px",
+                  "& .MuiChip-label": { px: 1 },
+                }}
+              />
+              {paramsEntries.length > 0 && (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: "rgba(255,255,255,0.6)",
+                    fontSize: "0.75rem",
+                    fontFamily: "monospace",
+                    wordBreak: "break-all",
+                  }}
+                >
+                  {paramsEntries
+                    .map(([k, v]) => {
+                      if (typeof v === "object") return `${k}: ${JSON.stringify(v)}`;
+                      return `${k}: ${v}`;
+                    })
+                    .join(", ")}
+                </Typography>
+              )}
+            </Stack>
+          </Box>
+        );
+      };
+
+      return renderAction(actionObj);
+    } catch (e) {
+      return (
+        <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", opacity: 0.8 }}>
+          {content}
+        </Typography>
+      );
+    }
+  }
+
+  if (type === "tool" && toolName) {
+    return (
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+          {content}
+        </Typography>
+        {toolInput && (
+          <Paper
+            variant="outlined"
+            sx={{
+              p: 1,
+              bgcolor: "rgba(0,0,0,0.2)",
+              borderColor: "rgba(255,255,255,0.1)",
+              maxHeight: 200,
+              overflow: "auto",
+            }}
+          >
+            <Typography
+              variant="caption"
+              component="pre"
+              sx={{
+                m: 0,
+                fontSize: "0.7rem",
+                color: "rgba(255,255,255,0.7)",
+                whiteSpace: "pre-wrap",
+                fontFamily: "monospace",
+              }}
+            >
+              {JSON.stringify(toolInput, null, 2)}
+            </Typography>
+          </Paper>
+        )}
+      </Box>
+    );
+  }
+
+  return (
+    <Typography
+      variant="body2"
+      sx={{
+        whiteSpace: "pre-wrap",
+        lineHeight: 1.6,
+        fontFamily: type === "action" || type === "tool" ? "monospace" : "inherit",
+      }}
+    >
+      {content}
+    </Typography>
+  );
+};
+
 const ChatApp = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
@@ -333,14 +493,12 @@ const ChatApp = () => {
                         fontSize: "0.65rem",
                       }}
                     >
-                      {getMessageLabel(msg)}
-                    </Typography>
-                  )}
-                  <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", lineHeight: 1.6, fontFamily: msg.type === "action" || msg.type === "tool" ? "monospace" : "inherit" }}>
-                    {msg.content}
+                    {getMessageLabel(msg)}
                   </Typography>
-                  <Typography
-                    variant="caption"
+                )}
+                <ActionContent msg={msg} />
+                <Typography
+                  variant="caption"
                     sx={{
                       display: "block",
                       mt: 1,
