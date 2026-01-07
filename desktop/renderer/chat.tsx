@@ -28,15 +28,20 @@ import { theme } from "./theme";
 import type { BackendEvent } from "./types";
 
 // Create Emotion cache with nonce for CSP
-const createEmotionCache = () => {
+async function createEmotionCache() {
+  let nonce = "";
+  try {
+    nonce = await (window as any).miki?.getStyleNonce?.();
+  } catch (error) {
+    console.warn("Failed to get nonce, styles may be blocked by CSP:", error);
+  }
+  
   return createCache({
     key: "miki-chat",
-    nonce: (window as any).miki?.getStyleNonce?.() || undefined,
+    nonce: nonce || undefined,
     prepend: true,
   });
-};
-
-const cache = createEmotionCache();
+}
 
 interface Message {
   type: "user" | "ai" | "action" | "result" | "error" | "thinking" | "tool";
@@ -183,10 +188,9 @@ const ChatApp = () => {
   };
 
   return (
-    <CacheProvider value={cache}>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <Box
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Box
         sx={{
           height: "100vh",
           display: "flex",
@@ -384,9 +388,16 @@ const ChatApp = () => {
         </Box>
       </Box>
     </ThemeProvider>
-    </CacheProvider>
   );
 };
 
 const root = createRoot(document.getElementById("root")!);
-root.render(<ChatApp />);
+
+// Initialize app with Emotion cache
+createEmotionCache().then((cache) => {
+  root.render(
+    <CacheProvider value={cache}>
+      <ChatApp />
+    </CacheProvider>
+  );
+});

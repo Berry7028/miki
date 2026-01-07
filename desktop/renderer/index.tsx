@@ -37,15 +37,20 @@ import { theme } from "./theme";
 import type { BackendEvent, SetupStatus } from "./types";
 
 // Create Emotion cache with nonce for CSP
-const createEmotionCache = () => {
+async function createEmotionCache() {
+  let nonce = "";
+  try {
+    nonce = await (window as any).miki?.getStyleNonce?.();
+  } catch (error) {
+    console.warn("Failed to get nonce, styles may be blocked by CSP:", error);
+  }
+  
   return createCache({
     key: "miki",
-    nonce: (window as any).miki?.getStyleNonce?.() || undefined,
+    nonce: nonce || undefined,
     prepend: true,
   });
-};
-
-const cache = createEmotionCache();
+}
 
 const setupSteps = [
   {
@@ -147,10 +152,9 @@ const App = () => {
   };
 
   return (
-    <CacheProvider value={cache}>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <Box
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Box
         sx={{
           minHeight: "100vh",
           bgcolor: "background.default",
@@ -665,10 +669,17 @@ const App = () => {
         </Dialog>
       </Box>
     </ThemeProvider>
-    </CacheProvider>
   );
 };
 
 const container = document.getElementById("root");
 const root = createRoot(container!);
-root.render(<App />);
+
+// Initialize app with Emotion cache
+createEmotionCache().then((cache) => {
+  root.render(
+    <CacheProvider value={cache}>
+      <App />
+    </CacheProvider>
+  );
+});

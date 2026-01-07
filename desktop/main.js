@@ -23,8 +23,14 @@ function generateNonce() {
 // Set CSP headers with nonce support
 function setupCSPHeaders() {
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    // Skip if no webContents available
+    if (!details.webContents) {
+      callback({ responseHeaders: details.responseHeaders });
+      return;
+    }
+    
     const nonce = generateNonce();
-    styleNonces.set(details.webContents?.id, nonce);
+    styleNonces.set(details.webContents.id, nonce);
     
     // Define CSP based on the URL
     let csp;
