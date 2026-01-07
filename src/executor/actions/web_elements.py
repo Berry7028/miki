@@ -2,14 +2,19 @@
 import subprocess
 import json
 
+from actions.script_escape import escape_jxa_string
+
 
 def get_web_elements(app_name):
     """
     ブラウザ内のWeb要素を取得（AXWebArea配下）
     """
+    # セキュリティ: app_nameをエスケープしてスクリプトインジェクションを防ぐ
+    app_name_escaped = escape_jxa_string(app_name)
+    
     jxa_script = f'''
     const se = Application("System Events");
-    const proc = se.processes["{app_name}"];
+    const proc = se.processes["{app_name_escaped}"];
 
     function findWebArea(root) {{
       try {{
@@ -77,9 +82,14 @@ def click_web_element(app_name, role, name):
     """
     ブラウザ内のWeb要素をクリック
     """
+    # セキュリティ: すべてのパラメータをエスケープしてスクリプトインジェクションを防ぐ
+    app_name_escaped = escape_jxa_string(app_name)
+    role_escaped = escape_jxa_string(role)
+    name_escaped = escape_jxa_string(name)
+    
     jxa_script = f'''
     const se = Application("System Events");
-    const proc = se.processes["{app_name}"];
+    const proc = se.processes["{app_name_escaped}"];
 
     function findWebArea(root) {{
       try {{
@@ -116,7 +126,7 @@ def click_web_element(app_name, role, name):
     }} else {{
       const webArea = findWebArea(proc.windows[0]);
       if (webArea !== null) {{
-        const elem = findElement(webArea, "{role}", "{name}");
+        const elem = findElement(webArea, "{role_escaped}", "{name_escaped}");
         if (elem !== null) {{
           const props = elem.properties();
           const pos = props.position;
