@@ -1,8 +1,9 @@
-const { app, BrowserWindow, ipcMain, shell, systemPreferences, globalShortcut, screen, Tray, Menu, nativeImage, safeStorage } = require("electron");
+const { app, BrowserWindow, ipcMain, shell, systemPreferences, globalShortcut, screen, Tray, Menu, nativeImage, safeStorage, session} = require("electron");
 const { spawn, execSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 const readline = require("node:readline");
+const crypto = require("node:crypto");
 
 let mainWindow;
 let chatWindow;
@@ -11,6 +12,70 @@ let tray;
 let controllerProcess;
 let controllerReader;
 let isQuitting = false;
+
+// Generate nonces for CSP
+let styleNonces = new Map(); // Map to store nonces per webContents ID
+
+function generateNonce() {
+  return crypto.randomBytes(16).toString("base64");
+}
+
+// Generate and store nonce for a window
+function setNonceForWindow(webContents) {
+  const nonce = generateNonce();
+  styleNonces.set(webContents.id, nonce);
+  return nonce;
+}
+
+// Get existing nonce for a webContents
+function getNonceForWindow(webContentsId) {
+  return styleNonces.get(webContentsId) || "";
+}
+
+// Set CSP headers with nonce support
+function setupCSPHeaders() {
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    // Skip if no webContents available
+    if (!details.webContents) {
+      callback({ responseHeaders: details.responseHeaders });
+      return;
+    }
+    
+    // Get or create nonce for this webContents (one nonce per window/page load)
+    let nonce = styleNonces.get(details.webContents.id);
+    if (!nonce) {
+      nonce = generateNonce();
+      styleNonces.set(details.webContents.id, nonce);
+    }
+    
+    // Define CSP based on the URL
+    let csp;
+    if (details.url.includes('index.html')) {
+      csp = `default-src 'self'; script-src 'self'; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self';`;
+    } else if (details.url.includes('chat.html')) {
+      csp = `default-src 'self'; script-src 'self'; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self';`;
+    } else if (details.url.includes('overlay.html')) {
+      csp = `default-src 'self'; script-src 'self'; style-src 'self' 'nonce-${nonce}'; font-src 'self' data:; img-src 'self' data:; connect-src 'self';`;
+    } else {
+      // Default strict CSP - only set for HTML files to avoid setting CSP on every resource
+      if (details.url.includes('.html') || details.resourceType === 'mainFrame') {
+        csp = `default-src 'self'; script-src 'self'; style-src 'self' 'nonce-${nonce}'; font-src 'self'; img-src 'self' data:;`;
+      } else {
+        // For non-HTML resources, don't set CSP headers
+        callback({ responseHeaders: details.responseHeaders });
+        return;
+      }
+    }
+
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [csp]
+      }
+    });
+  });
+}
+
 
 // デバッグモードフラグ (コマンドライン引数 --debug で有効化)
 const debugMode = process.argv.includes("--debug");
@@ -48,6 +113,11 @@ function createWindow() {
       event.preventDefault();
       win.hide();
     }
+  });
+
+  // Clean up nonce when window is destroyed
+  win.on("closed", () => {
+    styleNonces.delete(win.webContents.id);
   });
 
   return win;
@@ -148,6 +218,7 @@ function createOverlayWindow() {
 
   win.on("closed", () => {
     clearInterval(positionTimer);
+    styleNonces.delete(win.webContents.id);
     overlayWindow = null;
   });
 
@@ -209,6 +280,7 @@ function createChatWindow() {
   });
 
   win.on("closed", () => {
+    styleNonces.delete(win.webContents.id);
     chatWindow = null;
   });
 
@@ -550,6 +622,8 @@ function getSetupStatus() {
 }
 
 app.whenReady().then(() => {
+  setupCSPHeaders();
+  
   if (process.platform === "darwin") {
     app.dock.hide();
   }
@@ -620,4 +694,9 @@ ipcMain.handle("miki:markSetupCompleted", () => {
 ipcMain.handle("miki:openSystemPreferences", (_event, pane) => {
   openSystemPreferences(pane);
   return true;
+});
+
+ipcMain.handle("miki:getStyleNonce", (event) => {
+  const webContentsId = event.sender.id;
+  return styleNonces.get(webContentsId) || "";
 });

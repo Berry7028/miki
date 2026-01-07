@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { createRoot } from "react-dom/client";
+import createCache from "@emotion/cache";
+import { CacheProvider } from "@emotion/react";
 import {
   ThemeProvider,
   CssBaseline,
@@ -33,6 +35,22 @@ import {
 } from "@mui/icons-material";
 import { theme } from "./theme";
 import type { BackendEvent, SetupStatus } from "./types";
+
+// Create Emotion cache with nonce for CSP
+async function createEmotionCache() {
+  let nonce = "";
+  try {
+    nonce = await window.miki?.getStyleNonce();
+  } catch (error) {
+    console.warn("Failed to get nonce, styles may be blocked by CSP:", error);
+  }
+  
+  return createCache({
+    key: "miki",
+    nonce: nonce || undefined,
+    prepend: true,
+  });
+}
 
 const setupSteps = [
   {
@@ -656,4 +674,12 @@ const App = () => {
 
 const container = document.getElementById("root");
 const root = createRoot(container!);
-root.render(<App />);
+
+// Initialize app with Emotion cache
+createEmotionCache().then((cache) => {
+  root.render(
+    <CacheProvider value={cache}>
+      <App />
+    </CacheProvider>
+  );
+});

@@ -22,6 +22,7 @@ export interface BackendEvent {
 
 export interface MikiAPI {
   appName: string;
+  getStyleNonce: () => Promise<string>;
   start: (goal: string) => Promise<void>;
   hint: (text: string) => Promise<void>;
   stop: () => Promise<void>;
