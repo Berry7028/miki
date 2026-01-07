@@ -84,6 +84,15 @@ const ChatApp = () => {
         }
       } else if (payload.event === "thinking") {
         setThinkingText(payload.message || "Thinking...");
+        // Prefer explicit thought field from think action, fall back to message for backwards compatibility
+        // payload.thought: explicit thought content from think(phase, thought)
+        // payload.message: formatted message with phase label (e.g., "[計画] ...")
+        const content = payload.thought || payload.message || "Thinking...";
+        addMessage({
+          type: "thinking",
+          content,
+          timestamp: payload.timestamp || Date.now(),
+        });
       } else if (payload.event === "tool") {
         if (payload.toolName === "done") return;
         setCurrentTool(payload.toolName || "");
@@ -187,6 +196,45 @@ const ChatApp = () => {
     }
   };
 
+  // Helper function to get message style based on type
+  const getMessageStyle = (type: Message["type"]) => {
+    switch (type) {
+      case "user":
+        return {
+          background: "rgba(230, 214, 184, 0.15)",
+          border: "1px solid rgba(230, 214, 184, 0.3)",
+          borderRadius: "16px 4px 16px 16px",
+        };
+      case "action":
+      case "tool":
+        return {
+          background: "rgba(0, 0, 0, 0.25)",
+          border: "1px solid rgba(121, 184, 255, 0.2)",
+          borderRadius: "4px 16px 16px 16px",
+        };
+      case "thinking":
+        return {
+          background: "rgba(230, 214, 184, 0.1)",
+          border: "1px solid rgba(230, 214, 184, 0.3)",
+          borderRadius: "4px 16px 16px 16px",
+        };
+      default:
+        return {
+          background: "rgba(255,255,255,0.04)",
+          border: "1px solid rgba(255,255,255,0.08)",
+          borderRadius: "4px 16px 16px 16px",
+        };
+    }
+  };
+
+  // Helper function to get label text
+  const getMessageLabel = (msg: Message) => {
+    if (msg.type === "tool") return `TOOL: ${msg.toolName}`;
+    if (msg.type === "thinking") return "思考中";
+    if (msg.type === "action") return "ACTION";
+    return null;
+  };
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -269,35 +317,23 @@ const ChatApp = () => {
                 <Paper
                   sx={{
                     p: 2,
-                    background:
-                      msg.type === "user"
-                        ? "rgba(230, 214, 184, 0.15)"
-                        : msg.type === "action" || msg.type === "tool"
-                        ? "rgba(0, 0, 0, 0.25)"
-                        : "rgba(255,255,255,0.04)",
                     color: msg.type === "user" ? "#ffffff" : "text.primary",
-                    borderRadius: msg.type === "user" ? "16px 4px 16px 16px" : "4px 16px 16px 16px",
-                    border:
-                      msg.type === "user"
-                        ? "1px solid rgba(230, 214, 184, 0.3)"
-                        : msg.type === "action" || msg.type === "tool"
-                        ? "1px solid rgba(121, 184, 255, 0.2)"
-                        : "1px solid rgba(255,255,255,0.08)",
+                    ...getMessageStyle(msg.type),
                   }}
                 >
-                  {(msg.type === "action" || msg.type === "tool") && (
+                  {getMessageLabel(msg) && (
                     <Typography
                       variant="caption"
                       sx={{
                         display: "block",
                         mb: 1,
-                        color: "#79b8ff",
+                        color: msg.type === "thinking" ? "#e6d6b8" : "#79b8ff",
                         fontWeight: 700,
                         letterSpacing: "0.05em",
                         fontSize: "0.65rem",
                       }}
                     >
-                      {msg.type === "tool" ? `TOOL: ${msg.toolName}` : "ACTION"}
+                      {getMessageLabel(msg)}
                     </Typography>
                   )}
                   <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", lineHeight: 1.6, fontFamily: msg.type === "action" || msg.type === "tool" ? "monospace" : "inherit" }}>

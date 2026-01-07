@@ -18,6 +18,8 @@ export interface BackendEvent {
   toolName?: string;
   toolInput?: any;
   toolOutput?: any;
+  thought?: string;
+  phase?: "planning" | "verification" | "reflection";
 }
 
 export interface MikiAPI {

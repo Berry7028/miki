@@ -5,7 +5,7 @@ import * as path from "node:path";
 import { PythonBridge } from "./python-bridge";
 import { ActionExecutor } from "./action-executor";
 import { LLMClient } from "./llm-client";
-import { HISTORY_CONFIG, PERFORMANCE_CONFIG, SYSTEM_PROMPT } from "./constants";
+import { HISTORY_CONFIG, PERFORMANCE_CONFIG, SYSTEM_PROMPT, THINKING_PHASE_LABELS } from "./constants";
 
 type GeminiContent = { role: "user" | "model"; parts: any[] };
 type GeminiFunctionCall = { name: string; args?: any };
@@ -539,6 +539,33 @@ export class MacOSAgent extends EventEmitter {
             this.emit("completed", action.params.message);
             completed = true;
             break;
+          }
+
+          if (action.action === "think") {
+            const phaseLabel = THINKING_PHASE_LABELS[action.params.phase] || action.params.phase;
+            this.log("info", `[思考: ${phaseLabel}] ${action.params.thought}`);
+            this.emit("thinking", {
+              phase: action.params.phase,
+              thought: action.params.thought,
+              message: `[${phaseLabel}] ${action.params.thought}`,
+            });
+            this.appendHistory(history, {
+              role: "user",
+              parts: [
+                {
+                  functionResponse: {
+                    name: call.name,
+                    response: {
+                      status: "success",
+                      phase: action.params.phase,
+                      thought: action.params.thought,
+                      acknowledged: true,
+                    },
+                  },
+                },
+              ],
+            });
+            continue;
           }
 
           if (action.action === "wait") {

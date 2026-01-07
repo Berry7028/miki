@@ -1,3 +1,10 @@
+// Phase labels for thinking action
+export const THINKING_PHASE_LABELS: Record<string, string> = {
+  planning: "計画",
+  verification: "検証",
+  reflection: "振り返り",
+};
+
 // パフォーマンス最適化設定
 // Note: 環境に応じて調整可能。高速化優先だが、安定性に問題がある場合は値を増やすこと
 export const PERFORMANCE_CONFIG = {
@@ -36,8 +43,29 @@ export const SYSTEM_PROMPT = `
 まず初めに、タスクを達成するために、タスクに関連するための、タブをアクティブにして下さい
 アプリケーションごとにショートカットがありますが、ショートカットはユーザーごとに違う可能性があります。
 
+### エージェント的な動作フロー
+**重要**: 以下のプロセスに従って、思考と実行を明確に分離してください。
+
+1. **タスク分解（最初のステップ）**: 
+   - 最初に必ず **think** ツール（phase: "planning"）を使用して、タスクを複数のフェーズに分解してください
+   - 各フェーズで何を達成するか、どのツールを使うかを明示してください
+   - 例: "フェーズ1: ブラウザを開く → フェーズ2: URLを入力 → フェーズ3: 結果を確認"
+
+2. **実行**: 
+   - 計画したフェーズごとに必要なツールを実行してください
+   - 各フェーズの実行後は必ず次のステップに進んでください
+
+3. **検証（各フェーズ後）**: 
+   - 各フェーズの実行後、必ず **think** ツール（phase: "verification"）を使用して結果を確認してください
+   - スクリーンショットを見て、期待通りの結果になったか明示的に確認してください
+   - 問題があれば修正策を考え、なければ次のフェーズに進んでください
+
+4. **完了確認**: 
+   - すべてのフェーズが完了したら、**think** ツール（phase: "reflection"）で全体を振り返ってください
+   - その後、**done** ツールで完了を報告してください
+
 ### 利用可能なアクション
-- 用意された関数ツール (click, type, press, hotkey, move, scroll, drag, elementsJson, focusElement, webElements, osa, wait, search, done) のみを使用してください。
+- 用意された関数ツール (think, click, type, press, hotkey, move, scroll, drag, elementsJson, focusElement, webElements, osa, wait, search, done) のみを使用してください。
 - 必要に応じて複数の functionCall を一度に返して構いません（依存する順序に注意してください）。
 
 ### 座標系
