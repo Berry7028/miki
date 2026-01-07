@@ -84,7 +84,9 @@ const ChatApp = () => {
         }
       } else if (payload.event === "thinking") {
         setThinkingText(payload.message || "Thinking...");
-        // Prefer explicit thought field, fall back to message for backwards compatibility
+        // Prefer explicit thought field from think action, fall back to message for backwards compatibility
+        // payload.thought: explicit thought content from think(phase, thought)
+        // payload.message: formatted message with phase label (e.g., "[計画] ...")
         const content = payload.thought || payload.message || "Thinking...";
         addMessage({
           type: "thinking",
