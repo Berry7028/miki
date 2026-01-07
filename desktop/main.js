@@ -414,9 +414,10 @@ function readApiKey() {
       if (match) {
         const apiKey = match[1].trim();
         // Migrate to secure storage
-        if (apiKey) {
-          writeApiKey(apiKey);
-          // Delete old plain text file
+        if (apiKey && safeStorage.isEncryptionAvailable()) {
+          const encrypted = safeStorage.encryptString(apiKey);
+          fs.writeFileSync(securePath, encrypted);
+          // Delete old plain text file after successful migration
           fs.unlinkSync(envPath);
         }
         return apiKey;
@@ -438,6 +439,7 @@ function writeApiKey(apiKey) {
   }
 
   const securePath = secureKeyPath();
+  const envPath = envFilePath();
   
   if (!value) {
     // Delete the secure file if API key is empty
@@ -445,7 +447,6 @@ function writeApiKey(apiKey) {
       fs.unlinkSync(securePath);
     }
     // Also delete old .env file if it exists
-    const envPath = envFilePath();
     if (fs.existsSync(envPath)) {
       fs.unlinkSync(envPath);
     }
@@ -457,7 +458,6 @@ function writeApiKey(apiKey) {
   fs.writeFileSync(securePath, encrypted);
 
   // Remove old plain text .env file if it exists
-  const envPath = envFilePath();
   if (fs.existsSync(envPath)) {
     fs.unlinkSync(envPath);
   }
