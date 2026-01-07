@@ -31,7 +31,7 @@ import type { BackendEvent } from "./types";
 async function createEmotionCache() {
   let nonce = "";
   try {
-    nonce = await (window as any).miki?.getStyleNonce?.();
+    nonce = await window.miki?.getStyleNonce();
   } catch (error) {
     console.warn("Failed to get nonce, styles may be blocked by CSP:", error);
   }
