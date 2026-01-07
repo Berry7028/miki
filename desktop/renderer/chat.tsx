@@ -315,27 +315,11 @@ const ChatApp = () => {
                 <Paper
                   sx={{
                     p: 2,
-                    background:
-                      msg.type === "user"
-                        ? "rgba(230, 214, 184, 0.15)"
-                        : msg.type === "action" || msg.type === "tool"
-                        ? "rgba(0, 0, 0, 0.25)"
-                        : msg.type === "thinking"
-                        ? "rgba(230, 214, 184, 0.1)"
-                        : "rgba(255,255,255,0.04)",
                     color: msg.type === "user" ? "#ffffff" : "text.primary",
-                    borderRadius: msg.type === "user" ? "16px 4px 16px 16px" : "4px 16px 16px 16px",
-                    border:
-                      msg.type === "user"
-                        ? "1px solid rgba(230, 214, 184, 0.3)"
-                        : msg.type === "action" || msg.type === "tool"
-                        ? "1px solid rgba(121, 184, 255, 0.2)"
-                        : msg.type === "thinking"
-                        ? "1px solid rgba(230, 214, 184, 0.3)"
-                        : "1px solid rgba(255,255,255,0.08)",
+                    ...getMessageStyle(msg.type),
                   }}
                 >
-                  {(msg.type === "action" || msg.type === "tool" || msg.type === "thinking") && (
+                  {getMessageLabel(msg) && (
                     <Typography
                       variant="caption"
                       sx={{
@@ -347,7 +331,7 @@ const ChatApp = () => {
                         fontSize: "0.65rem",
                       }}
                     >
-                      {msg.type === "tool" ? `TOOL: ${msg.toolName}` : msg.type === "thinking" ? "思考中" : "ACTION"}
+                      {getMessageLabel(msg)}
                     </Typography>
                   )}
                   <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", lineHeight: 1.6, fontFamily: msg.type === "action" || msg.type === "tool" ? "monospace" : "inherit" }}>
