@@ -114,37 +114,6 @@ export const ACTION_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
     },
   },
   {
-    name: "clickElement",
-    description:
-      "アクセシビリティロールと名前で特定したUI要素をクリックします。座標よりも堅牢です。",
-    parameters: {
-      type: SchemaType.OBJECT,
-      properties: {
-        app_name: { type: SchemaType.STRING, description: "対象アプリ名" },
-        role: {
-          type: SchemaType.STRING,
-          description: "アクセシビリティロール (例: AXButton, AXTextField)",
-        },
-        name: { type: SchemaType.STRING, description: "要素の表示名" },
-      },
-      required: ["app_name", "role", "name"],
-    },
-  },
-  {
-    name: "typeToElement",
-    description: "指定した要素に直接テキストを入力します。フォーカスが不安定な場合に使用します。",
-    parameters: {
-      type: SchemaType.OBJECT,
-      properties: {
-        app_name: { type: SchemaType.STRING, description: "対象アプリ名" },
-        role: { type: SchemaType.STRING, description: "アクセシビリティロール (例: AXTextField)" },
-        name: { type: SchemaType.STRING, description: "要素の表示名" },
-        text: { type: SchemaType.STRING, description: "入力するテキスト" },
-      },
-      required: ["app_name", "role", "name", "text"],
-    },
-  },
-  {
     name: "focusElement",
     description: "要素をフォーカスします。クリックや入力前の安定化に使用します。",
     parameters: {
@@ -166,19 +135,6 @@ export const ACTION_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
         app_name: { type: SchemaType.STRING, description: '対象ブラウザアプリ名 (通常は "Comet")' },
       },
       required: ["app_name"],
-    },
-  },
-  {
-    name: "clickWebElement",
-    description: "Cometブラウザ内のDOM要素をロールと名前でクリックします。",
-    parameters: {
-      type: SchemaType.OBJECT,
-      properties: {
-        app_name: { type: SchemaType.STRING, description: '対象ブラウザアプリ名 (通常は "Comet")' },
-        role: { type: SchemaType.STRING, description: "DOMロール (例: button, link)" },
-        name: { type: SchemaType.STRING, description: "要素のラベルまたはテキスト" },
-      },
-      required: ["app_name", "role", "name"],
     },
   },
   {

@@ -46,27 +46,10 @@ export const ActionSchemaBase = z.discriminatedUnion("action", [
     params: z.object({ app_name: z.string(), max_depth: z.number().optional().default(3) }),
   }),
   z.object({
-    action: z.literal("clickElement"),
-    params: z.object({ app_name: z.string(), role: z.string(), name: z.string() }),
-  }),
-  z.object({
-    action: z.literal("typeToElement"),
-    params: z.object({
-      app_name: z.string(),
-      role: z.string(),
-      name: z.string(),
-      text: z.string(),
-    }),
-  }),
-  z.object({
     action: z.literal("focusElement"),
     params: z.object({ app_name: z.string(), role: z.string(), name: z.string() }),
   }),
   z.object({ action: z.literal("webElements"), params: z.object({ app_name: z.string() }) }),
-  z.object({
-    action: z.literal("clickWebElement"),
-    params: z.object({ app_name: z.string(), role: z.string(), name: z.string() }),
-  }),
   z.object({ action: z.literal("wait"), params: z.object({ seconds: z.number() }) }),
   z.object({ action: z.literal("search"), params: z.object({ query: z.string() }) }),
   z.object({ action: z.literal("done"), params: z.object({ message: z.string() }) }),
@@ -98,27 +81,10 @@ export const ActionSchema = z.discriminatedUnion("action", [
     params: z.object({ app_name: z.string(), max_depth: z.number().optional().default(3) }),
   }),
   z.object({
-    action: z.literal("clickElement"),
-    params: z.object({ app_name: z.string(), role: z.string(), name: z.string() }),
-  }),
-  z.object({
-    action: z.literal("typeToElement"),
-    params: z.object({
-      app_name: z.string(),
-      role: z.string(),
-      name: z.string(),
-      text: z.string(),
-    }),
-  }),
-  z.object({
     action: z.literal("focusElement"),
     params: z.object({ app_name: z.string(), role: z.string(), name: z.string() }),
   }),
   z.object({ action: z.literal("webElements"), params: z.object({ app_name: z.string() }) }),
-  z.object({
-    action: z.literal("clickWebElement"),
-    params: z.object({ app_name: z.string(), role: z.string(), name: z.string() }),
-  }),
   z.object({ action: z.literal("wait"), params: z.object({ seconds: z.number() }) }),
   z.object({ action: z.literal("search"), params: z.object({ query: z.string() }) }),
   z.object({ action: z.literal("done"), params: z.object({ message: z.string() }) }),

@@ -24,9 +24,9 @@ from actions.mouse_keyboard import (
 from actions.applescript import run_osa
 from actions.ui_elements import (
     get_ui_elements, get_ui_elements_json,
-    click_element, focus_element, type_to_element
+    focus_element
 )
-from actions.web_elements import get_web_elements, click_web_element
+from actions.web_elements import get_web_elements
 
 # 安全装置: マウスを画面の隅に移動させるとプログラムが停止する
 pyautogui.FAILSAFE = True
@@ -46,11 +46,8 @@ ACTION_HANDLERS = {
     "osa": run_osa,
     "elements": get_ui_elements,
     "elementsJson": get_ui_elements_json,
-    "clickElement": click_element,
-    "typeToElement": type_to_element,
     "focusElement": focus_element,
     "webElements": get_web_elements,
-    "clickWebElement": click_web_element,
     "size": get_screen_size,
 }
 

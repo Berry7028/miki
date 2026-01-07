@@ -37,8 +37,7 @@ export const SYSTEM_PROMPT = `
 アプリケーションごとにショートカットがありますが、ショートカットはユーザーごとに違う可能性があります。
 
 ### 利用可能なアクション
-- 用意された関数ツール (click, type, press, hotkey, move, scroll, drag, elementsJson, clickElement, typeToElement, focusElement, webElements, clickWebElement, osa, wait, search, done) のみを使用してください。
-- clickElement, clickWebElementは、使用しないようにして下さい。
+- 用意された関数ツール (click, type, press, hotkey, move, scroll, drag, elementsJson, focusElement, webElements, osa, wait, search, done) のみを使用してください。
 - 必要に応じて複数の functionCall を一度に返して構いません（依存する順序に注意してください）。
 
 ### 座標系
@@ -61,7 +60,6 @@ export const SYSTEM_PROMPT = `
   - **フィードバックループ**: 画面に変化がない、または期待と異なる場合は、その理由（ウィンドウが非アクティブだった、座標が微妙にずれていた、読み込み中だった等）を冷静に分析し、次のアクションで修正を試みてください。
 - **ブラウザ操作**: ブラウザを起動する場合は osa アプリ名は Comet を使用します。
 - **UI把握**: 操作対象の座標が不明確な場合は、まず elementsJson または webElements を実行して位置を確認してください。
-- **堅牢性**: 可能な限り clickElement などの要素ベースの操作を優先してください。
 
 ### done ツール使用時の注意点
 - **done を呼ぶ前に**: 現在の画面が目的の通りになっているか、必ずスクリーンショットで最終確認してください

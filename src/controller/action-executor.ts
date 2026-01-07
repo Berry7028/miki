@@ -56,12 +56,9 @@ export class ActionExecutor {
     });
 
     const elementBasedActions = [
-      "clickElement",
-      "typeToElement",
       "focusElement",
       "elementsJson",
       "webElements",
-      "clickWebElement",
     ];
     const isElementBased = elementBasedActions.includes(action.action);
 
