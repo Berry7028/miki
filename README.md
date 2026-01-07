@@ -17,6 +17,12 @@ Electron で最前面の操作パネルを提供し、Python Executor と連携�
 ./dev.sh doctor
 ```
 
+絵文字が表示できないターミナルでは、環境変数を付けてテキスト表示に切り替えられます。
+
+```bash
+MIKI_DEV_NO_EMOJI=1 ./dev.sh
+```
+
 数字選択と同じ機能をサブコマンドでも利用できます。慣れている場合は直接叩いてください。
 
 ```bash
@@ -67,9 +73,13 @@ Electron で最前面の操作パネルを提供し、Python Executor と連携�
 `dev.sh` は小さなタスクを登録していく構造になっています。
 
 1. `MENU_ITEMS` に `key|ラベル|実行関数|kind` を1行追加する  
-   - `kind` は `safe` / `slow` / `info` / `danger` のいずれか（色分けとアイコンに使用）
+   - `kind` は `safe` / `slow` / `info` / `danger` のいずれか（色分けとアイコンに使用。未知の値は `safe` 相当で表示）
 2. 追加した関数本体を同ファイルに定義する（環境前提がある場合は `preflight_node` / `preflight_python` を呼び出す）
 3. サブコマンドからも呼び出したい場合は最下部の `case` に `key)` を追加する
+
+例: `my-task|📝 My Custom Task|my_function|safe`
+
+`key` はサブコマンド名・識別子の目安です。対話メニューは `label` / `kind` を表示に使うため、サブコマンドとして扱う場合は必ず `case` への追加が必要です。
 
 最小限の編集で新しいタスクを組み込めるので、プロジェクト固有の処理も dev.sh に寄せてください。
 

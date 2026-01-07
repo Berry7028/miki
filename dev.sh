@@ -6,6 +6,10 @@ PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
 DESKTOP_DIR="$PROJECT_ROOT/desktop"
 VENV_DIR="$PROJECT_ROOT/venv"
 SETUP_FLAG="$HOME/Library/Application Support/miki-desktop/.setup_completed"
+RENDERER_ARTIFACT="$DESKTOP_DIR/renderer/dist"
+BACKEND_ARTIFACT="$DESKTOP_DIR/backend/controller"
+EXECUTOR_ARTIFACT="$DESKTOP_DIR/backend/executor"
+DIST_ARTIFACT="$DESKTOP_DIR/dist"
 
 # カラー出力
 GREEN='\033[0;32m'
@@ -14,13 +18,28 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-# アイコン
+# アイコン定義
 ICON_SAFE="✅"
 ICON_WARN="⚠️"
 ICON_DANGER="🧨"
 ICON_SLOW="⏳"
 ICON_INFO="ℹ️"
+ICON_SAFE_FALLBACK="[OK]"
+ICON_WARN_FALLBACK="[!]"
+ICON_DANGER_FALLBACK="[X]"
+ICON_SLOW_FALLBACK="[...]"
+ICON_INFO_FALLBACK="[i]"
 DIVIDER="────────────────────────────────────────"
+ERROR_GENERAL=1
+
+# 絵文字が使えない環境向けの簡易フォールバック
+if [ -n "$MIKI_DEV_NO_EMOJI" ]; then
+  ICON_SAFE="$ICON_SAFE_FALLBACK"
+  ICON_WARN="$ICON_WARN_FALLBACK"
+  ICON_DANGER="$ICON_DANGER_FALLBACK"
+  ICON_SLOW="$ICON_SLOW_FALLBACK"
+  ICON_INFO="$ICON_INFO_FALLBACK"
+fi
 
 # メニュー定義: key|label|handler|kind
 MENU_ITEMS=(
@@ -62,6 +81,13 @@ function icon_for_kind() {
   esac
 }
 
+function is_number() {
+  case "$1" in
+    ''|*[!0-9]*) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+
 function prompt_yes_no() {
   local prompt="$1"
   local default="${2:-n}"
@@ -83,6 +109,9 @@ function detect_state() {
   if command_exists bun; then
     BUN_STATUS="ready"
     BUN_VERSION="$(bun --version 2>/dev/null || true)"
+    if [ -z "$BUN_VERSION" ]; then
+      BUN_VERSION="version unknown"
+    fi
   fi
 
   NODE_DEPS_STATUS="missing"
@@ -115,22 +144,22 @@ function detect_state() {
   fi
 
   RENDERER_BUILT="no"
-  if [ -d "$DESKTOP_DIR/renderer/dist" ]; then
+  if [ -e "$RENDERER_ARTIFACT" ]; then
     RENDERER_BUILT="yes"
   fi
 
   BACKEND_BUILT="no"
-  if [ -d "$DESKTOP_DIR/backend/controller" ]; then
+  if [ -e "$BACKEND_ARTIFACT" ]; then
     BACKEND_BUILT="yes"
   fi
 
   EXECUTOR_BUILT="no"
-  if [ -d "$DESKTOP_DIR/backend/executor" ]; then
+  if [ -e "$EXECUTOR_ARTIFACT" ]; then
     EXECUTOR_BUILT="yes"
   fi
 
   DIST_BUILT="no"
-  if [ -d "$DESKTOP_DIR/dist" ]; then
+  if [ -e "$DIST_ARTIFACT" ]; then
     DIST_BUILT="yes"
   fi
 }
@@ -166,17 +195,21 @@ function status_line() {
 
 function print_status_panel() {
   detect_state
+  local bun_detail="$BUN_VERSION"
+  if [ "$BUN_STATUS" != "ready" ]; then
+    bun_detail="not installed - see https://bun.sh"
+  fi
   echo -e "${BLUE}${DIVIDER}${NC}"
   echo -e "${BLUE}環境状態${NC}"
-  status_line "Bun" "$BUN_STATUS" "${BUN_VERSION:-bunをインストールしてください (https://bun.sh)}"
-  status_line "Node依存" "$NODE_DEPS_STATUS" "desktop/node_modules"
+  status_line "Bun" "$BUN_STATUS" "$bun_detail"
+  status_line "Node依存" "$NODE_DEPS_STATUS" "$DESKTOP_DIR/node_modules"
   status_line "Python" "$PYTHON_STATUS" "${PYTHON_BIN:-python3 が見つかりません}"
   status_line "Python venv" "$VENV_STATUS" "$VENV_DIR"
   status_line "セットアップフラグ" "$SETUP_STATUS" "$SETUP_FLAG"
-  status_line "Rendererビルド" "$RENDERER_BUILT" "renderer/dist"
-  status_line "Backendビルド" "$BACKEND_BUILT" "backend/controller"
-  status_line "Executorビルド" "$EXECUTOR_BUILT" "backend/executor"
-  status_line "配布物" "$DIST_BUILT" "desktop/dist"
+  status_line "Rendererビルド" "$RENDERER_BUILT" "$RENDERER_ARTIFACT"
+  status_line "Backendビルド" "$BACKEND_BUILT" "$BACKEND_ARTIFACT"
+  status_line "Executorビルド" "$EXECUTOR_BUILT" "$EXECUTOR_ARTIFACT"
+  status_line "配布物" "$DIST_BUILT" "$DIST_ARTIFACT"
   echo -e "${BLUE}${DIVIDER}${NC}"
 }
 
@@ -184,7 +217,8 @@ function preflight_node() {
   detect_state
   local warnings=""
   if [ "$BUN_STATUS" != "ready" ]; then
-    warnings+="- bun が見つかりません。https://bun.sh からインストールしてください。\n"
+    echo -e "${RED}bun が見つかりません。https://bun.sh からインストールして再実行してください。${NC}"
+    return 1
   fi
   if [ "$NODE_DEPS_STATUS" != "ready" ]; then
     warnings+="- Node 依存関係が未インストールです。./dev.sh install を実行してください。\n"
@@ -243,7 +277,7 @@ function print_menu() {
 
   local index=1
   for entry in "${MENU_ITEMS[@]}"; do
-    IFS='|' read -r _ label _ kind <<<"$entry"
+    IFS='|' read -r key label _ kind <<<"$entry"
     local color
     color=$(color_for_kind "$kind")
     local icon
@@ -285,7 +319,9 @@ function print_help() {
 }
 
 function start_app() {
-  preflight_node || return 0
+  if ! preflight_node; then
+    return 1
+  fi
   echo -e "${BLUE}アプリを起動します...${NC}"
   cd "$DESKTOP_DIR"
 
@@ -305,14 +341,16 @@ function start_fresh() {
   echo -e "${YELLOW}セットアップフラグをリセットします...${NC}"
   if ! prompt_yes_no "リセット後に起動を続行しますか？" "y"; then
     echo -e "${RED}操作をキャンセルしました${NC}"
-    return 0
+    return 1
   fi
   reset_setup
   start_app "$1"
 }
 
 function build_backend() {
-  preflight_node || return 0
+  if ! preflight_node; then
+    return 1
+  fi
   echo -e "${BLUE}バックエンドをビルドします...${NC}"
   cd "$DESKTOP_DIR"
   bun run build:backend
@@ -320,7 +358,9 @@ function build_backend() {
 }
 
 function build_renderer() {
-  preflight_node || return 0
+  if ! preflight_node; then
+    return 1
+  fi
   echo -e "${BLUE}フロントエンド（レンダラー）をビルドします...${NC}"
   cd "$DESKTOP_DIR"
   bun run build:renderer
@@ -328,8 +368,12 @@ function build_renderer() {
 }
 
 function build_executor() {
-  preflight_node || return 0
-  preflight_python || return 0
+  if ! preflight_node; then
+    return 1
+  fi
+  if ! preflight_python; then
+    return 1
+  fi
   echo -e "${BLUE}Pythonエグゼキュータをビルドします...${NC}"
   cd "$DESKTOP_DIR"
   bun run build:executor
@@ -337,8 +381,12 @@ function build_executor() {
 }
 
 function build_all() {
-  preflight_node || return 0
-  preflight_python || return 0
+  if ! preflight_node; then
+    return 1
+  fi
+  if ! preflight_python; then
+    return 1
+  fi
   echo -e "${BLUE}全てのコンポーネントを一括ビルドします...${NC}"
   build_renderer
   build_backend
@@ -347,8 +395,12 @@ function build_all() {
 }
 
 function build_dist() {
-  preflight_node || return 0
-  preflight_python || return 0
+  if ! preflight_node; then
+    return 1
+  fi
+  if ! preflight_python; then
+    return 1
+  fi
   echo -e "${BLUE}配布用パッケージをビルドします...${NC}"
   cd "$DESKTOP_DIR"
   bun run dist
@@ -419,7 +471,7 @@ function setup_python() {
   fi
 
   echo -e "${BLUE}依存関係をインストール中...${NC}"
-  # shellcheck source=/dev/null
+  # shellcheck disable=SC1091 # load python3 -m venv generated activate script (external, expected)
   source "$VENV_DIR/bin/activate"
 
   if [ -f "$PROJECT_ROOT/requirements.txt" ]; then
@@ -481,6 +533,13 @@ function doctor() {
 }
 
 function interactive_menu() {
+  local menu_length=${#MENU_ITEMS[@]}
+  # 拡張時に MENU_ITEMS を動的に差し替えた場合のセーフガード
+  if [ "$menu_length" -eq 0 ]; then
+    echo -e "${RED}メニューが定義されていません。dev.sh を確認してください。${NC}"
+    exit "$ERROR_GENERAL"
+  fi
+
   while true; do
     print_menu
     read -r choice
@@ -490,13 +549,15 @@ function interactive_menu() {
       exit 0
     fi
 
-    if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#MENU_ITEMS[@]}" ]; then
+    if is_number "$choice" && [ "$choice" -ge 1 ] && [ "$choice" -le "$menu_length" ]; then
       local entry="${MENU_ITEMS[$((choice - 1))]}"
-      IFS='|' read -r _ label func _ <<<"$entry"
+      IFS='|' read -r key label func kind <<<"$entry"
       echo -e "${BLUE}${DIVIDER}${NC}"
       echo -e "${BLUE}${label}${NC}"
       echo -e "${BLUE}${DIVIDER}${NC}"
-      "$func"
+      if ! "$func"; then
+        echo -e "${RED}処理に失敗しました。doctor コマンドで状態を確認してください。${NC}"
+      fi
       echo ""
       read -p "Enterキーを押してメニューに戻る..." -r
     else
@@ -566,7 +627,7 @@ else
       echo -e "${RED}不明なコマンド: $1${NC}"
       echo ""
       print_help
-      exit 1
+      exit "$ERROR_GENERAL"
       ;;
   esac
 fi
