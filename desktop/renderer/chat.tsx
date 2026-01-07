@@ -67,6 +67,7 @@ const ChatApp = () => {
       } else if (payload.event === "thinking") {
         setThinkingText(payload.message || "Thinking...");
       } else if (payload.event === "tool") {
+        if (payload.toolName === "done") return;
         setCurrentTool(payload.toolName || "");
         addMessage({
           type: "tool",
@@ -77,6 +78,9 @@ const ChatApp = () => {
           toolOutput: payload.toolOutput,
         });
       } else if (payload.event === "log" && payload.type === "action") {
+        if (payload.message && (payload.message.includes('"action":"done"') || payload.message.includes('"action": "done"'))) {
+          return;
+        }
         addMessage({
           type: "action",
           content: payload.message || "",
@@ -84,7 +88,7 @@ const ChatApp = () => {
         });
       } else if (payload.event === "completed") {
         addMessage({
-          type: "result",
+          type: "ai",
           content: payload.message || payload.result || "Done.",
           timestamp: payload.timestamp || Date.now(),
         });
