@@ -26,6 +26,19 @@ function send(event: string, payload: Record<string, unknown> = {}) {
   process.stdout.write(JSON.stringify({ event, ...payload }) + "\n");
 }
 
+/**
+ * Sends an error event with the error message.
+ * Extracts the stack trace if available, otherwise uses the error message.
+ * @param error - The error to send, can be an Error object or any other value
+ */
+function sendError(error: unknown) {
+  if (error instanceof Error) {
+    send("error", { message: error.stack || error.message });
+  } else {
+    send("error", { message: String(error) });
+  }
+}
+
 function loadEnv() {
   process.env.DOTENV_CONFIG_QUIET = "true";
   const envPath = process.env.MIKI_ENV_PATH;
@@ -71,19 +84,15 @@ async function startRun(goal: string) {
     running = false;
   }
   loadEnv();
-  ensureAgent();
   running = true;
   sendStatus("running", goal);
 
   try {
+    ensureAgent();
     await agent!.init();
     await agent!.run(goal);
   } catch (error) {
-    if (error instanceof Error) {
-      send("error", { message: error.stack || error.message });
-    } else {
-      send("error", { message: String(error) });
-    }
+    sendError(error);
   } finally {
     running = false;
     sendStatus("idle");
@@ -96,8 +105,12 @@ function handleCommand(command: Command) {
       void startRun(command.goal);
       break;
     case "hint":
-      ensureAgent();
-      agent!.addHint(command.text);
+      try {
+        ensureAgent();
+        agent!.addHint(command.text);
+      } catch (error) {
+        sendError(error);
+      }
       break;
     case "stop":
       if (!agent || !running) {

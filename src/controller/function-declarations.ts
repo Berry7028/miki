@@ -128,11 +128,11 @@ export const ACTION_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
   },
   {
     name: "webElements",
-    description: "Cometブラウザ内のDOM要素一覧を取得します。Web操作時に使用します。",
+    description: "ブラウザ内のDOM要素一覧を取得します。Web操作時に使用します。",
     parameters: {
       type: SchemaType.OBJECT,
       properties: {
-        app_name: { type: SchemaType.STRING, description: '対象ブラウザアプリ名 (通常は "Comet")' },
+        app_name: { type: SchemaType.STRING, description: "対象ブラウザアプリ名" },
       },
       required: ["app_name"],
     },
