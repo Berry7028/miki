@@ -5,7 +5,7 @@ LLM由来の入力をAppleScript/JXAスクリプトに安全に埋め込むた�
 
 
 def escape_applescript_string(text):
-    """
+    r"""
     AppleScript文字列リテラル用のエスケープ処理
     
     AppleScriptでは文字列リテラルはダブルクォートで囲まれ、
@@ -37,7 +37,7 @@ def escape_applescript_string(text):
 
 
 def escape_jxa_string(text):
-    """
+    r"""
     JXA (JavaScript for Automation) 文字列リテラル用のエスケープ処理
     
     JXAはJavaScriptなので、文字列リテラル内で以下の文字をエスケープする必要があります:
