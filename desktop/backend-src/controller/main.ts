@@ -26,6 +26,11 @@ function send(event: string, payload: Record<string, unknown> = {}) {
   process.stdout.write(JSON.stringify({ event, ...payload }) + "\n");
 }
 
+/**
+ * Sends an error event with the error message.
+ * Extracts the stack trace if available, otherwise uses the error message.
+ * @param error - The error to send, can be an Error object or any other value
+ */
 function sendError(error: unknown) {
   if (error instanceof Error) {
     send("error", { message: error.stack || error.message });
