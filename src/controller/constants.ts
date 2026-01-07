@@ -1,3 +1,10 @@
+// Phase labels for thinking action
+export const THINKING_PHASE_LABELS: Record<string, string> = {
+  planning: "計画",
+  verification: "検証",
+  reflection: "振り返り",
+};
+
 // パフォーマンス最適化設定
 // Note: 環境に応じて調整可能。高速化優先だが、安定性に問題がある場合は値を増やすこと
 export const PERFORMANCE_CONFIG = {

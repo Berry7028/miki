@@ -84,9 +84,11 @@ const ChatApp = () => {
         }
       } else if (payload.event === "thinking") {
         setThinkingText(payload.message || "Thinking...");
+        // Prefer explicit thought field, fall back to message for backwards compatibility
+        const content = payload.thought || payload.message || "Thinking...";
         addMessage({
           type: "thinking",
-          content: payload.message || payload.thought || "Thinking...",
+          content,
           timestamp: payload.timestamp || Date.now(),
         });
       } else if (payload.event === "tool") {
@@ -190,6 +192,45 @@ const ChatApp = () => {
         handleSend();
       }
     }
+  };
+
+  // Helper function to get message style based on type
+  const getMessageStyle = (type: Message["type"]) => {
+    switch (type) {
+      case "user":
+        return {
+          background: "rgba(230, 214, 184, 0.15)",
+          border: "1px solid rgba(230, 214, 184, 0.3)",
+          borderRadius: "16px 4px 16px 16px",
+        };
+      case "action":
+      case "tool":
+        return {
+          background: "rgba(0, 0, 0, 0.25)",
+          border: "1px solid rgba(121, 184, 255, 0.2)",
+          borderRadius: "4px 16px 16px 16px",
+        };
+      case "thinking":
+        return {
+          background: "rgba(230, 214, 184, 0.1)",
+          border: "1px solid rgba(230, 214, 184, 0.3)",
+          borderRadius: "4px 16px 16px 16px",
+        };
+      default:
+        return {
+          background: "rgba(255,255,255,0.04)",
+          border: "1px solid rgba(255,255,255,0.08)",
+          borderRadius: "4px 16px 16px 16px",
+        };
+    }
+  };
+
+  // Helper function to get label text
+  const getMessageLabel = (msg: Message) => {
+    if (msg.type === "tool") return `TOOL: ${msg.toolName}`;
+    if (msg.type === "thinking") return "思考中";
+    if (msg.type === "action") return "ACTION";
+    return null;
   };
 
   return (

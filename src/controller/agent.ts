@@ -5,7 +5,7 @@ import * as path from "node:path";
 import { PythonBridge } from "./python-bridge";
 import { ActionExecutor } from "./action-executor";
 import { LLMClient } from "./llm-client";
-import { HISTORY_CONFIG, PERFORMANCE_CONFIG, SYSTEM_PROMPT } from "./constants";
+import { HISTORY_CONFIG, PERFORMANCE_CONFIG, SYSTEM_PROMPT, THINKING_PHASE_LABELS } from "./constants";
 
 type GeminiContent = { role: "user" | "model"; parts: any[] };
 type GeminiFunctionCall = { name: string; args?: any };
@@ -542,12 +542,7 @@ export class MacOSAgent extends EventEmitter {
           }
 
           if (action.action === "think") {
-            const phaseLabels: Record<string, string> = {
-              planning: "計画",
-              verification: "検証",
-              reflection: "振り返り",
-            };
-            const phaseLabel = phaseLabels[action.params.phase] || action.params.phase;
+            const phaseLabel = THINKING_PHASE_LABELS[action.params.phase] || action.params.phase;
             this.log("info", `[思考: ${phaseLabel}] ${action.params.thought}`);
             this.emit("thinking", {
               phase: action.params.phase,
