@@ -542,7 +542,7 @@ export class MacOSAgent extends EventEmitter {
           }
 
           if (action.action === "think") {
-            const phaseLabels = {
+            const phaseLabels: Record<string, string> = {
               planning: "計画",
               verification: "検証",
               reflection: "振り返り",
