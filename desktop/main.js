@@ -267,9 +267,14 @@ function ensureController() {
   const env = {
     ...process.env,
     ELECTRON_RUN_AS_NODE: "1",
-    MIKI_ENV_PATH: path.join(app.getPath("userData"), ".env"),
     DOTENV_CONFIG_QUIET: "true"
   };
+
+  // Pass API key directly to controller instead of using .env file
+  const apiKey = readApiKey();
+  if (apiKey) {
+    env.GEMINI_API_KEY = apiKey;
+  }
 
   // デバッグモードの環境変数を設定
   if (debugMode) {
