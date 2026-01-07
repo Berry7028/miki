@@ -113,6 +113,7 @@ export type Action = z.infer<typeof ActionSchema>;
 export interface PythonResponse {
   status: string;
   data?: string;
+  browser?: string;
   width?: number;
   height?: number;
   mouse_position?: { x: number; y: number };

@@ -17,6 +17,7 @@ export class LLMClient {
   private model: any;
   private modelName: string;
   private screenSize: { width: number; height: number };
+  private defaultBrowser: string = "Safari";
   private debugMode: boolean;
   private onLog: (type: string, message: string) => void;
 
@@ -57,6 +58,10 @@ export class LLMClient {
     this.screenSize = { width, height };
   }
 
+  updateDefaultBrowser(browser: string) {
+    this.defaultBrowser = browser;
+  }
+
   private debugLog(message: string) {
     if (this.debugMode) {
       console.error(message);
@@ -78,6 +83,12 @@ export class LLMClient {
     console.error(`[DEBUG] ==========================================\n`);
   }
 
+  private getFormattedSystemPrompt(): string {
+    return SYSTEM_PROMPT.replace("{SCREEN_WIDTH}", this.screenSize.width.toString())
+      .replace("{SCREEN_HEIGHT}", this.screenSize.height.toString())
+      .replace("{DEFAULT_BROWSER}", this.defaultBrowser);
+  }
+
   async getActions(
     history: GeminiContent[],
     screenshotBase64: string,
@@ -87,7 +98,8 @@ export class LLMClient {
     const normX = Math.round((mousePosition.x / (this.screenSize.width || 1)) * 1000);
     const normY = Math.round((mousePosition.y / (this.screenSize.height || 1)) * 1000);
 
-    const cacheName = this.cacheManager.getHistoryCacheName() || this.cacheManager.getSystemPromptCacheName();
+    const cacheName =
+      this.cacheManager.getHistoryCacheName() || this.cacheManager.getSystemPromptCacheName();
     let activeModel = this.model;
 
     if (cacheName) {
@@ -112,10 +124,7 @@ export class LLMClient {
       this.onLog("info", `Using prompt cache: ${cacheName}`);
     }
 
-    const formattedPrompt = SYSTEM_PROMPT.replace("{SCREEN_WIDTH}", this.screenSize.width.toString()).replace(
-      "{SCREEN_HEIGHT}",
-      this.screenSize.height.toString(),
-    );
+    const formattedPrompt = this.getFormattedSystemPrompt();
 
     const promptText = `現在のマウスカーソル位置: (${normX}, ${normY}) [正規化座標]。スクリーンショットを見て次のアクションをfunctionCallとして提案してください。必要に応じて複数提案して構いません。`;
 
@@ -253,10 +262,7 @@ export class LLMClient {
    * システムプロンプト + 履歴の一部をキャッシュに固める。
    */
   async cacheHistory(history: GeminiContent[]): Promise<void> {
-    const formattedPrompt = SYSTEM_PROMPT.replace("{SCREEN_WIDTH}", this.screenSize.width.toString()).replace(
-      "{SCREEN_HEIGHT}",
-      this.screenSize.height.toString(),
-    );
+    const formattedPrompt = this.getFormattedSystemPrompt();
 
     const contents = [{ role: "user" as const, parts: [{ text: formattedPrompt }] }, ...history];
 

@@ -78,6 +78,7 @@ export class MacOSAgent extends EventEmitter {
       const browserRes = await this.pythonBridge.call("browser");
       if (browserRes.status === "success" && browserRes.browser) {
         this.defaultBrowser = browserRes.browser;
+        this.llmClient.updateDefaultBrowser(this.defaultBrowser);
         this.log("info", `デフォルトブラウザ: ${this.defaultBrowser}`);
       }
     } catch (e) {
