@@ -7,7 +7,10 @@ import type { PythonResponse } from "./types";
 export class PythonBridge {
   private pythonProcess!: ChildProcessWithoutNullStreams;
   private pythonReader!: readline.Interface;
-  private pendingResolvers: ((value: any) => void)[] = [];
+  private pendingResolvers: Array<{
+    resolve: (value: any) => void;
+    reject: (error: Error) => void;
+  }> = [];
   private isRestarting = false;
   private onError: (message: string) => void;
   private onReady: () => void;
@@ -40,13 +43,22 @@ export class PythonBridge {
     });
 
     this.pythonReader.on("line", (line) => {
-      const resolver = this.pendingResolvers.shift();
-      if (resolver) {
-        try {
-          resolver(JSON.parse(line));
-        } catch (e) {
-          this.onError(`Python出力のパース失敗: ${line}`);
+      // 空行やJSONでない行（警告・ログなど）をスキップ
+      if (!line.trim()) {
+        return;
+      }
+
+      // JSON形式の行のみを処理
+      try {
+        const parsed = JSON.parse(line);
+        const resolver = this.pendingResolvers.shift();
+        if (resolver) {
+          resolver.resolve(parsed);
         }
+      } catch (e) {
+        // JSONパースエラー: 非JSON行（警告・デバッグ出力など）を無視
+        // resolverをshiftせず、次の有効なJSON行を待つ
+        console.warn(`Non-JSON output from Python (ignored): ${line}`);
       }
     });
 
@@ -76,6 +88,15 @@ export class PythonBridge {
     this.isRestarting = true;
     console.error("Pythonプロセスを再起動しています...");
 
+    // pending中の全てのpromiseをreject
+    const error = new Error("Python process crashed");
+    while (this.pendingResolvers.length > 0) {
+      const resolver = this.pendingResolvers.shift();
+      if (resolver) {
+        resolver.reject(error);
+      }
+    }
+
     // 古いプロセスのクリーンアップ
     try {
       this.pythonReader.close();
@@ -96,8 +117,8 @@ export class PythonBridge {
   }
 
   async call(action: string, params: any = {}): Promise<PythonResponse> {
-    return new Promise((resolve) => {
-      this.pendingResolvers.push(resolve);
+    return new Promise((resolve, reject) => {
+      this.pendingResolvers.push({ resolve, reject });
       this.pythonProcess.stdin.write(JSON.stringify({ action, params }) + "\n");
     });
   }
