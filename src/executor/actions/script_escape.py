@@ -56,10 +56,10 @@ def escape_jxa_string(text):
         エスケープされた文字列
         
     Example:
-        >>> escape_jxa_string('Line 1\\nLine 2')
-        'Line 1\\\\nLine 2'
         >>> escape_jxa_string('Say "Hi"')
         'Say \\"Hi\\"'
+        >>> escape_jxa_string('Line 1\nLine 2')  # 実際の改行文字
+        'Line 1\\nLine 2'
     """
     if text is None:
         return ""
