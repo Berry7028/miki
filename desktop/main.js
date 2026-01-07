@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, systemPreferences, globalShortcut, screen, Tray, Menu, nativeImage } = require("electron");
+const { app, BrowserWindow, ipcMain, shell, systemPreferences, globalShortcut, screen, Tray, Menu, nativeImage, safeStorage } = require("electron");
 const { spawn, execSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -386,18 +386,81 @@ function envFilePath() {
   return path.join(ensureEnvDir(), ".env");
 }
 
+function secureKeyPath() {
+  return path.join(ensureEnvDir(), ".api_key.enc");
+}
+
 function readApiKey() {
+  // Try to read from secure storage first
+  const securePath = secureKeyPath();
+  if (fs.existsSync(securePath)) {
+    try {
+      const encryptedData = fs.readFileSync(securePath);
+      if (safeStorage.isEncryptionAvailable()) {
+        const decrypted = safeStorage.decryptString(encryptedData);
+        return decrypted.trim();
+      }
+    } catch (err) {
+      console.error("Failed to decrypt API key:", err);
+    }
+  }
+
+  // Fallback: migrate from old plain text .env file
   const envPath = envFilePath();
-  if (!fs.existsSync(envPath)) return "";
-  const content = fs.readFileSync(envPath, "utf-8");
-  const match = content.match(/^GEMINI_API_KEY=(.*)$/m);
-  return match ? match[1].trim() : "";
+  if (fs.existsSync(envPath)) {
+    try {
+      const content = fs.readFileSync(envPath, "utf-8");
+      const match = content.match(/^GEMINI_API_KEY=(.*)$/m);
+      if (match) {
+        const apiKey = match[1].trim();
+        // Migrate to secure storage
+        if (apiKey) {
+          writeApiKey(apiKey);
+          // Delete old plain text file
+          fs.unlinkSync(envPath);
+        }
+        return apiKey;
+      }
+    } catch (err) {
+      console.error("Failed to migrate API key:", err);
+    }
+  }
+
+  return "";
 }
 
 function writeApiKey(apiKey) {
-  const envPath = envFilePath();
   const value = (apiKey || "").trim();
-  fs.writeFileSync(envPath, `GEMINI_API_KEY=${value}\n`, "utf-8");
+  
+  if (!safeStorage.isEncryptionAvailable()) {
+    console.error("Encryption not available, cannot store API key securely");
+    return;
+  }
+
+  const securePath = secureKeyPath();
+  
+  if (!value) {
+    // Delete the secure file if API key is empty
+    if (fs.existsSync(securePath)) {
+      fs.unlinkSync(securePath);
+    }
+    // Also delete old .env file if it exists
+    const envPath = envFilePath();
+    if (fs.existsSync(envPath)) {
+      fs.unlinkSync(envPath);
+    }
+    return;
+  }
+
+  // Encrypt and store the API key
+  const encrypted = safeStorage.encryptString(value);
+  fs.writeFileSync(securePath, encrypted);
+
+  // Remove old plain text .env file if it exists
+  const envPath = envFilePath();
+  if (fs.existsSync(envPath)) {
+    fs.unlinkSync(envPath);
+  }
 }
 
 function setupFlagPath() {
