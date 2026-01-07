@@ -26,7 +26,7 @@ from actions.ui_elements import (
     get_ui_elements, get_ui_elements_json,
     focus_element
 )
-from actions.web_elements import get_web_elements
+from actions.web_elements import get_web_elements, get_default_browser
 
 # 安全装置: マウスを画面の隅に移動させるとプログラムが停止する
 pyautogui.FAILSAFE = True
@@ -48,6 +48,7 @@ ACTION_HANDLERS = {
     "elementsJson": get_ui_elements_json,
     "focusElement": focus_element,
     "webElements": get_web_elements,
+    "browser": get_default_browser,
     "size": get_screen_size,
 }
 

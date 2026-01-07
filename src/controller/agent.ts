@@ -15,6 +15,7 @@ export class MacOSAgent extends EventEmitter {
   private actionExecutor: ActionExecutor;
   private llmClient: LLMClient;
   private screenSize: { width: number; height: number } = { width: 0, height: 0 };
+  private defaultBrowser: string = "Safari";
   private userPromptQueue: string[] = [];
   private currentStep = 0;
   private stopRequested = false;
@@ -71,6 +72,17 @@ export class MacOSAgent extends EventEmitter {
     this.actionExecutor.updateScreenSize(this.screenSize.width, this.screenSize.height);
     this.llmClient.updateScreenSize(this.screenSize.width, this.screenSize.height);
     this.log("info", `画面サイズ: ${this.screenSize.width}x${this.screenSize.height}`);
+
+    // デフォルトブラウザの取得
+    try {
+      const browserRes = await this.pythonBridge.call("browser");
+      if (browserRes.status === "success" && browserRes.browser) {
+        this.defaultBrowser = browserRes.browser;
+        this.log("info", `デフォルトブラウザ: ${this.defaultBrowser}`);
+      }
+    } catch (e) {
+      console.error("Failed to get default browser:", e);
+    }
   }
 
   private log(type: "info" | "success" | "error" | "hint" | "action", message: string) {
@@ -392,7 +404,9 @@ export class MacOSAgent extends EventEmitter {
       const formattedPrompt = SYSTEM_PROMPT.replace(
         "{SCREEN_WIDTH}",
         this.screenSize.width.toString(),
-      ).replace("{SCREEN_HEIGHT}", this.screenSize.height.toString());
+      )
+        .replace("{SCREEN_HEIGHT}", this.screenSize.height.toString())
+        .replace(/{DEFAULT_BROWSER}/g, this.defaultBrowser);
 
       await this.llmClient.createSystemPromptCache(formattedPrompt);
 
