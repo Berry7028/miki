@@ -31,6 +31,9 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 .env.production.local
 .env.local
 
+# encrypted API keys
+*.enc
+
 # caches
 .eslintcache
 .cache
