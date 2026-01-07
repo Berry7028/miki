@@ -26,6 +26,14 @@ function send(event: string, payload: Record<string, unknown> = {}) {
   process.stdout.write(JSON.stringify({ event, ...payload }) + "\n");
 }
 
+function sendError(error: unknown) {
+  if (error instanceof Error) {
+    send("error", { message: error.stack || error.message });
+  } else {
+    send("error", { message: String(error) });
+  }
+}
+
 function loadEnv() {
   process.env.DOTENV_CONFIG_QUIET = "true";
   const envPath = process.env.MIKI_ENV_PATH;
@@ -79,11 +87,7 @@ async function startRun(goal: string) {
     await agent!.init();
     await agent!.run(goal);
   } catch (error) {
-    if (error instanceof Error) {
-      send("error", { message: error.stack || error.message });
-    } else {
-      send("error", { message: String(error) });
-    }
+    sendError(error);
   } finally {
     running = false;
     sendStatus("idle");
@@ -100,11 +104,7 @@ function handleCommand(command: Command) {
         ensureAgent();
         agent!.addHint(command.text);
       } catch (error) {
-        if (error instanceof Error) {
-          send("error", { message: error.stack || error.message });
-        } else {
-          send("error", { message: String(error) });
-        }
+        sendError(error);
       }
       break;
     case "stop":
