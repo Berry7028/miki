@@ -17,7 +17,7 @@ import subprocess
 import re
 
 
-# 危険なシェルコマンドパターン（シェル実行が検出された場合にのみチェック）
+# 危険なシェルコマンドパターン（do shell script が検出された場合の二次防御）
 DANGEROUS_SHELL_PATTERNS = [
     r'rm\s+-rf',
     r'rm\s+-r\s+/',
@@ -31,8 +31,8 @@ DANGEROUS_SHELL_PATTERNS = [
     r'dd\s+if=',
     r'>\s*/dev/',
     r'chmod\s+000',
-    r'chown\s+-[Rr]',
-    r':\(\)\{:\|:&\};:',  # Fork bomb
+    r'chown\s+-R',  # -R フラグのみ（-r は存在しない）
+    r':\(\)\{:\|:&\};:',  # Fork bomb (リテラル文字列として扱う)
     r'format',
     r'del\s+/f',
     r'rmdir\s+/s',
@@ -52,8 +52,12 @@ def validate_script(script):
         
     Raises:
         ValueError: 危険なパターンが検出された場合
+    
+    Note:
+        セキュリティチェックのみに正規化を適用し、実行時は元のスクリプトを使用します。
     """
-    # 正規化: 連続する空白を単一スペースに、改行も空白に変換
+    # セキュリティチェック用に正規化（連続する空白を単一スペースに変換）
+    # 注: 実行時のスクリプトには影響しない
     normalized = re.sub(r'\s+', ' ', script.strip())
     script_lower = normalized.lower()
     
@@ -62,17 +66,11 @@ def validate_script(script):
     # - "do shell script", 'do shell script'
     # - do  shell  script (複数空白)
     # - do\nshell\nscript (改行)
-    shell_patterns = [
-        r'do\s+shell\s+script',  # 基本パターン
-        r'do\s*\(\s*shell\s+script\s*\)',  # 括弧による難読化
-    ]
-    
-    for pattern in shell_patterns:
-        if re.search(pattern, script_lower):
-            raise ValueError(
-                "do shell script の使用は禁止されています。"
-                "任意のシェルコマンドを実行できるため、セキュリティリスクとなります。"
-            )
+    if re.search(r'do\s+shell\s+script', script_lower):
+        raise ValueError(
+            "do shell script の使用は禁止されています。"
+            "任意のシェルコマンドを実行できるため、セキュリティリスクとなります。"
+        )
     
     # 2. 危険なシェルコマンドパターンの検出
     # （万が一 do shell script 検出を回避された場合の二次防御）
