@@ -8,7 +8,6 @@ def calculate_scale_factors():
     Retina等でのスクリーンショットと論理座標の差を考慮
     """
     screen_w, screen_h = pyautogui.size()
-    # 実際のスクリーンショットのサイズを取得
     shot = pyautogui.screenshot()
     img_w, img_h = shot.size
 
