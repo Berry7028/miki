@@ -254,7 +254,7 @@ function createChatWindow() {
     vibrancy: "under-window",
     visualEffectState: "active",
     roundedCorners: true,
-    skipTaskbar: true, // タスクバーに表示しない（パネル的な振る舞い）
+    skipTaskbar: true,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -262,17 +262,18 @@ function createChatWindow() {
     }
   });
 
-  // 全てのワークスペース（全画面アプリを含む）で表示されるように設定
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-  // 最前面のレベルを高く設定
   win.setAlwaysOnTop(true, "screen-saver");
 
   win.loadFile(path.join(__dirname, "renderer", "chat.html"));
 
   // macOSでのスクリーンショット/画面共有対策 (Chat Widget)
-  // ユーザーの機密情報が含まれる可能性があるため、キャプチャを防止します。
   if (process.platform === "darwin") {
-    win.setContentProtection(true);
+    if (debugMode) {  
+      win.setContentProtection(false);
+    } else {
+      win.setContentProtection(true);
+    }
   }
 
   win.webContents.on("did-finish-load", () => {
