@@ -42,6 +42,10 @@ function setupCSPHeaders() {
     }
     
     // Get or create nonce for this webContents (one nonce per window/page load)
+    if (details.webContents.isDestroyed()) {
+      callback({ responseHeaders: details.responseHeaders });
+      return;
+    }
     let nonce = styleNonces.get(details.webContents.id);
     if (!nonce) {
       nonce = generateNonce();
@@ -116,8 +120,9 @@ function createWindow() {
   });
 
   // Clean up nonce when window is destroyed
+  const webContentsId = win.webContents.id;
   win.on("closed", () => {
-    styleNonces.delete(win.webContents.id);
+    styleNonces.delete(webContentsId);
   });
 
   return win;
@@ -210,9 +215,10 @@ function createOverlayWindow() {
     win.webContents.send("miki:mouse-pos", point);
   }, 16); // ~60fps
 
+  const webContentsId = win.webContents.id;
   win.on("closed", () => {
     clearInterval(positionTimer);
-    styleNonces.delete(win.webContents.id);
+    styleNonces.delete(webContentsId);
     overlayWindow = null;
   });
 
@@ -273,8 +279,9 @@ function createChatWindow() {
     win.webContents.send("miki:focus-input");
   });
 
+  const webContentsId = win.webContents.id;
   win.on("closed", () => {
-    styleNonces.delete(win.webContents.id);
+    styleNonces.delete(webContentsId);
     chatWindow = null;
   });
 
