@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-// UI要素の型定義
 export interface UIElement {
   role: string;
   roleDescription: string;
@@ -12,7 +11,7 @@ export interface UIElement {
   enabled: boolean;
   focused: boolean;
   selected: boolean;
-  actions: string[]; // "AXPress", "AXFocus"等
+  actions: string[];
   subrole: string;
   children: UIElement[];
 }
@@ -21,7 +20,6 @@ export interface UIElementsResponse {
   windows: UIElement[];
 }
 
-// アクションの定義（Geminiの構造化出力に使用）
 export const ActionSchemaBase = z.discriminatedUnion("action", [
   z.object({ action: z.literal("screenshot") }),
   z.object({ action: z.literal("click"), params: z.object({ x: z.number(), y: z.number() }) }),
@@ -123,7 +121,6 @@ export interface PythonResponse {
   execution_time_ms?: number;
 }
 
-// キャッシュ関連の型定義
 export interface CacheMetadata {
   cacheName: string;
   createdAt: string;
