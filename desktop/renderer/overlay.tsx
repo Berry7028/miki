@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
+import { getLanguage, translations } from "./i18n";
 
 const TRAIL_LENGTH = 8;
 
@@ -9,7 +10,26 @@ const Overlay = () => {
   const [currentAction, setCurrentAction] = useState<any>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [trail, setTrail] = useState<{ x: number; y: number }[]>([]);
+  const [lang, setLang] = useState(getLanguage());
   const requestRef = useRef<number>();
+
+  const t = (key: keyof typeof translations.en) => {
+    return translations[lang][key] || translations.en[key];
+  };
+
+  useEffect(() => {
+    const handleLangChange = () => setLang(getLanguage());
+    window.addEventListener("miki_language_changed", handleLangChange);
+    window.addEventListener("storage", (e) => {
+      if (e.key === "miki_language") handleLangChange();
+    });
+    return () => {
+      window.removeEventListener("miki_language_changed", handleLangChange);
+      window.removeEventListener("storage", (e) => {
+        if (e.key === "miki_language") handleLangChange();
+      });
+    };
+  }, []);
 
   useEffect(() => {
     console.log("Overlay component mounted");
@@ -163,10 +183,11 @@ const Overlay = () => {
               }}
             >
               <LoadingSpinner />
-              {currentAction?.action 
-                ? `${currentAction.action.charAt(0).toUpperCase() + currentAction.action.slice(1)}...`
-                : (currentAction?.message || "Thinking...")
-              }
+               {currentAction?.action 
+                 ? `${currentAction.action.charAt(0).toUpperCase() + currentAction.action.slice(1)}...`
+                 : (currentAction?.message || t("thinking") + "...")
+               }
+
             </div>
           )}
         </div>
