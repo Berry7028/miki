@@ -1,135 +1,58 @@
 # リポジトリガイドライン
 
-## プロジェクト構造およびモジュールの整理
-- `desktop/`: Electron デスクトップアプリ。
-  - `desktop/main.js`: メインプロセス（ウィンドウ＋バックエンド起動）。
-  - `desktop/preload.js`: `contextBridge` によるセキュアブリッジ。
-  - `desktop/renderer/`: UI（`index.html`, `renderer.js`）。Tailwind CDN 使用。
-  - `desktop/backend-src/`: デスクトップビルド用 Node コントローラーエントリ。
-  - `desktop/backend/`: バンドル済みコントローラー／エグゼキューター出力（gitignore 済み）。
-- `src/controller/`: LLM 制御ロジック（デスクトップバックエンドビルドと共通）。
-- `src/executor/`: macOS オートメーションエグゼキューター（Python）。
-- `venv/`: Python 仮想環境。
+## プロジェクト概要
+macOS向けのElectronデスクトップアプリです。Controller（TypeScript/Bun）がLLMの対話とアクション制御を行い、Executor（Python）がOS操作を実行します。
 
-## ビルド・テスト・開発コマンド
-- `npm --prefix desktop install`：デスクトップ依存パッケージインストール。
-- `npm --prefix desktop run dev`：Electron アプリ起動。
-- `npm --prefix desktop run build:backend`：デスクトップコントローラーバンドル。
-- `npm --prefix desktop run dist`：デスクトップ配布ビルド。
+## プロジェクト構造
+- `desktop/`: Electronアプリ本体
+  - `desktop/main.js`: ウィンドウ管理、CSP設定、Controller起動、権限チェック、トレイ制御。
+  - `desktop/preload.js`: `contextBridge` による安全なAPI公開（`window.miki`）。
+  - `desktop/renderer/`: React UI（TSX + MUI + Emotion + CSS）。
+    - `index.html` / `chat.html` / `overlay.html`
+    - `index.tsx` / `chat.tsx` / `overlay.tsx` / `theme.ts` / `types.ts`
+    - `renderer/dist/`: ビルド成果物（編集しない）
+  - `desktop/backend-src/controller/main.ts`: Controllerのデスクトップ用エントリ。
+  - `desktop/scripts/build-backend.mjs`: Controllerバンドルスクリプト。
+  - `desktop/backend/`: バンドル済みController/Executor（gitignore対象）。
+- `src/controller/`: LLM制御ロジック（`agent.ts`, `action-executor.ts`, `python-bridge.ts`, `llm-client.ts` など）。
+- `src/executor/`: Python Executor（`main.py`, `actions/`, `utils/`, `requirements.txt`）。
+- `venv/`: Python仮想環境。
+
+## 開発・ビルドコマンド
+推奨は `dev.sh`。状態チェックやビルドを一括管理できます。
+
+- `./dev.sh`（対話メニュー）
+- `./dev.sh doctor`
+- `./dev.sh install`
+- `./dev.sh setup-python`
+- `./dev.sh build-all`
+- `./dev.sh start --debug`
+- `./dev.sh dist`
+
+> **注意:**  
+一部の `dev.sh` コマンドは対話型メニューとなっていますが、自動化やCLIツール環境ではそのまま利用できない場合があります。  
+この場合は、スクリプトの引数を指定して実行するか、下記のように直接ターミナルで `bun` コマンドを用いて操作してください（例：`bun run dev` や `bun run build-all` など）。  
+また、一時的なビルドや開発作業で仮設用スクリプトを追加することは避け、既存のシンプルな `bun` コマンドを優先して利用してください。
+
+
+手動で実行する場合:
+- `bun --cwd desktop run dev`
+- `bun --cwd desktop run build:backend`
+- `bun --cwd desktop run dist`
+- ルートのショートカット: `bun run dev` / `bun run desktop:install` / `bun run desktop:build:backend` / `bun run desktop:dist`
 
 ## コーディング規約・命名規則
-- JSON/HTML は 2 スペースインデント。JS は既存のダブルクォートスタイルを踏襲。
-- ファイル名は小文字＆説明的（例：`desktop/renderer/renderer.js`）。
-- メインプロセスでは簡潔で分かりやすい関数名（`createWindow`, `ensureController` など）を使用。
-- TypeScript/Python は既存ツール（`prettier`, `autopep8` など）で整形。
-- リポジトリ内の既存ドキュメントで特定のコマンドが指定されている場合はそれを優先し、それ以外は Bun ベースのツールチェーンを優先する。
-
-## Bun ベースのツールチェーン
-Node.js や npm/pnpm/vite よりも Bun を優先する。
-
-- `bun <file>` を `node <file>` / `ts-node <file>` の代わりに使う
-- `bun test` を `jest` / `vitest` の代わりに使う
-- `bun build <file.html|file.ts|file.css>` を `webpack` / `esbuild` の代わりに使う
-- `bun install` を `npm install` / `yarn install` / `pnpm install` の代わりに使う
-- `bun run <script>` を `npm run <script>` / `yarn run <script>` / `pnpm run <script>` の代わりに使う
-- `bunx <package> <command>` を `npx <package> <command>` の代わりに使う
-- Bun は `.env` を自動で読み込むため `dotenv` は使わない
-
-### APIs
-- `Bun.serve()` は WebSocket/HTTPS/routes をサポートするため、`express` は使わない
-- SQLite は `bun:sqlite` を使い、`better-sqlite3` は使わない
-- Redis は `Bun.redis` を使い、`ioredis` は使わない
-- Postgres は `Bun.sql` を使い、`pg` / `postgres.js` は使わない
-- `WebSocket` は組み込みを使い、`ws` は使わない
-- `node:fs` の readFile/writeFile より `Bun.file` を優先
-- `execa` の代わりに `Bun.$` を使う
-
-### Testing
-`bun test` を使う。
-
-```ts
-import { test, expect } from "bun:test";
-
-test("hello world", () => {
-  expect(1).toBe(1);
-});
-```
-
-### Frontend
-`Bun.serve()` と HTML imports を使う。`vite` は使わない。HTML imports は React/CSS/Tailwind をフルサポート。
-
-Server:
-
-```ts
-import index from "./index.html";
-
-Bun.serve({
-  routes: {
-    "/": index,
-    "/api/users/:id": {
-      GET: (req) => {
-        return new Response(JSON.stringify({ id: req.params.id }));
-      },
-    },
-  },
-  // optional websocket support
-  websocket: {
-    open: (ws) => {
-      ws.send("Hello, world!");
-    },
-    message: (ws, message) => {
-      ws.send(message);
-    },
-    close: (ws) => {
-      // handle close
-    },
-  },
-  development: {
-    hmr: true,
-    console: true,
-  },
-});
-```
-
-HTML は .tsx/.jsx/.js を直接 import でき、Bun のバンドラが自動でトランスパイル＆バンドルする。`<link>` の CSS も Bun が束ねる。
-
-```html
-<html>
-  <body>
-    <h1>Hello, world!</h1>
-    <script type="module" src="./frontend.tsx"></script>
-  </body>
-</html>
-```
-
-`frontend.tsx`:
-
-```tsx
-import React from "react";
-import { createRoot } from "react-dom/client";
-
-import "./index.css";
-
-const root = createRoot(document.body);
-
-export default function Frontend() {
-  return <h1>Hello, world!</h1>;
-}
-
-root.render(<Frontend />);
-```
-
-起動:
-
-```sh
-bun --hot ./index.ts
-```
-
-詳細は `node_modules/bun-types/docs/**.mdx` を参照。
+- JSON/HTML は2スペースインデント。JSは既存のダブルクォートを踏襲。
+- `desktop/` は CommonJS（`require` / `module.exports`）を維持。
+- Rendererは MUI + Emotion を使用。スタイルは `desktop/renderer/*.css` と `desktop/renderer/theme.ts` を優先。
+- CSP対策で Emotion の style nonce が必須。新規UIでスタイルを注入する場合は `window.miki.getStyleNonce()` を使う（`desktop/renderer/index.tsx` / `desktop/renderer/chat.tsx` を参照）。
+- 外部アセットを追加する場合は `desktop/main.js` の CSP を更新する。
+- Node/Bun 実行は Bun を優先し、READMEや既存スクリプトで指定がある場合はそちらに従う。
+- Python は `src/executor/requirements.txt` と `venv/` を前提にする。
 
 ## テストガイドライン
-自動テストは未導入。テストを追加する場合は以下の方針で：
-- 対象階層の `desktop/package.json` に `test` スクリプトを追加。
+自動テストは未導入。追加する場合は以下を踏襲する：
+- `desktop/package.json` に `test` スクリプトを追加。
 - `desktop/renderer/__tests__/` など明確な場所に配置。
 - ファイル名は `*.test.js` のように命名。
 
@@ -137,13 +60,13 @@ bun --hot ./index.ts
 直近のコミット履歴では慣習的プレフィックス（例：`feat:`）と短い要約が混在。
 このパターンを踏襲：
 - タイプ（`feat:`, `fix:`）付きまたは短い現在形要約を先頭行に。
-- 1 行目は約 72 文字以内を目安に。
+- 1行目は約72文字以内を目安に。
 
 プルリクエストには以下を含めること：
 - 振る舞いの簡潔な記述。
-- `desktop/renderer/` の UI 変更にはスクリーンショット添付。
-- 関連する Issue リンク。
+- `desktop/renderer/` のUI変更にはスクリーンショット添付。
+- 関連するIssueリンク。
 
 ## セキュリティ＆設定のポイント
 - `desktop/main.js` では `nodeIntegration: false` と `contextIsolation: true` を維持。
-- 新しい外部アセットが必要なら `desktop/renderer/index.html` の CSP を更新。
+- APIキーは `safeStorage` で暗号化保存される。旧`.env`は `~/Library/Application Support/miki-desktop/.env` に置かれる。
