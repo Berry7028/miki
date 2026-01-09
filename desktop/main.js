@@ -52,13 +52,13 @@ function setupCSPHeaders() {
       styleNonces.set(details.webContents.id, nonce);
     }
     
-    // Define CSP based on the URL
+    // Define CSP based on the URL (checking for filename only, so path changes don't affect this)
     let csp;
-    if (details.url.includes('index.html')) {
+    if (details.url.includes('dashboard') || details.url.includes('index.html')) {
       csp = `default-src 'self'; script-src 'self'; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self';`;
-    } else if (details.url.includes('chat.html')) {
+    } else if (details.url.includes('chat')) {
       csp = `default-src 'self'; script-src 'self'; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self';`;
-    } else if (details.url.includes('overlay.html')) {
+    } else if (details.url.includes('overlay')) {
       csp = `default-src 'self'; script-src 'self'; style-src 'self' 'nonce-${nonce}'; font-src 'self' data:; img-src 'self' data:; connect-src 'self';`;
     } else {
       // Default strict CSP - only set for HTML files to avoid setting CSP on every resource
@@ -102,7 +102,7 @@ function createWindow() {
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   win.setAlwaysOnTop(true, "screen-saver");
 
-  win.loadFile(path.join(__dirname, "renderer", "index.html"));
+  win.loadFile(path.join(__dirname, "renderer", "pages", "dashboard", "index.html"));
 
   // macOSでのスクリーンショット/画面共有対策 (setContentProtection)
   // NSWindowのsharingTypeをNSWindowSharingNoneに設定します。
@@ -204,7 +204,7 @@ function createOverlayWindow() {
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   win.setAlwaysOnTop(true, "screen-saver");
 
-  win.loadFile(path.join(__dirname, "renderer", "overlay.html"));
+  win.loadFile(path.join(__dirname, "renderer", "pages", "overlay", "index.html"));
   // マウス位置の同期を開始
   const positionTimer = setInterval(() => {
     if (win.isDestroyed()) {
@@ -265,7 +265,7 @@ function createChatWindow() {
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   win.setAlwaysOnTop(true, "screen-saver");
 
-  win.loadFile(path.join(__dirname, "renderer", "chat.html"));
+  win.loadFile(path.join(__dirname, "renderer", "pages", "chat", "index.html"));
 
   // macOSでのスクリーンショット/画面共有対策 (Chat Widget)
   if (process.platform === "darwin") {

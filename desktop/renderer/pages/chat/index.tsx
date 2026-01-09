@@ -24,8 +24,8 @@ import {
   Build,
   AttachFile,
 } from "@mui/icons-material";
-import { theme } from "./theme";
-import type { BackendEvent } from "./types";
+import { theme } from "../../shared/theme";
+import type { BackendEvent } from "../../shared/types";
 
 // Create Emotion cache with nonce for CSP
 async function createEmotionCache() {
