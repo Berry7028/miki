@@ -45,6 +45,7 @@ fi
 MENU_ITEMS=(
   "start|🚀 アプリを起動（開発モード）|start_app|safe"
   "start-debug|🛠️ アプリをデバッグモードで起動|start_app_debug|safe"
+  "hot-reload|♻️ 変更監視で再ビルド＆再起動|start_hot_reload|slow"
   "start-fresh|🧨 セットアップをリセットして起動|start_fresh|danger"
   "build-all|⏳ 全コンポーネントを一括ビルド|build_all|slow"
   "build-renderer|⏳ フロントエンド（レンダラー）をビルド|build_renderer|slow"
@@ -299,6 +300,7 @@ function print_help() {
   echo "主なコマンド:"
   echo "  ${GREEN}start${NC}              - アプリを起動（開発モード）"
   echo "  ${GREEN}start --debug${NC}      - アプリをデバッグモードで起動"
+  echo "  ${GREEN}hot-reload${NC}         - 変更監視で再ビルド＆再起動"
   echo "  ${GREEN}start-fresh${NC}        - セットアップフラグをリセットして起動"
   echo "  ${GREEN}build-all${NC}          - 全コンポーネントを一括ビルド"
   echo "  ${GREEN}build-renderer${NC}     - フロントエンド（レンダラー）をビルド"
@@ -345,6 +347,90 @@ function start_fresh() {
   fi
   reset_setup
   start_app "$1"
+}
+
+function build_executor_if_ready() {
+  detect_state
+  if [ "$PYTHON_STATUS" != "ready" ] || [ "$VENV_STATUS" != "ready" ]; then
+    echo -e "${YELLOW}Python 環境が未準備のため、エグゼキュータのビルドをスキップします。${NC}"
+    return 0
+  fi
+  echo -e "${BLUE}Pythonエグゼキュータをビルドします...${NC}"
+  cd "$DESKTOP_DIR"
+  bun run build:executor
+  echo -e "${GREEN}✓ エグゼキュータ ビルド完了${NC}"
+}
+
+function start_dev_process() {
+  cd "$DESKTOP_DIR"
+  bun run dev &
+  DEV_APP_PID=$!
+  cd "$PROJECT_ROOT"
+}
+
+function stop_dev_process() {
+  if [ -n "${DEV_APP_PID:-}" ]; then
+    kill "$DEV_APP_PID" >/dev/null 2>&1 || true
+    if command_exists pkill; then
+      pkill -TERM -P "$DEV_APP_PID" >/dev/null 2>&1 || true
+    fi
+    wait "$DEV_APP_PID" >/dev/null 2>&1 || true
+    DEV_APP_PID=""
+  fi
+}
+
+function start_hot_reload() {
+  if ! preflight_node; then
+    return 1
+  fi
+
+  if ! command_exists fswatch; then
+    echo -e "${RED}fswatch が見つかりません。${NC}"
+    echo -e "${YELLOW}インストール例: brew install fswatch${NC}"
+    return 1
+  fi
+
+  echo -e "${BLUE}初回ビルドを実行します...${NC}"
+  build_renderer
+  build_backend
+  build_executor_if_ready
+
+  echo -e "${BLUE}アプリを起動します...${NC}"
+  start_dev_process
+
+  function cleanup_hot_reload() {
+    echo -e "${BLUE}ホットリロードを終了します...${NC}"
+    stop_dev_process
+  }
+  trap cleanup_hot_reload EXIT INT TERM
+
+  echo -e "${BLUE}変更監視を開始しました。Ctrl+C で終了します。${NC}"
+
+  local watch_paths=(
+    "$PROJECT_ROOT/src"
+    "$DESKTOP_DIR/renderer"
+    "$DESKTOP_DIR/backend-src"
+    "$DESKTOP_DIR/main.js"
+    "$DESKTOP_DIR/preload.js"
+  )
+
+  local watch_cmd=(fswatch -o)
+  watch_cmd+=(-e "node_modules")
+  watch_cmd+=(-e "/dist")
+  watch_cmd+=(-e "/backend/")
+  watch_cmd+=(-e "/renderer/dist")
+  watch_cmd+=(-e "/venv")
+  watch_cmd+=(-e "/.git")
+  watch_cmd+=("${watch_paths[@]}")
+
+  while read -r _; do
+    echo -e "${YELLOW}変更を検知しました。再ビルドして再起動します...${NC}"
+    stop_dev_process
+    build_renderer
+    build_backend
+    build_executor_if_ready
+    start_dev_process
+  done < <("${watch_cmd[@]}")
 }
 
 function build_backend() {
@@ -573,7 +659,10 @@ if [ $# -eq 0 ]; then
 else
   case "${1}" in
     start)
-      start_app "${2}"
+    start_app "${2}"
+      ;;
+    hot-reload|watch)
+      start_hot_reload
       ;;
     start-debug)
       start_app_debug
