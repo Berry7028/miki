@@ -105,13 +105,13 @@ bun run dev -- --debug
 ## セットアップ（手動）
 
 ```bash
-npm --prefix desktop install
+bun --cwd desktop install
 ```
 
 ## 起動（手動）
 
 ```bash
-npm --prefix desktop run dev
+bun --cwd desktop run dev
 ```
 
 ## バックエンドのビルド
@@ -119,7 +119,7 @@ npm --prefix desktop run dev
 Controller は Node 向けにバンドルし、Executor は PyInstaller で同梱します。
 
 ```bash
-npm --prefix desktop run build:backend
+bun --cwd desktop run build:backend
 ```
 
 Python Executor の例:
@@ -132,7 +132,7 @@ pyinstaller --name miki-executor --onedir src/executor/main.py --distpath deskto
 ## 配布ビルド
 
 ```bash
-npm --prefix desktop run dist
+bun --cwd desktop run dist
 ```
 
 ## ショートカットキー
