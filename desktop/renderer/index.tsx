@@ -35,14 +35,6 @@ import {
 } from "@mui/icons-material";
 import { theme } from "./theme";
 import type { BackendEvent, SetupStatus } from "./types";
-import { useI18n, type Language } from "./i18n";
-import {
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  DialogTitle,
-} from "@mui/material";
 
 // Create Emotion cache with nonce for CSP
 async function createEmotionCache() {
@@ -60,35 +52,31 @@ async function createEmotionCache() {
   });
 }
 
-const setupSteps = (t: any) => [
+const setupSteps = [
   {
-    title: t("configureMiki"),
-    subtitle: t("enterApiKey"),
+    title: "Configure MIKI AI",
+    subtitle: "Enter your OpenAI or Anthropic API key.",
     icon: <VpnKey />,
   },
   {
-    title: t("enableAccessibility"),
-    subtitle: t("allowControl"),
+    title: "Enable Accessibility",
+    subtitle: "Allow MIKI to control your screen for automation.",
     icon: <Settings />,
   },
   {
-    title: t("seeWorkflow"),
-    subtitle: t("screenRecordingReq"),
+    title: "Let MIKI see your workflow",
+    subtitle: "Screen recording permission is required for context-aware help.",
     icon: <Visibility />,
   },
 ];
 
 const App = () => {
-  const { t, lang, setLanguage } = useI18n();
   const [apiKey, setApiKey] = useState("");
   const [isEditingApiKey, setIsEditingApiKey] = useState(false);
   const [saveStatus, setSaveStatus] = useState("");
   const [logs, setLogs] = useState<BackendEvent[]>([]);
   const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null);
   const [setupStep, setSetupStep] = useState(0);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-
-  const steps = setupSteps(t);
 
   const appendLog = useCallback((event: BackendEvent) => {
     setLogs((prev) => [event, ...prev].slice(0, 100));
@@ -110,9 +98,9 @@ const App = () => {
       if (payload.event === "log") {
         appendLog(payload);
       } else if (payload.event === "completed") {
-        appendLog({ ...payload, type: "success", message: payload.message || t("done") });
+        appendLog({ ...payload, type: "success", message: payload.message || "Completed" });
       } else if (payload.event === "error") {
-        appendLog({ ...payload, type: "error", message: payload.message || t("errorOccurred") });
+        appendLog({ ...payload, type: "error", message: payload.message || "Error" });
       }
     });
 
@@ -127,7 +115,7 @@ const App = () => {
   const handleSaveApiKey = async () => {
     if (!apiKey.trim()) return;
     await window.miki?.setApiKey(apiKey);
-    setSaveStatus(t("saved"));
+    setSaveStatus("Saved");
     setIsEditingApiKey(false);
     setTimeout(() => setSaveStatus(""), 3000);
   };
@@ -137,7 +125,7 @@ const App = () => {
       if (!apiKey.trim()) return;
       await window.miki?.setApiKey(apiKey);
     }
-    if (setupStep < steps.length - 1) setSetupStep(setupStep + 1);
+    if (setupStep < setupSteps.length - 1) setSetupStep(setupStep + 1);
   };
 
   const handleSetupFinish = async () => {
@@ -153,11 +141,11 @@ const App = () => {
       case "action":
         return { label: "ACTION", color: "rgba(121, 184, 255, 0.2)", text: "#8bc4ff" };
       case "success":
-        return { label: t("done").toUpperCase(), color: "rgba(79, 208, 138, 0.2)", text: "#7fe0ad" };
+        return { label: "SUCCESS", color: "rgba(79, 208, 138, 0.2)", text: "#7fe0ad" };
       case "error":
         return { label: "ERROR", color: "rgba(255, 99, 99, 0.2)", text: "#ff7b7b" };
       case "thinking":
-        return { label: t("thinking").toUpperCase(), color: "rgba(230, 214, 184, 0.2)", text: "#e6d6b8" };
+        return { label: "TASK", color: "rgba(230, 214, 184, 0.2)", text: "#e6d6b8" };
       default:
         return { label: "INFO", color: "rgba(255, 255, 255, 0.08)", text: "#b8b2a7" };
     }
@@ -208,12 +196,12 @@ const App = () => {
                 <Terminal sx={{ fontSize: 18, color: "primary.main" }} />
               </Box>
               <Typography variant="subtitle1" sx={{ fontWeight: 700, letterSpacing: "0.08em" }}>
-                {t("appTitle")}
+                MIKI DESKTOP
               </Typography>
             </Stack>
             <Stack direction="row" spacing={2} alignItems="center">
               <Chip
-                label={t("systemReady")}
+                label="SYSTEM READY"
                 sx={{
                   bgcolor: "rgba(79, 208, 138, 0.15)",
                   color: "#7fe0ad",
@@ -221,11 +209,7 @@ const App = () => {
                   border: "1px solid rgba(79, 208, 138, 0.3)",
                 }}
               />
-              <IconButton 
-                size="small" 
-                sx={{ bgcolor: "rgba(255,255,255,0.05)" }}
-                onClick={() => setIsSettingsOpen(true)}
-              >
+              <IconButton size="small" sx={{ bgcolor: "rgba(255,255,255,0.05)" }}>
                 <Settings fontSize="small" />
               </IconButton>
               <Box
@@ -246,7 +230,7 @@ const App = () => {
             <Grid size={{ xs: 12, lg: 8 }}>
               <Stack spacing={3}>
                 <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <Typography variant="h1">{t("dashboard")}</Typography>
+                  <Typography variant="h1">Dashboard</Typography>
                   <Chip
                     label="v2.4.0"
                     sx={{
@@ -260,9 +244,9 @@ const App = () => {
 
                 <Paper sx={{ p: 3.5, display: "flex", justifyContent: "space-between" }}>
                   <Stack spacing={1}>
-                    <Typography variant="h6">{t("quickTrigger")}</Typography>
+                    <Typography variant="h6">Quick Trigger</Typography>
                     <Typography variant="body2" color="text.secondary">
-                      {t("quickTriggerDesc")}
+                      Launch the chat overlay instantly from anywhere.
                     </Typography>
                   </Stack>
                   <Button
@@ -291,15 +275,15 @@ const App = () => {
                           </Avatar>
                           <Box>
                             <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                              {t("apiConfig")}
+                              API Configuration
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                              {hasApiKey ? t("connected") : t("notConnected")}
+                              {hasApiKey ? "Connected" : "Not Connected"}
                             </Typography>
                           </Box>
                         </Stack>
                         <Typography variant="caption" color="text.secondary">
-                          {t("openaiApiKey")}
+                          OPENAI API KEY
                         </Typography>
                         <TextField
                           fullWidth
@@ -317,15 +301,15 @@ const App = () => {
                         />
                         <Stack direction="row" spacing={2} alignItems="center" justifyContent="flex-end">
                           <Button variant="text" onClick={() => setIsEditingApiKey(true)}>
-                            {t("changeKey")}
+                            Change Key
                           </Button>
                           <Button variant="contained" onClick={handleSaveApiKey} disabled={!apiKey.trim()}>
-                            {t("verifyAndSave")}
+                            Verify & Save
                           </Button>
                         </Stack>
                         {saveStatus && (
                           <Typography variant="caption" color="secondary.light">
-                            {t("saved")}
+                            {saveStatus}
                           </Typography>
                         )}
                       </Stack>
@@ -347,10 +331,10 @@ const App = () => {
                           </Avatar>
                           <Box>
                             <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                              {t("systemPermissions")}
+                              System Permissions
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                              {t("reviewPermissions")}
+                              Review system access
                             </Typography>
                           </Box>
                         </Stack>
@@ -366,16 +350,16 @@ const App = () => {
                         >
                           <Stack spacing={0.5}>
                             <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                              {t("accessibility")}
+                              Accessibility
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                              {setupStatus?.hasAccessibility ? t("granted") : t("actionRequired")}
+                              Granted
                             </Typography>
                           </Stack>
                           {setupStatus?.hasAccessibility ? (
                             <Chip
                               icon={<CheckCircle sx={{ fontSize: 16 }} />}
-                              label={t("granted")}
+                              label="Granted"
                               size="small"
                               color="success"
                             />
@@ -386,7 +370,7 @@ const App = () => {
                               color="warning"
                               onClick={() => window.miki?.openSystemPreferences("accessibility")}
                             >
-                              {t("allow")}
+                              Allow
                             </Button>
                           )}
                         </Paper>
@@ -402,16 +386,16 @@ const App = () => {
                         >
                           <Stack spacing={0.5}>
                             <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                              {t("screenRecording")}
+                              Screen Recording
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                              {setupStatus?.hasScreenRecording ? t("granted") : t("actionRequired")}
+                              {setupStatus?.hasScreenRecording ? "Granted" : "Action Required"}
                             </Typography>
                           </Stack>
                           {setupStatus?.hasScreenRecording ? (
                             <Chip
                               icon={<CheckCircle sx={{ fontSize: 16 }} />}
-                              label={t("granted")}
+                              label="Granted"
                               size="small"
                               color="success"
                             />
@@ -422,7 +406,7 @@ const App = () => {
                               color="warning"
                               onClick={() => window.miki?.openSystemPreferences("screen-recording")}
                             >
-                              {t("allow")}
+                              Allow
                             </Button>
                           )}
                         </Paper>
@@ -446,7 +430,7 @@ const App = () => {
                   }}
                 >
                   <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                    {t("executionLog")}
+                    Execution Log
                   </Typography>
                   <IconButton size="small" onClick={() => setLogs([])} sx={{ opacity: 0.6 }}>
                     <Settings fontSize="small" />
@@ -517,7 +501,7 @@ const App = () => {
                       sx={{ height: "100%", opacity: 0.5 }}
                     >
                       <Terminal sx={{ fontSize: 32 }} />
-                      <Typography variant="body2">{t("noLogs")}</Typography>
+                      <Typography variant="body2">No logs yet</Typography>
                     </Stack>
                   )}
                 </Box>
@@ -542,15 +526,15 @@ const App = () => {
           <Box sx={{ px: 4, pt: 4 }}>
             <Stack direction="row" alignItems="center" justifyContent="space-between">
               <Typography variant="subtitle2" sx={{ letterSpacing: "0.1em" }}>
-                {t("setupWizard")}
+                SETUP WIZARD
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                {t("step")} {setupStep + 1} {t("of")} {steps.length}
+                Step {setupStep + 1} of {setupSteps.length}
               </Typography>
             </Stack>
             <LinearProgress
               variant="determinate"
-              value={((setupStep + 1) / steps.length) * 100}
+              value={((setupStep + 1) / setupSteps.length) * 100}
               sx={{
                 mt: 2,
                 height: 6,
@@ -573,21 +557,21 @@ const App = () => {
                   color: "#e6d6b8",
                 }}
               >
-                {steps[setupStep].icon}
+                {setupSteps[setupStep].icon}
               </Avatar>
               <Stack spacing={1} alignItems="center">
                 <Typography variant="h2" sx={{ textAlign: "center", color: "#e6d6b8" }}>
-                  {steps[setupStep].title}
+                  {setupSteps[setupStep].title}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center" }}>
-                  {steps[setupStep].subtitle}
+                  {setupSteps[setupStep].subtitle}
                 </Typography>
               </Stack>
 
               {setupStep === 0 && (
                 <Stack spacing={2} sx={{ width: "100%" }}>
                   <Typography variant="body2" color="text.secondary">
-                    {t("findApiKey")}
+                    Where do I find my API key?
                   </Typography>
                   <TextField
                     fullWidth
@@ -597,7 +581,7 @@ const App = () => {
                     onChange={(e) => setApiKey(e.target.value)}
                   />
                   <Typography variant="caption" color="text.secondary">
-                    {t("apiKeyPrivacy")}
+                    Your key is encrypted and stored locally. It is never shared with our servers.
                   </Typography>
                 </Stack>
               )}
@@ -607,7 +591,7 @@ const App = () => {
                   {setupStatus?.hasAccessibility ? (
                     <Chip
                       icon={<CheckCircle sx={{ fontSize: 18 }} />}
-                      label={t("accessibilityGranted")}
+                      label="Accessibility Granted"
                       color="success"
                       sx={{ alignSelf: "center" }}
                     />
@@ -617,7 +601,7 @@ const App = () => {
                       startIcon={<Settings />}
                       onClick={() => window.miki?.openSystemPreferences("accessibility")}
                     >
-                      {t("openSystemPreferences")}
+                      Open System Preferences
                     </Button>
                   )}
                 </Stack>
@@ -628,7 +612,7 @@ const App = () => {
                   {setupStatus?.hasScreenRecording ? (
                     <Chip
                       icon={<CheckCircle sx={{ fontSize: 18 }} />}
-                      label={t("screenRecordingGranted")}
+                      label="Screen Recording Granted"
                       color="success"
                       sx={{ alignSelf: "center" }}
                     />
@@ -638,12 +622,12 @@ const App = () => {
                       startIcon={<Visibility />}
                       onClick={() => window.miki?.openSystemPreferences("screen-recording")}
                     >
-                      {t("openSystemPreferences")}
+                      Open System Preferences
                     </Button>
                   )}
                   <Chip
                     icon={<Lock sx={{ fontSize: 18 }} />}
-                    label={t("dataPrivacy")}
+                    label="This data is processed locally and never leaves your device."
                     sx={{
                       bgcolor: "rgba(0,0,0,0.25)",
                       color: "text.secondary",
@@ -660,17 +644,17 @@ const App = () => {
               onClick={() => setSetupStep(setupStep - 1)}
               startIcon={<ArrowForward sx={{ transform: "rotate(180deg)" }} />}
             >
-              {t("back")}
+              Back
             </Button>
             <Box sx={{ flexGrow: 1 }} />
-            {setupStep < steps.length - 1 ? (
+            {setupStep < setupSteps.length - 1 ? (
               <Button
                 variant="contained"
                 onClick={handleSetupNext}
                 disabled={setupStep === 0 && !apiKey.trim()}
                 endIcon={<ArrowForward />}
               >
-                {t("nextStep")}
+                Next Step
               </Button>
             ) : (
               <Button
@@ -678,62 +662,9 @@ const App = () => {
                 onClick={handleSetupFinish}
                 disabled={!setupStatus?.hasScreenRecording}
               >
-                {t("finishSetup")}
+                Finish Setup
               </Button>
             )}
-          </DialogActions>
-        </Dialog>
-
-        <Dialog
-          open={isSettingsOpen}
-          onClose={() => setIsSettingsOpen(false)}
-          maxWidth="xs"
-          fullWidth
-          PaperProps={{
-            sx: {
-              borderRadius: 4,
-              background: "linear-gradient(180deg, #3a414b 0%, #2c333d 100%)",
-              border: "1px solid rgba(255,255,255,0.08)",
-            },
-          }}
-        >
-          <DialogTitle sx={{ color: "#e6d6b8", fontWeight: 700 }}>
-            {t("settings")}
-          </DialogTitle>
-          <DialogContent>
-            <Box sx={{ mt: 1 }}>
-              <FormControl fullWidth variant="outlined">
-                <InputLabel id="language-select-label" sx={{ color: "rgba(255,255,255,0.5)" }}>
-                  {t("language")}
-                </InputLabel>
-                <Select
-                  labelId="language-select-label"
-                  value={lang}
-                  label={t("language")}
-                  onChange={(e) => setLanguage(e.target.value as Language)}
-                  sx={{
-                    color: "white",
-                    ".MuiOutlinedInput-notchedOutline": {
-                      borderColor: "rgba(255,255,255,0.1)",
-                    },
-                    "&:hover .MuiOutlinedInput-notchedOutline": {
-                      borderColor: "rgba(255,255,255,0.2)",
-                    },
-                    ".MuiSvgIcon-root": {
-                      color: "rgba(255,255,255,0.5)",
-                    },
-                  }}
-                >
-                  <MenuItem value="en">English</MenuItem>
-                  <MenuItem value="ja">日本語</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
-          </DialogContent>
-          <DialogActions sx={{ px: 3, pb: 3 }}>
-            <Button onClick={() => setIsSettingsOpen(false)} variant="contained">
-              {t("done")}
-            </Button>
           </DialogActions>
         </Dialog>
       </Box>

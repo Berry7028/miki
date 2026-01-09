@@ -26,7 +26,6 @@ import {
 } from "@mui/icons-material";
 import { theme } from "./theme";
 import type { BackendEvent } from "./types";
-import { useI18n } from "./i18n";
 
 // Create Emotion cache with nonce for CSP
 async function createEmotionCache() {
@@ -214,7 +213,6 @@ const ActionContent = ({ msg }: { msg: Message }) => {
 };
 
 const ChatApp = () => {
-  const { t } = useI18n();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -245,11 +243,11 @@ const ChatApp = () => {
           setThinkingText("");
         }
       } else if (payload.event === "thinking") {
-        setThinkingText(payload.message || t("thinking") + "...");
+        setThinkingText(payload.message || "Thinking...");
         // Prefer explicit thought field from think action, fall back to message for backwards compatibility
         // payload.thought: explicit thought content from think(phase, thought)
         // payload.message: formatted message with phase label (e.g., "[計画] ...")
-        const content = payload.thought || payload.message || t("thinking") + "...";
+        const content = payload.thought || payload.message || "Thinking...";
         addMessage({
           type: "thinking",
           content,
@@ -278,7 +276,7 @@ const ChatApp = () => {
       } else if (payload.event === "completed") {
         addMessage({
           type: "ai",
-          content: payload.message || payload.result || t("done") + ".",
+          content: payload.message || payload.result || "Done.",
           timestamp: payload.timestamp || Date.now(),
         });
         setIsProcessing(false);
@@ -286,7 +284,7 @@ const ChatApp = () => {
       } else if (payload.event === "error") {
         addMessage({
           type: "error",
-          content: payload.message || t("errorOccurred"),
+          content: payload.message || "An error occurred.",
           timestamp: payload.timestamp || Date.now(),
         });
         setIsProcessing(false);
@@ -294,7 +292,7 @@ const ChatApp = () => {
     });
 
     return () => unsubscribe?.();
-  }, [addMessage, t]);
+  }, [addMessage]);
 
   useEffect(() => {
     const unsubscribe = window.miki?.onFocusInput(() => {
@@ -392,7 +390,7 @@ const ChatApp = () => {
   // Helper function to get label text
   const getMessageLabel = (msg: Message) => {
     if (msg.type === "tool") return `TOOL: ${msg.toolName}`;
-    if (msg.type === "thinking") return t("thinking");
+    if (msg.type === "thinking") return "思考中";
     if (msg.type === "action") return "ACTION";
     return null;
   };
@@ -428,7 +426,7 @@ const ChatApp = () => {
                   bgcolor: "rgba(255,255,255,0.06)",
                   "&:hover": { bgcolor: "rgba(255,100,100,0.15)", color: "#ff6b6b" },
                 }}
-                title={t("clearChat")}
+                title="Clear Chat"
               >
                 <DeleteOutline fontSize="small" />
               </IconButton>
@@ -542,7 +540,7 @@ const ChatApp = () => {
               multiline
               maxRows={3}
               inputRef={inputRef}
-              placeholder={t("askMiki")}
+              placeholder="Ask Miki to automate a task..."
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -579,7 +577,7 @@ const ChatApp = () => {
             </IconButton>
           </Paper>
           <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
-            {t("inputHint")}
+            Enter to send, Shift+Enter for new line
           </Typography>
         </Box>
       </Box>
