@@ -1,98 +1,99 @@
 
-# Miki AI Agent アーキテクチャ解説
+# Miki AI Agent Architecture
 
-このプロジェクトは、**「思考（LLM）」**と**「実行（OS操作）」**を分離した、ハイブリッドなエージェントアーキテクチャを採用しています。他の言語や環境で同様のシステムを実装する際の参考にしてください。
+[日本語](./ARCHITECTURE_JP.md) | English
+
+This project adopts a hybrid agent architecture that separates **"thinking (LLM)"** and **"execution (OS operations)"**. Use this as a reference when implementing similar systems in other languages or environments.
 
 ---
 
-## 1. 全体構造図
+## 1. Overall Structure
 
 ```mermaid
 graph TD
-    User([ユーザー指示]) --> Agent[MacOSAgent / TypeScript]
+    User([User Instructions]) --> Agent[MacOSAgent / TypeScript]
     
-    subgraph "Controller (脳: TypeScript/Bun)"
-        Agent -- 1. プロンプト生成 --> LLM(Gemini 3 Flash)
-        LLM -- 2. JSONアクション --> Agent
-        Agent -- 3. 座標変換 & 指令送信 --> Executor
+    subgraph "Controller (Brain: TypeScript/Bun)"
+        Agent -- 1. Prompt Generation --> LLM(Gemini 3 Flash)
+        LLM -- 2. JSON Action --> Agent
+        Agent -- 3. Coordinate Conversion & Command Transmission --> Executor
     end
 
-    subgraph "Executor (手: Python)"
-        Executor[main.py / Python] -- 4. OS操作実行 --> OS[(MacOS)]
-        OS -- 5. スクリーンショット/UI要素 --> Executor
+    subgraph "Executor (Hands: Python)"
+        Executor[main.py / Python] -- 4. Execute OS Operations --> OS[(MacOS)]
+        OS -- 5. Screenshot/UI Elements --> Executor
     end
     
-    Executor -- 6. 実行結果返却 --> Agent
-    Agent -- 7. 履歴蓄積 & 次のステップへ --> Agent
+    Executor -- 6. Return Execution Results --> Agent
+    Agent -- 7. Accumulate History & Next Step --> Agent
 ```
 
 ---
 
-## 2. 主要コンポーネントの役割
+## 2. Role of Main Components
 
 ### A. Controller (TypeScript/Bun)
-- **役割**: LLM との対話、実行履歴の管理、アクションのパース、座標の正規化。
-- **なぜ TypeScript か**:
-    - LLM SDK (Google Generative AI) の型安全な利用。
-    - 非同期処理（Promise/Async-Await）による Python プロセスや LLM との効率的な連携。
-    - Zod による厳密な JSON スキーマ検証。
+- **Role**: Dialogue with LLM, managing execution history, parsing actions, normalizing coordinates.
+- **Why TypeScript?**:
+    - Type-safe use of LLM SDK (Google Generative AI).
+    - Efficient coordination with Python processes and LLM through asynchronous processing (Promise/Async-Await).
+    - Strict JSON schema validation with Zod.
 
 ### B. Executor (Python)
-- **役割**: MacOS 固有の低レイヤー操作、画像処理。
-- **なぜ Python か**:
-    - `pyautogui` によるクロスプラットフォームな GUI 操作。
-    - `Pillow (PIL)` による画像へのハイライト描画。
-    - `PyObjC` 等を介した MacOS API へのアクセスが容易。
+- **Role**: Low-level operations specific to MacOS, image processing.
+- **Why Python?**:
+    - Cross-platform GUI operations with `pyautogui`.
+    - Highlight drawing on images with `Pillow (PIL)`.
+    - Easy access to MacOS API via `PyObjC` etc.
 
 ---
 
-## 3. 実装の核心的な仕組み
+## 3. Core Implementation Mechanisms
 
-### 1. プロセス間通信 (IPC)
-Controller は Python プロセスを `spawn` し、**標準入出力 (stdin/stdout)** を通じて JSON メッセージをやり取りします。
+### 1. Inter-Process Communication (IPC)
+The Controller spawns a Python process and exchanges JSON messages through **standard input/output (stdin/stdout)**.
 - **Controller -> Executor**: `{"action": "click", "params": {"x": 500, "y": 500}}`
 - **Executor -> Controller**: `{"status": "success", "execution_time_ms": 120}`
 
-### 2. 座標系の正規化 (Logical Coordinates)
-LLM は解像度に依存しない **0から1000の正規化座標** で思考します。
-- **メリット**: 異なるディスプレイ解像度でも同じプロンプトを使用可能。
-- **フロー**:
-    1. LLM が `(500, 500)` をクリックと回答。
-    2. Controller が現在の解像度（例: 1440x900）に基づき `(720, 450)` へ変換。
-    3. Executor が物理座標でクリック。
+### 2. Coordinate System Normalization (Logical Coordinates)
+The LLM thinks in **normalized coordinates from 0 to 1000** independent of resolution.
+- **Benefits**: Can use the same prompt on different display resolutions.
+- **Flow**:
+    1. LLM responds to click at `(500, 500)`.
+    2. Controller converts to `(720, 450)` based on current resolution (e.g., 1440x900).
+    3. Executor clicks at physical coordinates.
 
-### 3. ハイライト機能 (Visual Feedback)
-操作の「確信」を深めるため、Executor はアクション実行直後に **操作地点を赤い点で描画したスクリーンショット** を生成し、LLM にフィードバックします。これにより、LLM は自分が意図した場所を正しくクリックできたかを視覚的に確認できます。
+### 3. Highlight Feature (Visual Feedback)
+To deepen the "confidence" of operations, the Executor generates **a screenshot with the operation point drawn as a red dot** immediately after action execution and feeds it back to the LLM. This allows the LLM to visually confirm whether it clicked the intended location correctly.
 
-### 4. GUI 要素の直接取得 (Native UI Inspection)
-画像認識の弱点を補うため、`AppleScript` を使用して OS から直接 GUI 要素（ボタン名、役割、座標）を取得します。
-- **`elements` アクション**: 特定のアプリ内の全要素をテキストデータとして取得し、LLM に「どこに何があるか」を正確に伝えます。
-
----
-
-## 4. 他の言語で実装する場合のヒント
-
-### 言語選定のポイント
-- **Controller**: LLM API の呼び出しと JSON 処理が容易な言語（TypeScript, Python, Go, Rust）。
-- **Executor**: OS 操作ライブラリが充実している言語（Python, Swift, C#）。
-
-### 通信プロトコルの代替案
-- **HTTP/gRPC**: プロセスを常駐させ、API サーバーとして通信する。
-- **Shared Memory**: 大容量のスクリーンショット画像を高速にやり取りする場合に有効。
-
-### 実装時に注意すべき点
-1. **セキュリティ**: 任意のコード実行を許さないよう、アクションの種類を厳密に制限すること。
-2. **安全装置 (Failsafe)**: PyAutoGUI の `FAILSAFE = True` のように、緊急時にマウス操作を無効化する仕組みが必須。
-3. **Retina ディスプレイ**: MacOS 等では物理ピクセルと論理ピクセル（Scale Factor）が異なるため、座標変換時に考慮が必要です。
+### 4. Direct Retrieval of GUI Elements (Native UI Inspection)
+To compensate for the weaknesses of image recognition, `AppleScript` is used to directly retrieve GUI elements (button names, roles, coordinates) from the OS.
+- **`elements` action**: Retrieves all elements within a specific app as text data, accurately informing the LLM "where what is."
 
 ---
 
-## 5. アクション・スキーマ (参考)
+## 4. Tips for Implementation in Other Languages
 
-実装されている主要なアクション：
-- `click`: 指定座標をクリック。
-- `type`: テキスト入力（貼り付けを併用して安定化）。
-- `batch`: 複数操作（クリック->入力->Enter等）を一度に実行し、LLM の思考回数を削減。
-- `osa`: AppleScript による直接的なアプリ操作。
-- `elements`: UI 木構造の取得。
+### Language Selection Points
+- **Controller**: Languages that facilitate LLM API calls and JSON processing (TypeScript, Python, Go, Rust).
+- **Executor**: Languages with rich OS operation libraries (Python, Swift, C#).
 
+### Alternative Communication Protocols
+- **HTTP/gRPC**: Keep the process resident and communicate as an API server.
+- **Shared Memory**: Effective for quickly exchanging large screenshot images.
+
+### Points to Note During Implementation
+1. **Security**: Strictly limit the types of actions to prevent arbitrary code execution.
+2. **Safety Mechanism (Failsafe)**: A mechanism to disable mouse operations in emergencies, like PyAutoGUI's `FAILSAFE = True`, is essential.
+3. **Retina Display**: On MacOS etc., physical pixels and logical pixels (Scale Factor) differ, so consideration is needed during coordinate conversion.
+
+---
+
+## 5. Action Schema (Reference)
+
+Main actions implemented:
+- `click`: Click specified coordinates.
+- `type`: Text input (stabilized using paste).
+- `batch`: Execute multiple operations (click->input->Enter, etc.) at once to reduce LLM thinking count.
+- `osa`: Direct app operations via AppleScript.
+- `elements`: Retrieve UI tree structure.
