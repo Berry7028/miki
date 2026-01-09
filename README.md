@@ -98,9 +98,8 @@ bun run dev -- --debug
 - ツールの実行結果
 - AIに送信する内容（プロンプト、履歴、スクリーンショット）
 - AIからの応答
-- 各ステップのスクリーンショットを `.screenshot/` に保存
+- 各ステップのスクリーンショットを `desktop/backend/.screenshot/` に保存されます
 
-詳細は [DEBUG.md](DEBUG.md) を参照してください。
 
 ## セットアップ（手動）
 
@@ -130,10 +129,8 @@ pyinstaller --name miki-executor --onedir src/executor/main.py --distpath deskto
 ```
 
 ## 配布ビルド
+配布用のビルドは `dev.sh` を用いて一括実行できます。
 
-```bash
-bun --cwd desktop run dist
-```
 
 ## ショートカットキー
 
