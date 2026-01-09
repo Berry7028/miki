@@ -22,6 +22,110 @@
 - ファイル名は小文字＆説明的（例：`desktop/renderer/renderer.js`）。
 - メインプロセスでは簡潔で分かりやすい関数名（`createWindow`, `ensureController` など）を使用。
 - TypeScript/Python は既存ツール（`prettier`, `autopep8` など）で整形。
+- リポジトリ内の既存ドキュメントで特定のコマンドが指定されている場合はそれを優先し、それ以外は Bun ベースのツールチェーンを優先する。
+
+## Bun ベースのツールチェーン
+Node.js や npm/pnpm/vite よりも Bun を優先する。
+
+- `bun <file>` を `node <file>` / `ts-node <file>` の代わりに使う
+- `bun test` を `jest` / `vitest` の代わりに使う
+- `bun build <file.html|file.ts|file.css>` を `webpack` / `esbuild` の代わりに使う
+- `bun install` を `npm install` / `yarn install` / `pnpm install` の代わりに使う
+- `bun run <script>` を `npm run <script>` / `yarn run <script>` / `pnpm run <script>` の代わりに使う
+- `bunx <package> <command>` を `npx <package> <command>` の代わりに使う
+- Bun は `.env` を自動で読み込むため `dotenv` は使わない
+
+### APIs
+- `Bun.serve()` は WebSocket/HTTPS/routes をサポートするため、`express` は使わない
+- SQLite は `bun:sqlite` を使い、`better-sqlite3` は使わない
+- Redis は `Bun.redis` を使い、`ioredis` は使わない
+- Postgres は `Bun.sql` を使い、`pg` / `postgres.js` は使わない
+- `WebSocket` は組み込みを使い、`ws` は使わない
+- `node:fs` の readFile/writeFile より `Bun.file` を優先
+- `execa` の代わりに `Bun.$` を使う
+
+### Testing
+`bun test` を使う。
+
+```ts
+import { test, expect } from "bun:test";
+
+test("hello world", () => {
+  expect(1).toBe(1);
+});
+```
+
+### Frontend
+`Bun.serve()` と HTML imports を使う。`vite` は使わない。HTML imports は React/CSS/Tailwind をフルサポート。
+
+Server:
+
+```ts
+import index from "./index.html";
+
+Bun.serve({
+  routes: {
+    "/": index,
+    "/api/users/:id": {
+      GET: (req) => {
+        return new Response(JSON.stringify({ id: req.params.id }));
+      },
+    },
+  },
+  // optional websocket support
+  websocket: {
+    open: (ws) => {
+      ws.send("Hello, world!");
+    },
+    message: (ws, message) => {
+      ws.send(message);
+    },
+    close: (ws) => {
+      // handle close
+    },
+  },
+  development: {
+    hmr: true,
+    console: true,
+  },
+});
+```
+
+HTML は .tsx/.jsx/.js を直接 import でき、Bun のバンドラが自動でトランスパイル＆バンドルする。`<link>` の CSS も Bun が束ねる。
+
+```html
+<html>
+  <body>
+    <h1>Hello, world!</h1>
+    <script type="module" src="./frontend.tsx"></script>
+  </body>
+</html>
+```
+
+`frontend.tsx`:
+
+```tsx
+import React from "react";
+import { createRoot } from "react-dom/client";
+
+import "./index.css";
+
+const root = createRoot(document.body);
+
+export default function Frontend() {
+  return <h1>Hello, world!</h1>;
+}
+
+root.render(<Frontend />);
+```
+
+起動:
+
+```sh
+bun --hot ./index.ts
+```
+
+詳細は `node_modules/bun-types/docs/**.mdx` を参照。
 
 ## テストガイドライン
 自動テストは未導入。テストを追加する場合は以下の方針で：
