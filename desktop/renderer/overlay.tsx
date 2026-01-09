@@ -67,7 +67,7 @@ const Overlay = () => {
           left: 0,
           right: 0,
           height: "15vh",
-          background: "linear-gradient(to bottom, rgba(255, 176, 64, 0.3) 0%, rgba(255, 176, 64, 0) 100%)",
+          background: "linear-gradient(to bottom, rgba(150, 150, 150, 0.15) 0%, rgba(150, 150, 150, 0) 100%)",
         }}
       />
       <div
@@ -77,7 +77,7 @@ const Overlay = () => {
           left: 0,
           right: 0,
           height: "15vh",
-          background: "linear-gradient(to top, rgba(255, 176, 64, 0.3) 0%, rgba(255, 176, 64, 0) 100%)",
+          background: "linear-gradient(to top, rgba(150, 150, 150, 0.15) 0%, rgba(150, 150, 150, 0) 100%)",
         }}
       />
       <div
@@ -87,7 +87,7 @@ const Overlay = () => {
           bottom: 0,
           left: 0,
           width: "15vw",
-          background: "linear-gradient(to right, rgba(255, 176, 64, 0.3) 0%, rgba(255, 176, 64, 0) 100%)",
+          background: "linear-gradient(to right, rgba(150, 150, 150, 0.15) 0%, rgba(150, 150, 150, 0) 100%)",
         }}
       />
       <div
@@ -97,7 +97,7 @@ const Overlay = () => {
           bottom: 0,
           right: 0,
           width: "15vw",
-          background: "linear-gradient(to left, rgba(255, 176, 64, 0.3) 0%, rgba(255, 176, 64, 0) 100%)",
+          background: "linear-gradient(to left, rgba(150, 150, 150, 0.15) 0%, rgba(150, 150, 150, 0) 100%)",
         }}
       />
 
@@ -108,7 +108,7 @@ const Overlay = () => {
           top: mousePos.y - 100,
           width: 200,
           height: 200,
-          background: "radial-gradient(circle, rgba(255, 176, 64, 0.15) 0%, rgba(255, 176, 64, 0) 70%)",
+          background: "radial-gradient(circle, rgba(180, 180, 180, 0.08) 0%, rgba(180, 180, 180, 0) 70%)",
           borderRadius: "50%",
           pointerEvents: "none",
           transition: "transform 0.1s ease-out",
@@ -127,7 +127,7 @@ const Overlay = () => {
             pointerEvents: "none",
           }}
         >
-          <CursorSVG color="#FFB040" scale={0.8} />
+          <CursorSVG color="#b0b0b0" scale={0.8} />
         </div>
       ))}
 
@@ -143,22 +143,22 @@ const Overlay = () => {
         }}
       >
         <div style={{ display: "flex", alignItems: "center" }}>
-          <CursorSVG color="#FFB040" />
+          <CursorSVG color="#b0b0b0" />
           
           {(status === "thinking" || status === "running") && (
             <div
               style={{
                 marginLeft: 8,
                 padding: "4px 12px",
-                background: "white",
+                background: "#2e3339",
                 borderRadius: 20,
-                boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
                 fontSize: 13,
                 fontWeight: 600,
-                color: "#333",
+                color: "#d0d0d0",
                 animation: "fadeIn 0.2s ease-out",
               }}
             >
@@ -175,7 +175,7 @@ const Overlay = () => {
   );
 };
 
-const CursorSVG = ({ color = "#FFB040", scale = 1 }) => (
+const CursorSVG = ({ color = "#b0b0b0", scale = 1 }) => (
   <svg
     width={24 * scale}
     height={24 * scale}
@@ -197,8 +197,8 @@ const LoadingSpinner = () => (
     style={{
       width: 12,
       height: 12,
-      border: "2px solid #EEE",
-      borderTop: "2px solid #FFB040",
+      border: "2px solid #555",
+      borderTop: "2px solid #b0b0b0",
       borderRadius: "50%",
       animation: "spin 1s linear infinite",
     }}

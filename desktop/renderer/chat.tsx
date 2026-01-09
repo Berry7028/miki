@@ -122,10 +122,10 @@ const ActionContent = ({ msg }: { msg: Message }) => {
                 sx={{
                   height: 18,
                   fontSize: "0.65rem",
-                  bgcolor: "rgba(121, 184, 255, 0.15)",
-                  color: "#79b8ff",
+                  bgcolor: "#3a4a5a",
+                  color: "#8fa0b0",
                   fontWeight: 800,
-                  borderRadius: "4px",
+                  borderRadius: 6,
                   "& .MuiChip-label": { px: 1 },
                 }}
               />
@@ -173,7 +173,7 @@ const ActionContent = ({ msg }: { msg: Message }) => {
             variant="outlined"
             sx={{
               p: 1,
-              bgcolor: "rgba(0,0,0,0.2)",
+              bgcolor: "#1e2228",
               borderColor: "rgba(255,255,255,0.1)",
               maxHeight: 200,
               overflow: "auto",
@@ -361,28 +361,28 @@ const ChatApp = () => {
     switch (type) {
       case "user":
         return {
-          background: "rgba(230, 214, 184, 0.15)",
-          border: "1px solid rgba(230, 214, 184, 0.3)",
-          borderRadius: "16px 4px 16px 16px",
+          background: "#3a3f47",
+          border: "1px solid rgba(255,255,255,0.15)",
+          borderRadius: "8px 8px 2px 8px",
         };
       case "action":
       case "tool":
         return {
-          background: "rgba(0, 0, 0, 0.25)",
-          border: "1px solid rgba(121, 184, 255, 0.2)",
-          borderRadius: "4px 16px 16px 16px",
+          background: "#2a2e34",
+          border: "1px solid rgba(100,120,150,0.3)",
+          borderRadius: "8px 8px 8px 2px",
         };
       case "thinking":
         return {
-          background: "rgba(230, 214, 184, 0.1)",
-          border: "1px solid rgba(230, 214, 184, 0.3)",
-          borderRadius: "4px 16px 16px 16px",
+          background: "#32373d",
+          border: "1px solid rgba(150,150,150,0.3)",
+          borderRadius: "8px 8px 8px 2px",
         };
       default:
         return {
-          background: "rgba(255,255,255,0.04)",
-          border: "1px solid rgba(255,255,255,0.08)",
-          borderRadius: "4px 16px 16px 16px",
+          background: "#2e3339",
+          border: "1px solid rgba(255,255,255,0.1)",
+          borderRadius: "8px 8px 8px 2px",
         };
     }
   };
@@ -403,18 +403,18 @@ const ChatApp = () => {
           height: "100vh",
           display: "flex",
           flexDirection: "column",
-          bgcolor: "#1f252d",
+          bgcolor: "#1a1e24",
           borderRadius: "18px",
-          border: "1px solid rgba(255,255,255,0.08)",
+          border: "1px solid rgba(255,255,255,0.1)",
           overflow: "hidden",
-          boxShadow: "0 20px 50px rgba(0,0,0,0.45)",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)",
         }}
       >
         <Box
           sx={{
             p: 2,
-            borderBottom: "1px solid rgba(255,255,255,0.06)",
-            background: "linear-gradient(180deg, rgba(40,46,56,0.9) 0%, rgba(31,37,45,0.9) 100%)",
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
+            background: "#282e38",
           }}
         >
           <Stack direction="row" alignItems="center" justifyContent="space-between">
@@ -461,8 +461,8 @@ const ChatApp = () => {
                     sx={{
                       width: 28,
                       height: 28,
-                      bgcolor: "rgba(255,255,255,0.08)",
-                      color: "#d6cec1",
+                      bgcolor: "#3a3f47",
+                      color: "#b0b0b0",
                     }}
                   >
                     {msg.type === "action" ? (
@@ -528,8 +528,8 @@ const ChatApp = () => {
               alignItems: "center",
               gap: 1,
               borderRadius: 2,
-              bgcolor: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.08)",
+              bgcolor: "#1e2228",
+              border: "1px solid rgba(255,255,255,0.1)",
             }}
           >
             <IconButton size="small" sx={{ color: "text.secondary" }}>

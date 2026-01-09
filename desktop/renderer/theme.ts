@@ -4,35 +4,35 @@ export const theme = createTheme({
   palette: {
     mode: "dark",
     primary: {
-      main: "#e6d6b8",
-      light: "#f1e6cf",
-      dark: "#d3c2a2",
+      main: "#b0b0b0",
+      light: "#d0d0d0",
+      dark: "#808080",
     },
     secondary: {
-      main: "#67d6a1",
+      main: "#7a8a9e",
     },
     success: {
-      main: "#4fd08a",
-      light: "#7fe0ad",
+      main: "#6fa86f",
+      light: "#8fbe8f",
     },
     warning: {
-      main: "#f0a54a",
+      main: "#d4a46a",
     },
     info: {
-      main: "#79b8ff",
+      main: "#7a8fa0",
     },
     background: {
-      default: "#212833",
-      paper: "#2c333d",
+      default: "#1a1e24",
+      paper: "#252930",
     },
     text: {
-      primary: "#ece7dd",
-      secondary: "#a9a399",
+      primary: "#f0f0f0",
+      secondary: "#9a9a9a",
     },
-    divider: "rgba(255, 255, 255, 0.08)",
+    divider: "rgba(255, 255, 255, 0.12)",
   },
   shape: {
-    borderRadius: 18,
+    borderRadius: 6,
   },
   typography: {
     fontFamily: [
@@ -76,21 +76,21 @@ export const theme = createTheme({
     MuiButton: {
       styleOverrides: {
         root: {
-          borderRadius: 12,
+          borderRadius: 8,
           padding: "8px 18px",
           boxShadow: "none",
         },
         containedPrimary: {
           color: "#1f242c",
-          background: "linear-gradient(180deg, #f1e5cb 0%, #e1d0af 100%)",
-          border: "1px solid rgba(255, 255, 255, 0.2)",
+          background: "#a0a0a0",
+          border: "1px solid rgba(255, 255, 255, 0.15)",
           "&:hover": {
-            background: "linear-gradient(180deg, #f7ead4 0%, #e4d4b6 100%)",
+            background: "#b5b5b5",
           },
         },
         outlined: {
-          borderColor: "rgba(255, 255, 255, 0.18)",
-          color: "#d7c8ac",
+          borderColor: "rgba(255, 255, 255, 0.2)",
+          color: "#b0b0b0",
         },
       },
     },
@@ -98,8 +98,8 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           backgroundImage: "none",
-          border: "1px solid rgba(255, 255, 255, 0.06)",
-          boxShadow: "0 16px 40px rgba(0, 0, 0, 0.35)",
+          border: "1px solid rgba(255, 255, 255, 0.08)",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)",
         },
       },
     },
@@ -107,14 +107,21 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           "& .MuiOutlinedInput-root": {
-            backgroundColor: "rgba(17, 21, 26, 0.55)",
+            backgroundColor: "#1e2228",
             "& fieldset": {
-              borderColor: "rgba(255, 255, 255, 0.12)",
+              borderColor: "rgba(255, 255, 255, 0.15)",
             },
             "&:hover fieldset": {
-              borderColor: "rgba(255, 255, 255, 0.2)",
+              borderColor: "rgba(255, 255, 255, 0.25)",
             },
           },
+        },
+      },
+    },
+    MuiChip: {
+      styleOverrides: {
+        root: {
+          borderRadius: 6,
         },
       },
     },

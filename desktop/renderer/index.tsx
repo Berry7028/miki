@@ -139,15 +139,15 @@ const App = () => {
   const logLabel = (type?: BackendEvent["type"]) => {
     switch (type) {
       case "action":
-        return { label: "ACTION", color: "rgba(121, 184, 255, 0.2)", text: "#8bc4ff" };
+        return { label: "ACTION", color: "rgba(100, 120, 150, 0.3)", text: "#8fa0b0" };
       case "success":
-        return { label: "SUCCESS", color: "rgba(79, 208, 138, 0.2)", text: "#7fe0ad" };
+        return { label: "SUCCESS", color: "rgba(70, 150, 90, 0.3)", text: "#8fbe8f" };
       case "error":
-        return { label: "ERROR", color: "rgba(255, 99, 99, 0.2)", text: "#ff7b7b" };
+        return { label: "ERROR", color: "rgba(180, 60, 60, 0.3)", text: "#d08080" };
       case "thinking":
-        return { label: "TASK", color: "rgba(230, 214, 184, 0.2)", text: "#e6d6b8" };
+        return { label: "TASK", color: "rgba(150, 150, 150, 0.3)", text: "#b0b0b0" };
       default:
-        return { label: "INFO", color: "rgba(255, 255, 255, 0.08)", text: "#b8b2a7" };
+        return { label: "INFO", color: "rgba(255, 255, 255, 0.1)", text: "#9a9a9a" };
     }
   };
 
@@ -160,14 +160,6 @@ const App = () => {
           bgcolor: "background.default",
           position: "relative",
           overflow: "hidden",
-          "&::before": {
-            content: '""',
-            position: "absolute",
-            inset: 0,
-            background:
-              "radial-gradient(circle at 20% 20%, rgba(230, 214, 184, 0.08), transparent 45%), radial-gradient(circle at 80% 0%, rgba(120, 184, 255, 0.08), transparent 40%)",
-            pointerEvents: "none",
-          },
         }}
       >
         <Box
@@ -186,8 +178,8 @@ const App = () => {
                   width: 34,
                   height: 34,
                   borderRadius: 2,
-                  bgcolor: "rgba(230,214,184,0.15)",
-                  border: "1px solid rgba(230,214,184,0.25)",
+                  bgcolor: "#2e3339",
+                  border: "1px solid rgba(255,255,255,0.15)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -203,10 +195,10 @@ const App = () => {
               <Chip
                 label="SYSTEM READY"
                 sx={{
-                  bgcolor: "rgba(79, 208, 138, 0.15)",
-                  color: "#7fe0ad",
+                  bgcolor: "#2e5a3a",
+                  color: "#90ee90",
                   fontWeight: 600,
-                  border: "1px solid rgba(79, 208, 138, 0.3)",
+                  border: "1px solid rgba(100, 200, 100, 0.3)",
                 }}
               />
               <IconButton size="small" sx={{ bgcolor: "rgba(255,255,255,0.05)" }}>
@@ -217,8 +209,8 @@ const App = () => {
                   width: 34,
                   height: 34,
                   borderRadius: "50%",
-                  border: "2px solid rgba(230,214,184,0.7)",
-                  bgcolor: "rgba(230,214,184,0.2)",
+                  border: "2px solid rgba(255,255,255,0.3)",
+                  bgcolor: "#3a3f47",
                 }}
               />
             </Stack>
@@ -234,9 +226,9 @@ const App = () => {
                   <Chip
                     label="v2.4.0"
                     sx={{
-                      bgcolor: "rgba(230,214,184,0.12)",
-                      border: "1px solid rgba(230,214,184,0.25)",
-                      color: "#e6d6b8",
+                      bgcolor: "#2e3339",
+                      border: "1px solid rgba(255,255,255,0.15)",
+                      color: "#9a9a9a",
                       fontWeight: 600,
                     }}
                   />
@@ -265,8 +257,8 @@ const App = () => {
                         <Stack direction="row" spacing={1.5} alignItems="center">
                           <Avatar
                             sx={{
-                              bgcolor: "rgba(230,214,184,0.15)",
-                              color: "#e6d6b8",
+                              bgcolor: "#3a3f47",
+                              color: "#c0c0c0",
                               width: 34,
                               height: 34,
                             }}
@@ -321,8 +313,8 @@ const App = () => {
                         <Stack direction="row" spacing={1.5} alignItems="center">
                           <Avatar
                             sx={{
-                              bgcolor: "rgba(230,214,184,0.15)",
-                              color: "#e6d6b8",
+                              bgcolor: "#3a3f47",
+                              color: "#c0c0c0",
                               width: 34,
                               height: 34,
                             }}
@@ -341,7 +333,7 @@ const App = () => {
                         <Paper
                           sx={{
                             p: 2,
-                            bgcolor: "rgba(255,255,255,0.03)",
+                            bgcolor: "#2a2e34",
                             borderRadius: 2,
                             display: "flex",
                             alignItems: "center",
@@ -377,7 +369,7 @@ const App = () => {
                         <Paper
                           sx={{
                             p: 2,
-                            bgcolor: "rgba(255,255,255,0.03)",
+                            bgcolor: "#2a2e34",
                             borderRadius: 2,
                             display: "flex",
                             alignItems: "center",
@@ -458,9 +450,9 @@ const App = () => {
                             key={i}
                             sx={{
                               p: 1.5,
-                              bgcolor: "rgba(17,21,26,0.4)",
+                              bgcolor: "#1e2228",
                               borderRadius: 2,
-                              border: "1px solid rgba(255,255,255,0.06)",
+                              border: "1px solid rgba(255,255,255,0.08)",
                             }}
                           >
                             <Stack direction="row" spacing={1} alignItems="center">
@@ -517,8 +509,8 @@ const App = () => {
           PaperProps={{
             sx: {
               borderRadius: 4,
-              background: "linear-gradient(180deg, #3a414b 0%, #2c333d 100%)",
-              border: "1px solid rgba(255,255,255,0.08)",
+              background: "#2c333d",
+              border: "1px solid rgba(255,255,255,0.1)",
               overflow: "hidden",
             },
           }}
@@ -539,9 +531,9 @@ const App = () => {
                 mt: 2,
                 height: 6,
                 borderRadius: 999,
-                bgcolor: "rgba(0,0,0,0.2)",
+                bgcolor: "rgba(0,0,0,0.3)",
                 "& .MuiLinearProgress-bar": {
-                  bgcolor: "#e6d6b8",
+                  bgcolor: "#b0b0b0",
                 },
               }}
             />
@@ -552,15 +544,15 @@ const App = () => {
                 sx={{
                   width: 72,
                   height: 72,
-                  bgcolor: "rgba(33,40,51,0.7)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  color: "#e6d6b8",
+                  bgcolor: "#3a3f47",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  color: "#c0c0c0",
                 }}
               >
                 {setupSteps[setupStep].icon}
               </Avatar>
               <Stack spacing={1} alignItems="center">
-                <Typography variant="h2" sx={{ textAlign: "center", color: "#e6d6b8" }}>
+                <Typography variant="h2" sx={{ textAlign: "center", color: "#f0f0f0" }}>
                   {setupSteps[setupStep].title}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center" }}>
@@ -629,9 +621,9 @@ const App = () => {
                     icon={<Lock sx={{ fontSize: 18 }} />}
                     label="This data is processed locally and never leaves your device."
                     sx={{
-                      bgcolor: "rgba(0,0,0,0.25)",
+                      bgcolor: "#2a2e34",
                       color: "text.secondary",
-                      border: "1px solid rgba(255,255,255,0.08)",
+                      border: "1px solid rgba(255,255,255,0.1)",
                     }}
                   />
                 </Stack>
