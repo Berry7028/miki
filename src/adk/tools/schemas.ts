@@ -148,5 +148,5 @@ export const ScreenshotSchema = {
       required: ["x", "y"],
     },
   },
-  required: ["quality", "highlight_pos"],
+  required: ["quality"],
 };
