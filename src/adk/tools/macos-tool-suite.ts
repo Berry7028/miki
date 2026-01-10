@@ -1,6 +1,6 @@
 import { FunctionTool, type ToolContext } from "@google/adk";
-import type { PythonBridge } from "../../controller/python-bridge";
-import { PERFORMANCE_CONFIG } from "../../controller/constants";
+import type { PythonBridge } from "../../core/python-bridge";
+import { PERFORMANCE_CONFIG } from "../../core/constants";
 import * as schemas from "./schemas";
 import { PythonBridgeTool } from "./python-bridge-tool";
 
