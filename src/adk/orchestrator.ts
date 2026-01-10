@@ -35,7 +35,7 @@ export class MacOSAgentOrchestrator extends EventEmitter {
       (message) => this.emit("error", message),
       () => {
         this.init().catch(err => {
-          this.log("error", `背景初期化エラー: ${err}`);
+          this.log("error", `Background initialization error: ${err}`);
         });
       }
     );
