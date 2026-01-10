@@ -27,6 +27,7 @@ await build({
   target: "node20",
   outfile: path.join(outdir, "index.js"),
   sourcemap: "inline",
+  keepNames: true, // プロパティ名やクラス名の保持
   // 外部のsrcディレクトリからのインポートを解決するためにプラグインを使用
   plugins: [
     {

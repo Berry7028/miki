@@ -12,11 +12,12 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
+    "@google/adk": "^0.2.2",
     "@google/generative-ai": "^0.24.1",
     "@mui/icons-material": "^7.3.6",
     "@mui/material": "^7.3.6",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "zod": "^4.3.4"
+    "zod": "3.25.76"
   }
 }

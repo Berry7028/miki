@@ -14,6 +14,8 @@ export class PythonBridge {
   private isRestarting = false;
   private onError: (message: string) => void;
   private onReady: () => void;
+  private defaultTimeout = 30000;
+  private maxRetries = 3;
 
   constructor(
     onError: (message: string) => void,
@@ -116,10 +118,69 @@ export class PythonBridge {
     this.onReady();
   }
 
-  async call(action: string, params: any = {}): Promise<PythonResponse> {
+  async call(
+    action: string,
+    params: any = {},
+    options: { timeout?: number; retries?: number } = {},
+  ): Promise<PythonResponse> {
+    const timeout = options.timeout ?? this.defaultTimeout;
+    const maxRetries = options.retries ?? this.maxRetries;
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await this.executeCall(action, params, timeout);
+      } catch (e: any) {
+        lastError = e;
+        console.error(
+          `PythonBridge call failed (attempt ${attempt + 1}/${maxRetries + 1}): ${e.message}`,
+        );
+
+        // プロセスクラッシュやタイムアウトの場合にリトライを検討
+        if (attempt < maxRetries) {
+          const delay = Math.pow(2, attempt) * 1000;
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          // プロセスが死んでいる場合は自動的にhandleProcessCrashで再起動されるはずだが、
+          // ここで明示的にチェックが必要な場合もある
+          continue;
+        }
+      }
+    }
+
+    throw lastError || new Error(`Failed to call Python action: ${action}`);
+  }
+
+  private async executeCall(action: string, params: any, timeoutMs: number): Promise<PythonResponse> {
     return new Promise((resolve, reject) => {
-      this.pendingResolvers.push({ resolve, reject });
-      this.pythonProcess.stdin.write(JSON.stringify({ action, params }) + "\n");
+      const timeout = setTimeout(() => {
+        const index = this.pendingResolvers.findIndex((r) => r.resolve === resolve);
+        if (index !== -1) {
+          this.pendingResolvers.splice(index, 1);
+          reject(new Error(`PythonBridge timeout after ${timeoutMs}ms for action: ${action}`));
+        }
+      }, timeoutMs);
+
+      this.pendingResolvers.push({
+        resolve: (val) => {
+          clearTimeout(timeout);
+          resolve(val);
+        },
+        reject: (err) => {
+          clearTimeout(timeout);
+          reject(err);
+        },
+      });
+
+      try {
+        this.pythonProcess.stdin.write(JSON.stringify({ action, params }) + "\n");
+      } catch (e) {
+        clearTimeout(timeout);
+        const index = this.pendingResolvers.findIndex((r) => r.resolve === resolve);
+        if (index !== -1) {
+          this.pendingResolvers.splice(index, 1);
+        }
+        reject(e);
+      }
     });
   }
 
