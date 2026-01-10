@@ -70,6 +70,7 @@ function ensureAgent() {
   agent.on("error", (message: string) => send("error", { message }));
   agent.on("action_update", (payload: any) => send("action_update", payload));
   agent.on("thinking", (payload: any) => send("thinking", payload));
+  agent.on("token_usage", (payload: any) => send("token_usage", payload));
 }
 
 function sendStatus(state: StatusState, goal?: string) {

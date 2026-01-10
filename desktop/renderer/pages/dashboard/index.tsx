@@ -77,6 +77,7 @@ const App = () => {
   const [logs, setLogs] = useState<BackendEvent[]>([]);
   const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null);
   const [setupStep, setSetupStep] = useState(0);
+  const [taskTokenUsage, setTaskTokenUsage] = useState<number | null>(null);
 
   const appendLog = useCallback((event: BackendEvent) => {
     setLogs((prev) => [event, ...prev].slice(0, 100));
@@ -97,10 +98,16 @@ const App = () => {
     const unsubscribe = window.miki?.onBackendEvent((payload) => {
       if (payload.event === "log") {
         appendLog(payload);
+      } else if (payload.event === "token_usage") {
+        if (typeof payload.totalTokens === "number") {
+          setTaskTokenUsage(payload.totalTokens);
+        }
       } else if (payload.event === "completed") {
         appendLog({ ...payload, type: "success", message: payload.message || "Completed" });
       } else if (payload.event === "error") {
         appendLog({ ...payload, type: "error", message: payload.message || "Error" });
+      } else if (payload.event === "status" && payload.state === "running") {
+        setTaskTokenUsage((prev) => (prev === null ? prev : 0));
       }
     });
 
@@ -222,7 +229,20 @@ const App = () => {
             <Grid size={{ xs: 12, lg: 8 }}>
               <Stack spacing={3}>
                 <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <Typography variant="h1">Dashboard</Typography>
+                  <Stack direction="row" spacing={1.5} alignItems="center">
+                    <Typography variant="h1">Dashboard</Typography>
+                    {taskTokenUsage !== null && (
+                      <Chip
+                        label={`Task Tokens: ${taskTokenUsage.toLocaleString()}`}
+                        sx={{
+                          bgcolor: "rgba(90, 120, 160, 0.2)",
+                          color: "#b8c7d8",
+                          fontWeight: 600,
+                          border: "1px solid rgba(90, 120, 160, 0.4)",
+                        }}
+                      />
+                    )}
+                  </Stack>
                   <Chip
                     label="v2.4.0"
                     sx={{

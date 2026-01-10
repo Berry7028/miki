@@ -7,7 +7,7 @@ export interface SetupStatus {
 }
 
 export interface BackendEvent {
-  event: "status" | "step" | "log" | "completed" | "error" | "thinking" | "tool";
+  event: "status" | "step" | "log" | "completed" | "error" | "thinking" | "tool" | "token_usage";
   state?: "idle" | "running" | "stopping";
   goal?: string;
   step?: number;
@@ -20,6 +20,9 @@ export interface BackendEvent {
   toolOutput?: any;
   thought?: string;
   phase?: "planning" | "verification" | "reflection";
+  totalTokens?: number;
+  promptTokens?: number;
+  completionTokens?: number;
 }
 
 export interface MikiAPI {

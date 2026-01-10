@@ -22,6 +22,7 @@ export class MacOSAgent extends EventEmitter {
   private debugMode: boolean = false;
   private screenshotDir: string = "";
   private lastCachedStep = -1; // キャッシュ済みの最後のステップ
+  private taskTokenUsage = 0;
 
   constructor(debugMode: boolean = false) {
     super();
@@ -395,6 +396,7 @@ export class MacOSAgent extends EventEmitter {
   async run(goal: string) {
     this.log("info", `ゴール: ${goal}`);
     this.stopRequested = false;
+    this.taskTokenUsage = 0;
     this.emitStatus("running");
 
     // 実行開始時にマウスカーソルを非表示にする
@@ -492,12 +494,21 @@ export class MacOSAgent extends EventEmitter {
           }
         }
 
-        const { actions, calls } = await this.llmClient.getActions(
+        const { actions, calls, usage } = await this.llmClient.getActions(
           history,
           screenshot,
           mousePosition,
           this.currentStep,
         );
+        if (this.debugMode && usage && typeof usage.totalTokens === "number") {
+          this.taskTokenUsage += usage.totalTokens;
+          this.emit("token_usage", {
+            totalTokens: this.taskTokenUsage,
+            step: this.currentStep + 1,
+            promptTokens: usage.promptTokens,
+            completionTokens: usage.completionTokens,
+          });
+        }
         this.emitStatus("running");
         
         actions.forEach((action) => {

@@ -10,6 +10,11 @@ type GeminiFunctionCall = { name: string; args?: any };
 type GeminiResponse = {
   response?: { functionCalls?: GeminiFunctionCall[] | (() => GeminiFunctionCall[]) };
 };
+type TokenUsage = {
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
+};
 
 export class LLMClient {
   private genAI: GoogleGenerativeAI;
@@ -94,7 +99,7 @@ export class LLMClient {
     screenshotBase64: string,
     mousePosition: { x: number; y: number },
     currentStep: number,
-  ): Promise<{ calls: GeminiFunctionCall[]; actions: Action[] }> {
+  ): Promise<{ calls: GeminiFunctionCall[]; actions: Action[]; usage?: TokenUsage }> {
     const normX = Math.round((mousePosition.x / (this.screenSize.width || 1)) * 1000);
     const normY = Math.round((mousePosition.y / (this.screenSize.height || 1)) * 1000);
 
@@ -183,6 +188,7 @@ export class LLMClient {
 
     try {
       const response = await activeModel.generateContent({ contents });
+      const usage = this.extractUsageMetadata(response as any);
       const functionCalls = this.extractFunctionCalls(response as GeminiResponse);
 
       if (!functionCalls || functionCalls.length === 0) {
@@ -204,11 +210,41 @@ export class LLMClient {
         });
       }
 
-      return { calls: functionCalls, actions };
+      return { calls: functionCalls, actions, usage };
     } catch (e: any) {
       this.onLog("error", `Geminiレスポンスの取得に失敗: ${e?.message || e}`);
       throw e;
     }
+  }
+
+  private extractUsageMetadata(response: any): TokenUsage | undefined {
+    const usage =
+      response?.response?.usageMetadata ??
+      response?.response?.usage_metadata ??
+      response?.usageMetadata ??
+      response?.usage_metadata;
+
+    if (!usage) return undefined;
+
+    const promptTokens = Number(
+      usage.promptTokenCount ?? usage.prompt_tokens ?? usage.promptTokens ?? 0,
+    );
+    const completionTokens = Number(
+      usage.candidatesTokenCount ??
+        usage.completionTokenCount ??
+        usage.candidates_tokens ??
+        usage.completion_tokens ??
+        0,
+    );
+    let totalTokens = Number(
+      usage.totalTokenCount ?? usage.total_tokens ?? usage.totalTokens ?? 0,
+    );
+
+    if (!totalTokens && (promptTokens || completionTokens)) {
+      totalTokens = promptTokens + completionTokens;
+    }
+
+    return { promptTokens, completionTokens, totalTokens };
   }
 
   private extractFunctionCalls(response: GeminiResponse): GeminiFunctionCall[] {
