@@ -1,0 +1,242 @@
+import { FunctionTool, type ToolContext } from "@google/adk";
+import type { PythonBridge } from "../../controller/python-bridge";
+import { PERFORMANCE_CONFIG } from "../../controller/constants";
+import * as schemas from "./schemas";
+import { PythonBridgeTool } from "./python-bridge-tool";
+
+export class MacOSToolSuite {
+  private bridge: PythonBridge;
+  private screenSize: { width: number; height: number };
+
+  constructor(bridge: PythonBridge, screenSize: { width: number; height: number }) {
+    this.bridge = bridge;
+    this.screenSize = screenSize;
+  }
+
+  public updateScreenSize(width: number, height: number) {
+    this.screenSize = { width, height };
+  }
+
+  private normalizeToScreen(x: number, y: number): { x: number; y: number } {
+    return {
+      x: Math.round((x / 1000) * this.screenSize.width),
+      y: Math.round((y / 1000) * this.screenSize.height),
+    };
+  }
+
+  private async takePostActionScreenshot(highlightPos?: { x: number; y: number }) {
+    const result = await this.bridge.call("screenshot", {
+      highlight_pos: highlightPos,
+      quality: PERFORMANCE_CONFIG.SCREENSHOT_QUALITY,
+    });
+    return result.status === "success" ? result.data : undefined;
+  }
+
+  public createTools(): FunctionTool<any>[] {
+    return [
+      this.createClickTool(),
+      this.createMoveTool(),
+      this.createDragTool(),
+      this.createScrollTool(),
+      this.createTypeTool(),
+      this.createPressTool(),
+      this.createHotkeyTool(),
+      this.createElementsJsonTool(),
+      this.createFocusElementTool(),
+      this.createWebElementsTool(),
+      this.createOsaTool(),
+      this.createWaitTool(),
+      this.createSearchTool(),
+      this.createThinkTool(),
+      this.createDoneTool(),
+    ];
+  }
+
+  private createClickTool() {
+    return new FunctionTool({
+      name: "click",
+      description: "指定した正規化座標(0-1000)を単一の左クリックで操作します。",
+      parameters: schemas.ClickSchema,
+      execute: async (args: any, context?: ToolContext) => {
+        const pos = this.normalizeToScreen(args.x, args.y);
+        const result = await this.bridge.call("click", pos);
+        const screenshot = await this.takePostActionScreenshot(pos);
+        if (context) {
+          context.state.set("last_action_pos", pos);
+        }
+        return { ...result, screenshot };
+      },
+    });
+  }
+
+  private createMoveTool() {
+    return new FunctionTool({
+      name: "move",
+      description: "マウスカーソルを指定した正規化座標(0-1000)へ移動します。",
+      parameters: schemas.MoveSchema,
+      execute: async (args: any, context?: ToolContext) => {
+        const pos = this.normalizeToScreen(args.x, args.y);
+        const result = await this.bridge.call("move", pos);
+        const screenshot = await this.takePostActionScreenshot(pos);
+        if (context) {
+          context.state.set("last_action_pos", pos);
+        }
+        return { ...result, screenshot };
+      },
+    });
+  }
+
+  private createDragTool() {
+    return new FunctionTool({
+      name: "drag",
+      description: "from座標からto座標へドラッグ&ドロップします。",
+      parameters: schemas.DragSchema,
+      execute: async (args: any, context?: ToolContext) => {
+        const from = this.normalizeToScreen(args.from_x, args.from_y);
+        const to = this.normalizeToScreen(args.to_x, args.to_y);
+        const result = await this.bridge.call("drag", {
+          from_x: from.x,
+          from_y: from.y,
+          to_x: to.x,
+          to_y: to.y,
+        });
+        const screenshot = await this.takePostActionScreenshot(from);
+        if (context) {
+          context.state["last_action_pos"] = from;
+        }
+        return { ...result, screenshot };
+      },
+    });
+  }
+
+  private createScrollTool() {
+    return new PythonBridgeTool({
+      name: "scroll",
+      description: "垂直方向にスクロールします。正の値で下方向、負の値で上方向。",
+      parameters: schemas.ScrollSchema,
+      bridge: this.bridge,
+    });
+  }
+
+  private createTypeTool() {
+    return new PythonBridgeTool({
+      name: "type",
+      description: "フォーカス中の入力欄にテキストを入力します。",
+      parameters: schemas.TypeSchema,
+      bridge: this.bridge,
+    });
+  }
+
+  private createPressTool() {
+    return new PythonBridgeTool({
+      name: "press",
+      description: "EnterやEscなどの単一キーを送信します。",
+      parameters: schemas.PressSchema,
+      bridge: this.bridge,
+    });
+  }
+
+  private createHotkeyTool() {
+    return new PythonBridgeTool({
+      name: "hotkey",
+      description: "修飾キーを含む複数キーの同時押下を送信します。",
+      parameters: schemas.HotkeySchema,
+      bridge: this.bridge,
+    });
+  }
+
+  private createElementsJsonTool() {
+    return new FunctionTool({
+      name: "elementsJson",
+      description: "macOSのアクセシビリティツリーを取得します。",
+      parameters: schemas.ElementsJsonSchema,
+      execute: async (args: any, context?: ToolContext) => {
+        const result = await this.bridge.call("elementsJson", args);
+        if (context && result.status === "success" && result.ui_data) {
+          context.state.set("last_ui_snapshot_app", args.app_name);
+          context.state.set("current_app", args.app_name);
+        }
+        return result;
+      },
+    });
+  }
+
+  private createFocusElementTool() {
+    return new PythonBridgeTool({
+      name: "focusElement",
+      description: "要素をフォーカスします。",
+      parameters: schemas.FocusElementSchema,
+      bridge: this.bridge,
+    });
+  }
+
+  private createWebElementsTool() {
+    return new FunctionTool({
+      name: "webElements",
+      description: "ブラウザ内のDOM要素一覧を取得します。",
+      parameters: schemas.WebElementsSchema,
+      execute: async (args: any, context?: ToolContext) => {
+        const result = await this.bridge.call("webElements", args);
+        if (context && result.status === "success") {
+          context.state.set("current_app", args.app_name);
+        }
+        return result;
+      },
+    });
+  }
+
+  private createOsaTool() {
+    return new PythonBridgeTool({
+      name: "osa",
+      description: "任意のAppleScriptを実行します。",
+      parameters: schemas.OsaSchema,
+      bridge: this.bridge,
+    });
+  }
+
+  private createWaitTool() {
+    return new FunctionTool({
+      name: "wait",
+      description: "指定秒数待機します。",
+      parameters: schemas.WaitSchema,
+      execute: async (args: any) => {
+        await new Promise((resolve) => setTimeout(resolve, args.seconds * 1000));
+        return { status: "success", message: `${args.seconds}秒待機しました` };
+      },
+    });
+  }
+
+  private createSearchTool() {
+    return new FunctionTool({
+      name: "search",
+      description: "Google検索などの外部検索を指示します。",
+      parameters: schemas.SearchSchema,
+      execute: async (args: any) => {
+        const script = `open location "https://www.google.com/search?q=${encodeURIComponent(args.query)}"`;
+        return await this.bridge.call("osa", { script });
+      },
+    });
+  }
+
+  private createThinkTool() {
+    return new FunctionTool({
+      name: "think",
+      description: "タスクの計画や実行後の検証を明示的に記録します。",
+      parameters: schemas.ThinkSchema,
+      execute: async (args: any) => {
+        return { status: "success", thought: args.thought, phase: args.phase };
+      },
+    });
+  }
+
+  private createDoneTool() {
+    return new FunctionTool({
+      name: "done",
+      description: "すべてのタスクが完了したことを報告します。",
+      parameters: schemas.DoneSchema,
+      execute: async (args: any) => {
+        return { status: "success", message: args.message };
+      },
+    });
+  }
+}
