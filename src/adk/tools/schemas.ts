@@ -70,7 +70,7 @@ export const ElementsJsonSchema = {
     app_name: { type: "string", description: "アプリ名" },
     max_depth: { type: "number", description: "探索深さ" },
   },
-  required: ["app_name", "max_depth"],
+  required: ["app_name"],
 };
 
 export const FocusElementSchema = {
