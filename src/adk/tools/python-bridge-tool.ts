@@ -1,5 +1,5 @@
 import { FunctionTool, type ToolContext } from "@google/adk";
-import type { PythonBridge } from "../../controller/python-bridge";
+import type { PythonBridge } from "../../core/python-bridge";
 
 export class PythonBridgeTool extends FunctionTool<any> {
   protected bridge: PythonBridge;

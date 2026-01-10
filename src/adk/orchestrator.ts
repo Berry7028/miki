@@ -1,7 +1,7 @@
 import { EventEmitter } from "node:events";
 import { LlmAgent, Runner, InMemorySessionService, LoggingPlugin, type ToolContext, isFinalResponse, getFunctionCalls } from "@google/adk";
 import "./adk-patches";
-import { PythonBridge } from "../controller/python-bridge";
+import { PythonBridge } from "../core/python-bridge";
 import { MacOSToolSuite } from "./tools/macos-tool-suite";
 import { RootAgentFactory } from "./agents/root-agent";
 import { BrowserAgentFactory } from "./agents/browser-agent";
@@ -9,7 +9,7 @@ import { UIAgentFactory } from "./agents/ui-agent";
 import { DiagnosticAgentFactory } from "./agents/diagnostic-agent";
 import { SystemAgentFactory } from "./agents/system-agent";
 import { MacOSErrorHandlerPlugin } from "./errors/error-handler";
-import { PERFORMANCE_CONFIG } from "../controller/constants";
+import { PERFORMANCE_CONFIG } from "../core/constants";
 
 export class MacOSAgentOrchestrator extends EventEmitter {
   private pythonBridge: PythonBridge;
