@@ -3,11 +3,7 @@ import { LlmAgent, Runner, InMemorySessionService, LoggingPlugin, type ToolConte
 import "./adk-patches";
 import { PythonBridge } from "../core/python-bridge";
 import { MacOSToolSuite } from "./tools/macos-tool-suite";
-import { RootAgentFactory } from "./agents/root-agent";
-import { BrowserAgentFactory } from "./agents/browser-agent";
-import { UIAgentFactory } from "./agents/ui-agent";
-import { DiagnosticAgentFactory } from "./agents/diagnostic-agent";
-import { SystemAgentFactory } from "./agents/system-agent";
+import { MainAgentFactory } from "./agents/main-agent";
 import { MacOSErrorHandlerPlugin } from "./errors/error-handler";
 import { PERFORMANCE_CONFIG } from "../core/constants";
 
@@ -19,6 +15,7 @@ export class MacOSAgentOrchestrator extends EventEmitter {
   private sessionService: InMemorySessionService;
   private screenSize: { width: number; height: number } = { width: 0, height: 0 };
   private defaultBrowser: string = "Safari";
+  private defaultBrowserId: string = "";
   private debugMode: boolean;
   private stopRequested = false;
   private apiKey: string;
@@ -55,6 +52,7 @@ export class MacOSAgentOrchestrator extends EventEmitter {
         const browserRes = await this.pythonBridge.call("browser", {}, { timeout: 5000 });
         if (browserRes.status === "success" && browserRes.browser) {
           this.defaultBrowser = browserRes.browser;
+          this.defaultBrowserId = browserRes.bundle_id || "";
           this.log("info", `デフォルトブラウザ: ${this.defaultBrowser}`);
         }
       } catch (e) {
@@ -66,18 +64,12 @@ export class MacOSAgentOrchestrator extends EventEmitter {
       // ツールスイートの構築
       this.toolSuite = new MacOSToolSuite(this.pythonBridge, this.screenSize);
 
-      // 各エージェントの初期化
-      const browserAgent = BrowserAgentFactory.create(this.toolSuite, this.apiKey);
-      const uiAgent = UIAgentFactory.create(this.toolSuite, this.apiKey);
-      const diagnosticAgent = DiagnosticAgentFactory.create(this.toolSuite, this.apiKey);
-      const systemAgent = SystemAgentFactory.create(this.toolSuite, this.apiKey);
-
-      this.rootAgent = RootAgentFactory.create(this.toolSuite, [
-        browserAgent,
-        uiAgent,
-        diagnosticAgent,
-        systemAgent
-      ], this.apiKey);
+      this.rootAgent = MainAgentFactory.create(
+        this.toolSuite,
+        this.apiKey,
+        this.defaultBrowser,
+        this.defaultBrowserId
+      );
 
       // プラグインの設定
       const plugins = [
@@ -151,11 +143,11 @@ export class MacOSAgentOrchestrator extends EventEmitter {
       if (session) {
         session.state["screen_size"] = this.screenSize;
         session.state["default_browser"] = this.defaultBrowser;
-        session.state["current_app"] = "Finder"; // 初期アプリをFinderと仮定
+        session.state["default_browser_id"] = this.defaultBrowserId;
+        session.state["current_app"] = "Finder";
       }
 
       this.log("info", "エージェントの実行を開始します...");
-      // マウスカーソルを非表示
       await this.pythonBridge.setCursorVisibility(false);
 
       const stream = this.runner.runAsync({
@@ -176,7 +168,6 @@ export class MacOSAgentOrchestrator extends EventEmitter {
           break;
         }
 
-        // ADKのイベントに基づいてUIイベントを発行
         const functionCalls = getFunctionCalls(event);
         if (functionCalls.length > 0) {
           this.log("info", `${functionCalls.length} 個の関数呼び出しを処理します`);
@@ -212,7 +203,6 @@ export class MacOSAgentOrchestrator extends EventEmitter {
           break;
         }
 
-        // ステップ更新 (ADKのイテレーションごとにカウント)
         stepCount++;
         this.emit("step", stepCount);
         
@@ -241,16 +231,11 @@ export class MacOSAgentOrchestrator extends EventEmitter {
 
   async reset(): Promise<void> {
     this.stopRequested = true;
-    // セッションのクリア等
     this.emit("reset");
     this.log("info", "リセットしました。");
   }
 
   addHint(text: string): void {
-    // ヒントをログに記録し、次のイテレーションでモデルに伝える
-    // 実際のADKランナーには newMessage として渡す必要があるが、
-    // 実行中のランナーにメッセージを割り込ませる仕組みが必要。
-    // ここでは簡易的にログのみ。
     this.log("hint", `ヒントを追加: ${text}`);
   }
 

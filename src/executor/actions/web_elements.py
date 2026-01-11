@@ -1,6 +1,7 @@
 """Web要素の取得と操作（ブラウザ内）"""
 import subprocess
 import json
+import os
 
 
 def get_web_elements(app_name):
@@ -77,12 +78,28 @@ def get_default_browser():
     """
     macOSのデフォルトブラウザ名を取得する
     """
-    import subprocess
-
-    # httpsスキームを扱うデフォルトアプリケーションのBundle IDを取得
-    cmd = "defaults read com.apple.LaunchServices/com.apple.launchservices.secure LSHandlers | grep -B1 -I 'https' | grep 'LSHandlerRoleAll' | cut -d '\"' -f 4"
     try:
-        bundle_id = subprocess.check_output(cmd, shell=True, text=True).strip()
+        raw = subprocess.check_output(
+            ["defaults", "read", "com.apple.LaunchServices/com.apple.launchservices.secure", "LSHandlers"],
+            text=True
+        )
+        json_text = subprocess.check_output(
+            ["plutil", "-convert", "json", "-o", "-", "-"],
+            input=raw,
+            text=True
+        )
+        handlers = json.loads(json_text)
+
+        def pick_bundle_id(scheme):
+            for entry in handlers if isinstance(handlers, list) else []:
+                if entry.get("LSHandlerURLScheme") == scheme:
+                    for key in ("LSHandlerRoleAll", "LSHandlerRoleViewer", "LSHandlerRoleEditor"):
+                        value = entry.get(key)
+                        if value and value != "-":
+                            return value
+            return None
+
+        bundle_id = pick_bundle_id("https") or pick_bundle_id("http")
     except Exception:
         # デフォルト設定が見つからない場合はSafariとみなす
         bundle_id = "com.apple.Safari"
@@ -90,25 +107,59 @@ def get_default_browser():
     if not bundle_id:
         bundle_id = "com.apple.Safari"
 
-    # Bundle IDからアプリ名を取得
+    if bundle_id == "com.apple.safari":
+        bundle_id = "com.apple.Safari"
+
+    browser_name = None
+
+    # Bundle IDからアプリ名を取得（Finder経由）
     osa_cmd = f'tell application "Finder" to get name of (application file id "{bundle_id}")'
     try:
         browser_name = subprocess.check_output(
             ['osascript', '-e', osa_cmd], text=True).strip()
-        # .app 拡張子が含まれる場合があるので除く
-        if browser_name.endswith(".app"):
-            browser_name = browser_name[:-4]
-        return {"status": "success", "browser": browser_name}
     except Exception:
+        browser_name = None
+
+    # Finderで解決できない場合はSpotlightで検索
+    if not browser_name:
+        try:
+            app_paths = subprocess.check_output(
+                ["mdfind", f"kMDItemCFBundleIdentifier == '{bundle_id}'"],
+                text=True
+            ).splitlines()
+            if app_paths:
+                app_path = app_paths[0]
+                display_name = subprocess.check_output(
+                    ["mdls", "-name", "kMDItemDisplayName", "-raw", app_path],
+                    text=True
+                ).strip()
+                if display_name:
+                    browser_name = display_name
+                else:
+                    browser_name = os.path.basename(app_path)
+        except Exception:
+            browser_name = None
+
+    # .app 拡張子が含まれる場合があるので除く
+    if browser_name and browser_name.endswith(".app"):
+        browser_name = browser_name[:-4]
+
+    if not browser_name:
         # 取得に失敗した場合は一般的な名称を返す
         if "chrome" in bundle_id.lower():
-            return {"status": "success", "browser": "Google Chrome"}
+            browser_name = "Google Chrome"
         elif "firefox" in bundle_id.lower():
-            return {"status": "success", "browser": "Firefox"}
+            browser_name = "Firefox"
         elif "edge" in bundle_id.lower():
-            return {"status": "success", "browser": "Microsoft Edge"}
+            browser_name = "Microsoft Edge"
         else:
-            return {"status": "success", "browser": "Safari"}
+            browser_name = "Safari"
+
+    return {
+        "status": "success",
+        "browser": browser_name,
+        "bundle_id": bundle_id
+    }
 
 
 def click_web_element(app_name, role, name):
