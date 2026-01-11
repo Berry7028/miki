@@ -1,4 +1,4 @@
-import { FunctionTool, BuiltInCodeExecutor } from "@google/adk";
+import { FunctionTool, BuiltInCodeExecutor, LlmAgent } from "@google/adk";
 import { Type } from "@google/genai";
 
 type ZodV4Def = {
@@ -161,3 +161,13 @@ const originalProcessLlmRequest = (BuiltInCodeExecutor as any).prototype.process
     throw e;
   }
 };
+
+const originalFindAgent = (LlmAgent as any).prototype.findAgent;
+if (originalFindAgent) {
+  (LlmAgent as any).prototype.findAgent = function patchedFindAgent(agentName: string): any {
+    if (this.name === agentName) {
+      return this;
+    }
+    return originalFindAgent.call(this, agentName);
+  };
+}
