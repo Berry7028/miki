@@ -29,7 +29,15 @@ export class MacOSToolSuite {
       highlight_pos: highlightPos,
       quality: PERFORMANCE_CONFIG.SCREENSHOT_QUALITY,
     });
-    return result.status === "success" ? result.data : undefined;
+    if (result.status !== "success" || !result.data) {
+      return undefined;
+    }
+    return {
+      inlineData: {
+        mimeType: "image/jpeg",
+        data: result.data
+      }
+    };
   }
 
   public createTools(): FunctionTool<any>[] {
@@ -64,7 +72,11 @@ export class MacOSToolSuite {
         if (context) {
           context.state.set("last_action_pos", pos);
         }
-        return { ...result, screenshot };
+        const finalResult: any = { ...result };
+        if (screenshot) {
+          finalResult.screenshot = screenshot;
+        }
+        return finalResult;
       },
     });
   }
@@ -81,7 +93,11 @@ export class MacOSToolSuite {
         if (context) {
           context.state.set("last_action_pos", pos);
         }
-        return { ...result, screenshot };
+        const finalResult: any = { ...result };
+        if (screenshot) {
+          finalResult.screenshot = screenshot;
+        }
+        return finalResult;
       },
     });
   }
@@ -104,7 +120,11 @@ export class MacOSToolSuite {
         if (context) {
           context.state["last_action_pos"] = from;
         }
-        return { ...result, screenshot };
+        const finalResult: any = { ...result };
+        if (screenshot) {
+          finalResult.screenshot = screenshot;
+        }
+        return finalResult;
       },
     });
   }
