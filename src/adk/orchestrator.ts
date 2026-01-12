@@ -174,11 +174,17 @@ export class MacOSAgentOrchestrator extends EventEmitter {
           for (const call of functionCalls) {
             if (call.name === "think") {
               const args = call.args as any;
-              this.log("info", `[思考: ${args.phase}] ${args.thought}`);
+              const phaseLabel = {
+                planning: "計画",
+                executing: "実行",
+                verification: "検証",
+                reflection: "振り返り"
+              }[args.phase] || args.phase;
+              this.log("info", `[${phaseLabel}] ${args.thought}`);
               this.emit("thinking", {
                 phase: args.phase,
                 thought: args.thought,
-                message: `[${args.phase}] ${args.thought}`
+                message: `[${phaseLabel}] ${args.thought}`
               });
             } else if (call.name === "done") {
               const args = call.args as any;
