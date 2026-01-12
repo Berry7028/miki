@@ -8,7 +8,7 @@
   "type": "commonjs",
   "scripts": {
     "start": "electron .",
-    "dev": "electron . --",
+    "dev": "bun run build:renderer && bun run build:backend && electron . --",
     "dev:ui": "node scripts/dev-ui.mjs",
     "build:renderer": "bun build ./renderer/pages/dashboard/index.tsx --outfile ./renderer/dist/index.js --target browser --minify && bun build ./renderer/pages/chat/index.tsx --outfile ./renderer/dist/chat.js --target browser --minify && bun build ./renderer/pages/overlay/index.tsx --outfile ./renderer/dist/overlay.js --target browser --minify",
     "build:backend": "bun scripts/build-backend.mjs",
