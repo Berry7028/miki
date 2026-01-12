@@ -1,5 +1,5 @@
 import { LlmAgent, Gemini } from "@google/adk";
-import { GenerateContentConfig, GoogleSearch } from "@google/genai";
+import { GenerateContentConfig } from "@google/genai";
 import { createMainAgentInstruction } from "./agent-config";
 import type { MacOSToolSuite } from "../tools/macos-tool-suite";
 
@@ -23,7 +23,7 @@ export class MainAgentFactory {
       instruction: createMainAgentInstruction(defaultBrowser, defaultBrowserId),
       tools: tools,
       generateContentConfig: {
-        tools: [new GoogleSearch()]
+        tools: [{ googleSearch: {} }]
       } as GenerateContentConfig,
     });
   }
