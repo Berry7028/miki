@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
-
-const TRAIL_LENGTH = 8;
+import { OVERLAY_CONSTANTS } from "../shared/constants";
 
 const Overlay = () => {
   const [visible, setVisible] = useState(false);
@@ -34,7 +33,7 @@ const Overlay = () => {
 
     const unsubscribeMouse = window.miki?.onMousePos((pos: { x: number; y: number }) => {
       setMousePos(pos);
-      setTrail((prev) => [pos, ...prev].slice(0, TRAIL_LENGTH));
+      setTrail((prev) => [pos, ...prev].slice(0, OVERLAY_CONSTANTS.TRAIL_LENGTH));
     });
 
     return () => {
@@ -52,7 +51,7 @@ const Overlay = () => {
     pointerEvents: "none",
     zIndex: 9999,
     opacity: visible ? 1 : 0,
-    transition: "opacity 0.5s ease-in-out",
+    transition: `opacity ${OVERLAY_CONSTANTS.FADE_OUT_DURATION_SEC}s ease-in-out`,
     visibility: visible ? "visible" : "hidden",
   };
 
@@ -122,8 +121,8 @@ const Overlay = () => {
             position: "absolute",
             left: pos.x,
             top: pos.y,
-            opacity: (TRAIL_LENGTH - i - 1) / TRAIL_LENGTH * 0.3,
-            transform: `scale(${(TRAIL_LENGTH - i - 1) / TRAIL_LENGTH})`,
+            opacity: (OVERLAY_CONSTANTS.TRAIL_LENGTH - i - 1) / OVERLAY_CONSTANTS.TRAIL_LENGTH * 0.3,
+            transform: `scale(${(OVERLAY_CONSTANTS.TRAIL_LENGTH - i - 1) / OVERLAY_CONSTANTS.TRAIL_LENGTH})`,
             pointerEvents: "none",
           }}
         >
