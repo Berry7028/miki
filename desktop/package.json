@@ -2,7 +2,7 @@
   "name": "miki-desktop",
   "version": "0.1.0",
   "description": "Electron desktop app for macOS",
-  "main": "main.js",
+  "main": "main/index.js",
   "author": "",
   "license": "MIT",
   "type": "commonjs",
@@ -36,7 +36,7 @@
     "appId": "com.miki.desktop",
     "productName": "miki",
     "files": [
-      "main.js",
+      "main/**",
       "preload.js",
       "renderer/**",
       "package.json"
