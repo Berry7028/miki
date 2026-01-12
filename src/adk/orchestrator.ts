@@ -1,23 +1,19 @@
 import { EventEmitter } from "node:events";
-import { LlmAgent, Runner, InMemorySessionService, LoggingPlugin, type ToolContext, isFinalResponse, getFunctionCalls } from "@google/adk";
+import { LlmAgent, Runner, InMemorySessionService } from "@google/adk";
 import "./adk-patches";
 import { PythonBridge } from "../core/python-bridge";
 import { MacOSToolSuite } from "./tools/macos-tool-suite";
-import { MainAgentFactory } from "./agents/main-agent";
-import { MacOSErrorHandlerPlugin } from "./errors/error-handler";
+import { InitializationService, InitializationConfig } from "./services/initialization-service";
+import { ExecutionService } from "./services/execution-service";
 import { PERFORMANCE_CONFIG } from "../core/constants";
 
 export class MacOSAgentOrchestrator extends EventEmitter {
   private pythonBridge: PythonBridge;
-  private toolSuite!: MacOSToolSuite;
-  private rootAgent!: LlmAgent;
-  private runner!: Runner;
+  private initializationService: InitializationService;
+  private executionService?: ExecutionService;
   private sessionService: InMemorySessionService;
-  private screenSize: { width: number; height: number } = { width: 0, height: 0 };
-  private defaultBrowser: string = "Safari";
-  private defaultBrowserId: string = "";
+  private config?: InitializationConfig;
   private debugMode: boolean;
-  private stopRequested = false;
   private apiKey: string;
   private isInitialized = false;
 
@@ -36,6 +32,13 @@ export class MacOSAgentOrchestrator extends EventEmitter {
         });
       }
     );
+
+    // サービスの初期化
+    this.initializationService = new InitializationService(
+      this.pythonBridge,
+      this.apiKey,
+      this.debugMode
+    );
   }
 
   async init(): Promise<void> {
@@ -43,50 +46,23 @@ export class MacOSAgentOrchestrator extends EventEmitter {
 
     try {
       this.log("info", "Orchestratorを初期化しています...");
-      // 画面サイズの取得
-      const res = await this.pythonBridge.call("size");
-      this.screenSize = { width: res.width || 0, height: res.height || 0 };
-      
-      // デフォルトブラウザの取得 (タイムアウト付き)
-      try {
-        const browserRes = await this.pythonBridge.call("browser", {}, { timeout: 5000 });
-        if (browserRes.status === "success" && browserRes.browser) {
-          this.defaultBrowser = browserRes.browser;
-          this.defaultBrowserId = browserRes.bundle_id || "";
-          this.log("info", `デフォルトブラウザ: ${this.defaultBrowser}`);
-        }
-      } catch (e) {
-        this.log("error", `ブラウザ取得エラー: ${e}。Safariを使用します。`);
-      }
 
-      this.log("info", `画面サイズ: ${this.screenSize.width}x${this.screenSize.height}`);
+      // 初期化サービスで設定を取得
+      this.config = await this.initializationService.initialize();
 
-      // ツールスイートの構築
-      this.toolSuite = new MacOSToolSuite(this.pythonBridge, this.screenSize);
+      this.log("info", `画面サイズ: ${this.config.screenSize.width}x${this.config.screenSize.height}`);
+      this.log("info", `デフォルトブラウザ: ${this.config.defaultBrowser}`);
 
-      this.rootAgent = MainAgentFactory.create(
-        this.toolSuite,
-        this.apiKey,
-        this.defaultBrowser,
-        this.defaultBrowserId
+      // コンポーネントの作成
+      const components = this.initializationService.createComponents(this.config);
+      this.sessionService = components.sessionService;
+
+      // 実行サービスの初期化
+      this.executionService = new ExecutionService(
+        components.runner,
+        this.sessionService,
+        this.pythonBridge
       );
-
-      // プラグインの設定
-      const plugins = [
-        new MacOSErrorHandlerPlugin()
-      ];
-
-      if (this.debugMode) {
-        plugins.push(new LoggingPlugin());
-      }
-
-      // ランナーの初期化
-      this.runner = new Runner({
-        agent: this.rootAgent,
-        appName: "miki-desktop",
-        sessionService: this.sessionService,
-        plugins: plugins
-      });
 
       this.isInitialized = true;
       this.log("info", "Orchestratorの初期化が完了しました。");
@@ -112,10 +88,6 @@ export class MacOSAgentOrchestrator extends EventEmitter {
       await this.init();
     }
 
-    this.log("info", `タスク開始 - ゴール: ${goal}`);
-    this.stopRequested = false;
-    this.emitStatus("running");
-
     if (!this.apiKey) {
       const errorMsg = "APIキーが設定されていません。設定画面でAPIキーを保存してください。";
       this.log("error", errorMsg);
@@ -123,120 +95,53 @@ export class MacOSAgentOrchestrator extends EventEmitter {
       return;
     }
 
-    const sessionId = Date.now().toString();
-
-    try {
-      this.log("info", `セッションを作成しています (ID: ${sessionId})...`);
-      // セッションの作成と初期状態の設定
-      await this.sessionService.createSession({
-        appName: "miki-desktop",
-        userId: "default_user",
-        sessionId: sessionId,
-      });
-
-      const session = await this.sessionService.getSession({
-        appName: "miki-desktop",
-        userId: "default_user",
-        sessionId: sessionId,
-      });
-
-      if (session) {
-        session.state["screen_size"] = this.screenSize;
-        session.state["default_browser"] = this.defaultBrowser;
-        session.state["default_browser_id"] = this.defaultBrowserId;
-        session.state["current_app"] = "Finder";
-      }
-
-      this.log("info", "エージェントの実行を開始します...");
-      await this.pythonBridge.setCursorVisibility(false);
-
-      const stream = this.runner.runAsync({
-        userId: "default_user",
-        sessionId: sessionId,
-        newMessage: {
-          role: "user",
-          parts: [{ text: goal }]
-        }
-      });
-
-      let stepCount = 0;
-
-      for await (const event of stream) {
-        this.log("info", `イベントを受信しました: ${event.id || "no-id"}`);
-        if (this.stopRequested) {
-          this.log("info", "停止要求により中断しました。");
-          break;
-        }
-
-        const functionCalls = getFunctionCalls(event);
-        if (functionCalls.length > 0) {
-          this.log("info", `${functionCalls.length} 個の関数呼び出しを処理します`);
-          for (const call of functionCalls) {
-            if (call.name === "think") {
-              const args = call.args as any;
-              const phaseLabel = {
-                planning: "計画",
-                executing: "実行",
-                verification: "検証",
-                reflection: "振り返り"
-              }[args.phase] || args.phase;
-              this.log("info", `[${phaseLabel}] ${args.thought}`);
-              this.emit("thinking", {
-                phase: args.phase,
-                thought: args.thought,
-                message: `[${phaseLabel}] ${args.thought}`
-              });
-            } else if (call.name === "done") {
-              const args = call.args as any;
-              this.log("success", `完了: ${args.message}`);
-              this.emit("completed", args.message);
-            } else {
-              this.log("action", `アクション: ${call.name} ${JSON.stringify(call.args)}`);
-              this.emit("action_update", {
-                phase: "running",
-                action: call.name,
-                params: call.args
-              });
-            }
-          }
-        }
-
-        if (isFinalResponse(event)) {
-          this.log("info", "タスク実行が完了しました（最終レスポンスを受信）。");
-          if (event.content && event.content.parts && event.content.parts[0] && event.content.parts[0].text) {
-            this.log("info", `エージェントの最終回答: ${event.content.parts[0].text}`);
-          }
-          break;
-        }
-
-        stepCount++;
-        this.emit("step", stepCount);
-        
-        if (stepCount >= PERFORMANCE_CONFIG.MAX_STEPS) {
-          this.log("error", "最大ステップ数に達しました。");
-          break;
-        }
-      }
-
-      this.log("info", "実行ループが終了しました。");
-      this.emit("runCompleted");
-    } catch (error) {
-      this.log("error", `実行エラー: ${error}`);
-      console.error("Execution error detail:", error);
-      this.emit("error", `実行エラー: ${error}`);
-    } finally {
-      await this.pythonBridge.setCursorVisibility(true);
-      this.emitStatus("idle");
+    if (!this.config || !this.executionService) {
+      const errorMsg = "Orchestratorが正しく初期化されていません。";
+      this.log("error", errorMsg);
+      this.emit("error", errorMsg);
+      return;
     }
+
+    this.log("info", `タスク開始 - ゴール: ${goal}`);
+
+    await this.executionService.execute(
+      goal,
+      this.config.screenSize,
+      this.config.defaultBrowser,
+      this.config.defaultBrowserId,
+      {
+        onLog: (type, message) => this.log(type, message),
+        onStatus: (state) => this.emitStatus(state),
+        onThinking: (phase, thought, message) => {
+          this.emit("thinking", { phase, thought, message });
+        },
+        onCompleted: (message) => {
+          this.emit("completed", message);
+        },
+        onActionUpdate: (action, params) => {
+          this.emit("action_update", {
+            phase: "running",
+            action,
+            params
+          });
+        },
+        onStep: (stepCount) => {
+          this.emit("step", stepCount);
+        },
+        onRunCompleted: () => {
+          this.emit("runCompleted");
+        }
+      }
+    );
   }
 
   stop(): void {
-    this.stopRequested = true;
+    this.executionService?.stop();
     this.log("info", "停止要求を受け付けました。");
   }
 
   async reset(): Promise<void> {
-    this.stopRequested = true;
+    this.executionService?.reset();
     this.emit("reset");
     this.log("info", "リセットしました。");
   }
