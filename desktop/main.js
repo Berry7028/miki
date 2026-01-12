@@ -420,11 +420,33 @@ function ensureController() {
         } else if (payload.state === "idle") {
           if (overlayWindow && !overlayWindow.isDestroyed()) {
             overlayWindow.webContents.send("miki:backend", { event: "fadeout" });
+            // フェードアウトアニメーション完了後にウィンドウを破棄
+            const windowToDestroy = overlayWindow;
+            setTimeout(() => {
+              if (windowToDestroy && !windowToDestroy.isDestroyed()) {
+                console.log("Destroying overlay window after idle...");
+                windowToDestroy.destroy();
+                if (overlayWindow === windowToDestroy) {
+                  overlayWindow = null;
+                }
+              }
+            }, 600); // overlay transition time (0.5s) + buffer
           }
         }
       } else if (payload.event === "completed") {
         if (overlayWindow && !overlayWindow.isDestroyed()) {
           overlayWindow.webContents.send("miki:backend", { event: "fadeout" });
+          // フェードアウトアニメーション完了後にウィンドウを破棄
+          const windowToDestroy = overlayWindow;
+          setTimeout(() => {
+            if (windowToDestroy && !windowToDestroy.isDestroyed()) {
+              console.log("Destroying overlay window after completion...");
+              windowToDestroy.destroy();
+              if (overlayWindow === windowToDestroy) {
+                overlayWindow = null;
+              }
+            }
+          }, 600); // overlay transition time (0.5s) + buffer
         }
       }
     } catch (error) {
