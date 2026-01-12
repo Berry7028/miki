@@ -56,3 +56,4 @@ build/
 
 # debug screenshots
 .screenshot/
+*.bak
