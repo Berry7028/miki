@@ -6,7 +6,7 @@ export const ClickSchema = {
     y: { type: "number", description: "正規化Y座標 (0-1000)" },
   },
   required: ["x", "y"],
-};
+} as any;
 
 export const MoveSchema = {
   type: "object",
@@ -15,7 +15,7 @@ export const MoveSchema = {
     y: { type: "number", description: "正規化Y座標 (0-1000)" },
   },
   required: ["x", "y"],
-};
+} as any;
 
 export const DragSchema = {
   type: "object",
@@ -26,7 +26,7 @@ export const DragSchema = {
     to_y: { type: "number", description: "終了Y" },
   },
   required: ["from_x", "from_y", "to_x", "to_y"],
-};
+} as any;
 
 export const ScrollSchema = {
   type: "object",
@@ -34,7 +34,7 @@ export const ScrollSchema = {
     amount: { type: "number", description: "スクロール量 (正:下, 負:上)" },
   },
   required: ["amount"],
-};
+} as any;
 
 export const TypeSchema = {
   type: "object",
@@ -42,7 +42,7 @@ export const TypeSchema = {
     text: { type: "string", description: "入力テキスト" },
   },
   required: ["text"],
-};
+} as any;
 
 export const PressSchema = {
   type: "object",
@@ -50,7 +50,7 @@ export const PressSchema = {
     key: { type: "string", description: "キー名" },
   },
   required: ["key"],
-};
+} as any;
 
 export const HotkeySchema = {
   type: "object",
@@ -62,7 +62,7 @@ export const HotkeySchema = {
     },
   },
   required: ["keys"],
-};
+} as any;
 
 export const ElementsJsonSchema = {
   type: "object",
@@ -71,7 +71,7 @@ export const ElementsJsonSchema = {
     max_depth: { type: "number", description: "探索深さ" },
   },
   required: ["app_name"],
-};
+} as any;
 
 export const FocusElementSchema = {
   type: "object",
@@ -81,7 +81,7 @@ export const FocusElementSchema = {
     name: { type: "string" },
   },
   required: ["app_name", "role", "name"],
-};
+} as any;
 
 export const WebElementsSchema = {
   type: "object",
@@ -89,7 +89,7 @@ export const WebElementsSchema = {
     app_name: { type: "string" },
   },
   required: ["app_name"],
-};
+} as any;
 
 export const OsaSchema = {
   type: "object",
@@ -97,7 +97,7 @@ export const OsaSchema = {
     script: { type: "string", description: "AppleScript内容" },
   },
   required: ["script"],
-};
+} as any;
 
 export const WaitSchema = {
   type: "object",
@@ -105,7 +105,7 @@ export const WaitSchema = {
     seconds: { type: "number" },
   },
   required: ["seconds"],
-};
+} as any;
 
 export const SearchSchema = {
   type: "object",
@@ -113,7 +113,7 @@ export const SearchSchema = {
     query: { type: "string" },
   },
   required: ["query"],
-};
+} as any;
 
 export const ThinkSchema = {
   type: "object",
@@ -125,7 +125,7 @@ export const ThinkSchema = {
     },
   },
   required: ["thought", "phase"],
-};
+} as any;
 
 export const DoneSchema = {
   type: "object",
@@ -133,7 +133,7 @@ export const DoneSchema = {
     message: { type: "string" },
   },
   required: ["message"],
-};
+} as any;
 
 export const ScreenshotSchema = {
   type: "object",
@@ -149,4 +149,4 @@ export const ScreenshotSchema = {
     },
   },
   required: ["quality"],
-};
+} as any;

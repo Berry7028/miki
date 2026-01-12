@@ -118,7 +118,7 @@ export class MacOSToolSuite {
         });
         const screenshot = await this.takePostActionScreenshot(from);
         if (context) {
-          context.state["last_action_pos"] = from;
+          context.state.set("last_action_pos", from);
         }
         const finalResult: any = { ...result };
         if (screenshot) {
