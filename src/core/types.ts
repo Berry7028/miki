@@ -54,7 +54,7 @@ export const ActionSchemaBase = z.discriminatedUnion("action", [
     action: z.literal("think"),
     params: z.object({
       thought: z.string(),
-      phase: z.enum(["planning", "verification", "reflection"]),
+      phase: z.enum(["planning", "executing", "verification", "reflection"]),
     }),
   }),
   z.object({ action: z.literal("done"), params: z.object({ message: z.string() }) }),
@@ -96,7 +96,7 @@ export const ActionSchema = z.discriminatedUnion("action", [
     action: z.literal("think"),
     params: z.object({
       thought: z.string(),
-      phase: z.enum(["planning", "verification", "reflection"]),
+      phase: z.enum(["planning", "executing", "verification", "reflection"]),
     }),
   }),
   z.object({ action: z.literal("done"), params: z.object({ message: z.string() }) }),

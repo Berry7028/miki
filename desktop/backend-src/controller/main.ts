@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as readline from "node:readline";
 import * as dotenv from "dotenv";
-import { MacOSAgent } from "../../../src/controller/agent";
+import { MacOSAgentOrchestrator } from "../../../src/adk/orchestrator";
 
 type Command =
   | { type: "start"; goal: string }
@@ -12,7 +12,7 @@ type Command =
 
 type StatusState = "idle" | "running" | "stopping";
 
-let agent: MacOSAgent | null = null;
+let agent: MacOSAgentOrchestrator | null = null;
 let running = false;
 
 // デバッグモードフラグ
@@ -55,7 +55,8 @@ function loadEnv() {
 
 function ensureAgent() {
   if (agent) return;
-  agent = new MacOSAgent(debugMode);
+  const apiKey = process.env.GEMINI_API_KEY || "";
+  agent = new MacOSAgentOrchestrator(apiKey, debugMode);
   agent.on("log", (payload: { type: string; message: string; timestamp: Date }) => {
     send("log", {
       ...payload,
@@ -63,7 +64,7 @@ function ensureAgent() {
     });
   });
   agent.on("step", (step: number) => send("step", { step }));
-  agent.on("status", (payload: { state: StatusState }) => sendStatus(payload.state));
+  agent.on("status", (payload: { state: any }) => sendStatus(payload.state));
   agent.on("completed", (message: string) => send("completed", { message }));
   agent.on("runCompleted", () => sendStatus("idle"));
   agent.on("stopped", () => sendStatus("idle"));
@@ -91,6 +92,9 @@ async function startRun(goal: string) {
 
   try {
     ensureAgent();
+    // Orchestratorのinitは内部でPythonBridgeのready時に呼ばれるが、
+    // 明示的に呼ぶことも可能。ただし二重初期化に注意。
+    // ここでは init() が Promise を返すので待機する。
     await agent!.init();
     await agent!.run(goal);
   } catch (error) {
