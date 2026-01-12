@@ -9,6 +9,7 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron . --",
+    "dev:ui": "node scripts/dev-ui.mjs",
     "build:renderer": "bun build ./renderer/pages/dashboard/index.tsx --outfile ./renderer/dist/index.js --target browser --minify && bun build ./renderer/pages/chat/index.tsx --outfile ./renderer/dist/chat.js --target browser --minify && bun build ./renderer/pages/overlay/index.tsx --outfile ./renderer/dist/overlay.js --target browser --minify",
     "build:backend": "bun scripts/build-backend.mjs",
     "build:executor": "../venv/bin/pyinstaller --name miki-executor --onedir ../src/executor/main.py --distpath backend/executor -y",

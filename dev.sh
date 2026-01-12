@@ -45,6 +45,7 @@ fi
 MENU_ITEMS=(
   "start|🚀 アプリを起動（開発モード）|start_app|safe"
   "start-debug|🛠️ アプリをデバッグモードで起動|start_app_debug|safe"
+  "dev-ui|🎨 UIのみホットリロード開発モード|start_dev_ui|safe"
   "hot-reload|♻️ 変更監視で再ビルド＆再起動|start_hot_reload|slow"
   "start-fresh|🧨 セットアップをリセットして起動|start_fresh|danger"
   "build-all|⏳ 全コンポーネントを一括ビルド|build_all|slow"
@@ -300,6 +301,7 @@ function print_help() {
   echo "主なコマンド:"
   echo "  ${GREEN}start${NC}              - アプリを起動（開発モード）"
   echo "  ${GREEN}start --debug${NC}      - アプリをデバッグモードで起動"
+  echo "  ${GREEN}dev-ui${NC}             - UIのみホットリロード開発モード"
   echo "  ${GREEN}hot-reload${NC}         - 変更監視で再ビルド＆再起動"
   echo "  ${GREEN}start-fresh${NC}        - セットアップフラグをリセットして起動"
   echo "  ${GREEN}build-all${NC}          - 全コンポーネントを一括ビルド"
@@ -377,6 +379,17 @@ function stop_dev_process() {
     wait "$DEV_APP_PID" >/dev/null 2>&1 || true
     DEV_APP_PID=""
   fi
+}
+
+function start_dev_ui() {
+  if ! preflight_node; then
+    return 1
+  fi
+
+  echo -e "${BLUE}UIホットリロード開発モードを開始します...${NC}"
+  echo -e "${YELLOW}ヒント: アプリ内で Cmd+R でリロードしてください${NC}"
+  cd "$DESKTOP_DIR"
+  bun run dev:ui
 }
 
 function start_hot_reload() {
@@ -660,6 +673,9 @@ else
   case "${1}" in
     start)
     start_app "${2}"
+      ;;
+    dev-ui)
+      start_dev_ui
       ;;
     hot-reload|watch)
       start_hot_reload
