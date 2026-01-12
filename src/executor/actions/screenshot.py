@@ -3,6 +3,7 @@ import pyautogui
 import base64
 from io import BytesIO
 from PIL import Image, ImageDraw
+from constants import DEFAULT_HIGHLIGHT_RADIUS, DEFAULT_SCREENSHOT_QUALITY
 
 
 def _calculate_image_scale_factors(img):
@@ -15,7 +16,7 @@ def _calculate_image_scale_factors(img):
     return img_w / screen_w, img_h / screen_h
 
 
-def draw_point_on_screenshot(img, x, y, radius=15, color="red"):
+def draw_point_on_screenshot(img, x, y, radius=DEFAULT_HIGHLIGHT_RADIUS, color="red"):
     """スクリーンショット上の指定座標にハイライト（赤い点）を描画する"""
     draw = ImageDraw.Draw(img)
 
@@ -30,7 +31,7 @@ def draw_point_on_screenshot(img, x, y, radius=15, color="red"):
     return img
 
 
-def screenshot(highlight_pos=None, quality=85):
+def screenshot(highlight_pos=None, quality=DEFAULT_SCREENSHOT_QUALITY):
     """
     画面のスクリーンショットを撮り、Base64文字列で返し、現在のマウス位置も提供する
     

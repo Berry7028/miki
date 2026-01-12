@@ -5,29 +5,13 @@ import time
 import pyautogui
 
 from actions.clipboard_utils import copy_text
-
-
-def _type_text(text):
-    """
-    テキストを入力する（クリップボード経由でより確実に）
-    Note: This is duplicated from mouse_keyboard to avoid circular dependency
-    """
-    # 特殊な文字や日本語入力の不安定さを避けるため、クリップボード経由での貼り付けを試みる
-    copy_result = copy_text(text)
-    if copy_result["status"] == "success":
-        try:
-            time.sleep(0.1)
-            pyautogui.hotkey('command', 'v')
-            time.sleep(0.2)
-            return {"status": "success", "method": copy_result["method"]}
-        except Exception as e:
-            return {"status": "error", "message": f"Failed to paste text: {str(e)}"}
-
-    try:
-        pyautogui.write(text, interval=0.05)
-        return {"status": "success", "method": "write"}
-    except Exception as e:
-        return {"status": "error", "message": f"Failed to type text: {str(e)}"}
+from constants import (
+    DEFAULT_UI_MAX_DEPTH,
+    DEFAULT_UI_ELEMENTS_TIMEOUT,
+    DEFAULT_CLICK_ELEMENT_TIMEOUT,
+    DEFAULT_FOCUS_ELEMENT_TIMEOUT,
+)
+from utils.text_input import type_text_via_clipboard
 
 
 def get_ui_elements(app_name):
@@ -93,7 +77,7 @@ def get_ui_elements(app_name):
         return {"status": "error", "message": str(e)}
 
 
-def get_ui_elements_json(app_name, max_depth=3):
+def get_ui_elements_json(app_name, max_depth=DEFAULT_UI_MAX_DEPTH):
     """
     UI要素をJSON形式で詳細に取得（JXA使用）
     properties()とactions()を使って、UI要素の詳細情報を再帰的に取得する
@@ -160,7 +144,7 @@ def get_ui_elements_json(app_name, max_depth=3):
             ['osascript', '-l', 'JavaScript', '-e', jxa_script],
             capture_output=True,
             text=True,
-            timeout=10
+            timeout=DEFAULT_UI_ELEMENTS_TIMEOUT
         )
         if result.returncode == 0:
             data = json.loads(result.stdout.strip())
@@ -223,7 +207,7 @@ def click_element(app_name, role, name):
             ['osascript', '-l', 'JavaScript', '-e', jxa_script],
             capture_output=True,
             text=True,
-            timeout=5
+            timeout=DEFAULT_CLICK_ELEMENT_TIMEOUT
         )
         output = result.stdout.strip()
         if output.startswith("{"):
@@ -287,7 +271,7 @@ def focus_element(app_name, role, name):
             ['osascript', '-l', 'JavaScript', '-e', jxa_script],
             capture_output=True,
             text=True,
-            timeout=5
+            timeout=DEFAULT_CLICK_ELEMENT_TIMEOUT
         )
         output = result.stdout.strip()
         if output == "success":
@@ -309,6 +293,6 @@ def type_to_element(app_name, role, name, text):
     if focus_result["status"] != "success":
         return focus_result
 
-    # テキスト入力
+    # テキスト入力（クリップボード経由で日本語対応）
     time.sleep(0.2)
-    return _type_text(text=text)
+    return type_text_via_clipboard(text, copy_text)
