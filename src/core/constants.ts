@@ -36,6 +36,37 @@ export const HISTORY_CONFIG = {
 export const DEBUG_TEXT_TRUNCATE_LENGTH = 200;
 export const DEBUG_SCREENSHOT_PREVIEW_LENGTH = 50;
 
+// UI定数
+export const UI_CONSTANTS = {
+  OVERLAY: {
+    TRAIL_LENGTH: 8,
+    FADE_OUT_DURATION_SEC: 0.5,
+    TRANSITION_DURATION_SEC: 0.5,
+  },
+  CURSOR: {
+    HIGHLIGHT_RADIUS: 15,
+  },
+  CHAT_WINDOW: {
+    WIDTH: 480,
+    HEIGHT: 600,
+    MARGIN: 20,
+  },
+} as const;
+
+// タイムアウト定数
+export const TIMEOUT_CONSTANTS = {
+  PYTHON: {
+    DEFAULT: 30000,
+    BROWSER_DETECTION: 5000,
+    UI_ELEMENTS_JSON: 10000,
+    CLICK_ELEMENT: 5000,
+    APPLESCRIPT: 30000,
+  },
+  OVERLAY: {
+    MOUSE_UPDATE_INTERVAL_MS: 16, // ~60fps
+  },
+} as const;
+
 export const SYSTEM_PROMPT = `
 
 あなたはMacOSを精密に操作する自動化エージェントです。

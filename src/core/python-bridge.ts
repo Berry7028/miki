@@ -3,6 +3,7 @@ import * as fs from "node:fs";
 import * as readline from "node:readline";
 import * as path from "node:path";
 import type { PythonResponse } from "./types";
+import { TIMEOUT_CONSTANTS } from "./constants";
 
 export class PythonBridge {
   private pythonProcess!: ChildProcessWithoutNullStreams;
@@ -14,7 +15,7 @@ export class PythonBridge {
   private isRestarting = false;
   private onError: (message: string) => void;
   private onReady: () => void;
-  private defaultTimeout = 30000;
+  private defaultTimeout = TIMEOUT_CONSTANTS.PYTHON.DEFAULT;
   private maxRetries = 3;
 
   constructor(

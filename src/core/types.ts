@@ -20,7 +20,8 @@ export interface UIElementsResponse {
   windows: UIElement[];
 }
 
-export const ActionSchemaBase = z.discriminatedUnion("action", [
+// 共通アクション定義（ActionSchemaBaseとActionSchemaで共有）
+const baseActionVariants = [
   z.object({ action: z.literal("screenshot") }),
   z.object({ action: z.literal("click"), params: z.object({ x: z.number(), y: z.number() }) }),
   z.object({ action: z.literal("type"), params: z.object({ text: z.string() }) }),
@@ -58,48 +59,16 @@ export const ActionSchemaBase = z.discriminatedUnion("action", [
     }),
   }),
   z.object({ action: z.literal("done"), params: z.object({ message: z.string() }) }),
-]);
+] as const;
+
+// ActionSchemaBase は共通アクションのみ
+export const ActionSchemaBase = z.discriminatedUnion("action", baseActionVariants);
 
 export type ActionBase = z.infer<typeof ActionSchemaBase>;
 
+// ActionSchema は batch アクションを追加
 export const ActionSchema = z.discriminatedUnion("action", [
-  z.object({ action: z.literal("screenshot") }),
-  z.object({ action: z.literal("click"), params: z.object({ x: z.number(), y: z.number() }) }),
-  z.object({ action: z.literal("type"), params: z.object({ text: z.string() }) }),
-  z.object({ action: z.literal("press"), params: z.object({ key: z.string() }) }),
-  z.object({ action: z.literal("hotkey"), params: z.object({ keys: z.array(z.string()) }) }),
-  z.object({ action: z.literal("move"), params: z.object({ x: z.number(), y: z.number() }) }),
-  z.object({ action: z.literal("scroll"), params: z.object({ amount: z.number() }) }),
-  z.object({
-    action: z.literal("drag"),
-    params: z.object({
-      from_x: z.number(),
-      from_y: z.number(),
-      to_x: z.number(),
-      to_y: z.number(),
-    }),
-  }),
-  z.object({ action: z.literal("osa"), params: z.object({ script: z.string() }) }),
-  z.object({ action: z.literal("elements"), params: z.object({ app_name: z.string() }) }),
-  z.object({
-    action: z.literal("elementsJson"),
-    params: z.object({ app_name: z.string(), max_depth: z.number().optional().default(3) }),
-  }),
-  z.object({
-    action: z.literal("focusElement"),
-    params: z.object({ app_name: z.string(), role: z.string(), name: z.string() }),
-  }),
-  z.object({ action: z.literal("webElements"), params: z.object({ app_name: z.string() }) }),
-  z.object({ action: z.literal("wait"), params: z.object({ seconds: z.number() }) }),
-  z.object({ action: z.literal("search"), params: z.object({ query: z.string() }) }),
-  z.object({
-    action: z.literal("think"),
-    params: z.object({
-      thought: z.string(),
-      phase: z.enum(["planning", "executing", "verification", "reflection"]),
-    }),
-  }),
-  z.object({ action: z.literal("done"), params: z.object({ message: z.string() }) }),
+  ...baseActionVariants,
   z.object({
     action: z.literal("batch"),
     params: z.object({ actions: z.array(ActionSchemaBase) }),
