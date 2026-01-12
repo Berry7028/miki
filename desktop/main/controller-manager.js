@@ -20,15 +20,15 @@ class ControllerManager extends EventEmitter {
   getBackendPaths() {
     const backendRoot = app.isPackaged
       ? path.join(process.resourcesPath, "backend")
-      : path.join(__dirname, "../../backend");
+      : path.join(__dirname, "../backend");
     const controllerEntry = path.join(backendRoot, "controller", "index.js");
     const executorOnedir = path.join(backendRoot, "executor", "miki-executor");
     const executorOnedirBinary = path.join(executorOnedir, "miki-executor");
     const executorBinary = fs.existsSync(executorOnedirBinary)
       ? executorOnedirBinary
       : null;
-    const devPython = path.join(__dirname, "../../../venv/bin/python");
-    const devExecutor = path.join(__dirname, "../../../src/executor/main.py");
+    const devPython = path.join(__dirname, "../../venv/bin/python");
+    const devExecutor = path.join(__dirname, "../../src/executor/main.py");
 
     return {
       backendRoot,
