@@ -7,6 +7,7 @@ import { MainAgentFactory } from "../agents/main-agent";
 import { MacOSErrorHandlerPlugin } from "../errors/error-handler";
 import { LlmAgent, Runner, InMemorySessionService, LoggingPlugin } from "@google/adk";
 import type { ToolContext } from "@google/adk";
+import { TIMEOUT_CONSTANTS } from "../../core/constants";
 
 export interface InitializationConfig {
   screenSize: { width: number; height: number };
@@ -37,7 +38,7 @@ export class InitializationService {
     let defaultBrowser = "Safari";
     let defaultBrowserId = "";
     try {
-      const browserRes = await this.pythonBridge.call("browser", {}, { timeout: 5000 });
+      const browserRes = await this.pythonBridge.call("browser", {}, { timeout: TIMEOUT_CONSTANTS.PYTHON.BROWSER_DETECTION });
       if (browserRes.status === "success" && browserRes.browser) {
         defaultBrowser = browserRes.browser;
         defaultBrowserId = browserRes.bundle_id || "";

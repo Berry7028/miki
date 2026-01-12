@@ -5,7 +5,7 @@ import time
 import pyautogui
 
 from actions.clipboard_utils import copy_text
-from constants import (
+from .constants import (
     DEFAULT_UI_MAX_DEPTH,
     DEFAULT_UI_ELEMENTS_TIMEOUT,
     DEFAULT_CLICK_ELEMENT_TIMEOUT,
@@ -271,7 +271,7 @@ def focus_element(app_name, role, name):
             ['osascript', '-l', 'JavaScript', '-e', jxa_script],
             capture_output=True,
             text=True,
-            timeout=DEFAULT_CLICK_ELEMENT_TIMEOUT
+            timeout=DEFAULT_FOCUS_ELEMENT_TIMEOUT
         )
         output = result.stdout.strip()
         if output == "success":
