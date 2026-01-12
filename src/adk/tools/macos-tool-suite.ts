@@ -54,7 +54,6 @@ export class MacOSToolSuite {
       this.createWebElementsTool(),
       this.createOsaTool(),
       this.createWaitTool(),
-      this.createSearchTool(),
       this.createThinkTool(),
       this.createDoneTool(),
     ];
@@ -222,18 +221,6 @@ export class MacOSToolSuite {
       execute: async (args: any) => {
         await new Promise((resolve) => setTimeout(resolve, args.seconds * 1000));
         return { status: "success", message: `${args.seconds}秒待機しました` };
-      },
-    });
-  }
-
-  private createSearchTool() {
-    return new FunctionTool({
-      name: "search",
-      description: "Google検索などの外部検索を指示します。",
-      parameters: schemas.SearchSchema,
-      execute: async (args: any) => {
-        const script = `open location "https://www.google.com/search?q=${encodeURIComponent(args.query)}"`;
-        return await this.bridge.call("osa", { script });
       },
     });
   }

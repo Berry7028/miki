@@ -107,14 +107,6 @@ export const WaitSchema = {
   required: ["seconds"],
 } as any;
 
-export const SearchSchema = {
-  type: "object",
-  properties: {
-    query: { type: "string" },
-  },
-  required: ["query"],
-} as any;
-
 export const ThinkSchema = {
   type: "object",
   properties: {

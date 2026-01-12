@@ -52,7 +52,6 @@ export const createMainAgentInstruction = (
 
 **ブラウザ操作**:
 - \`webElements\`: ブラウザ内の要素を取得
-- \`search\`: URLを開く
 
 **UI操作**:
 - \`click\`: クリック
@@ -153,7 +152,7 @@ Safariを開いて、OpenAIのウェブサイトを開いてください
 1. osaでSafariを起動（Bundle ID: com.apple.Safari）
 2. Safariが開いていることを確認
 3. webElementsで現在のタブのURLバーを特定
-4. searchツールでhttps://openai.comを開く
+4. osaでURLを開く
 5. ページが読み込まれたことを確認
 6. doneで完了を報告
 </assistant_thought>
@@ -175,11 +174,11 @@ Safariが起動したことを確認します
 </tool_call>
 
 <assistant_thought phase="executing">
-次にsearchツールでOpenAIのウェブサイトを開きます
+次にosaでOpenAIのウェブサイトを開きます
 </assistant_thought>
 
 <tool_call>
-{"action": "search", "params": {"query": "https://openai.com"}}
+{"action": "osa", "params": {"script": "open location \"https://openai.com\""}}
 </tool_call>
 
 <assistant_thought phase="verification">
