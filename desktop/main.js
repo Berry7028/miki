@@ -417,6 +417,16 @@ function ensureController() {
               overlayWindow.showInactive();
             }
           }
+          // チャットウィンドウを非表示に
+          if (chatWindow && !chatWindow.isDestroyed() && chatWindow.isVisible()) {
+            chatWindow.webContents.send("miki:chat-visibility", { visible: false });
+            // アニメーション完了後にウィンドウを非表示
+            setTimeout(() => {
+              if (chatWindow && !chatWindow.isDestroyed()) {
+                chatWindow.hide();
+              }
+            }, 350); // アニメーション時間 + buffer
+          }
         } else if (payload.state === "idle") {
           if (overlayWindow && !overlayWindow.isDestroyed()) {
             overlayWindow.webContents.send("miki:backend", { event: "fadeout" });
@@ -431,6 +441,12 @@ function ensureController() {
                 }
               }
             }, 600); // overlay transition time (0.5s) + buffer
+          }
+          // チャットウィンドウを再表示
+          if (chatWindow && !chatWindow.isDestroyed()) {
+            chatWindow.webContents.send("miki:chat-visibility", { visible: true });
+            chatWindow.show();
+            chatWindow.webContents.send("miki:focus-input");
           }
         }
       } else if (payload.event === "completed") {
@@ -447,6 +463,12 @@ function ensureController() {
               }
             }
           }, 600); // overlay transition time (0.5s) + buffer
+        }
+        // チャットウィンドウを再表示
+        if (chatWindow && !chatWindow.isDestroyed()) {
+          chatWindow.webContents.send("miki:chat-visibility", { visible: true });
+          chatWindow.show();
+          chatWindow.webContents.send("miki:focus-input");
         }
       }
     } catch (error) {
