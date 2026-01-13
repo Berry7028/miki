@@ -1,12 +1,13 @@
 """スクリーンショット取得とハイライト描画"""
+from typing import Dict, Any, Tuple, Optional
+from PIL import Image
 import pyautogui
 import base64
 from io import BytesIO
-from PIL import Image, ImageDraw
 from constants import DEFAULT_HIGHLIGHT_RADIUS, DEFAULT_SCREENSHOT_QUALITY
 
 
-def _calculate_image_scale_factors(img):
+def _calculate_image_scale_factors(img: Image.Image) -> Tuple[float, float]:
     """
     画像とスクリーンサイズから倍率を計算
     Retina等でのスクリーンショットと論理座標の差を考慮
@@ -16,8 +17,11 @@ def _calculate_image_scale_factors(img):
     return img_w / screen_w, img_h / screen_h
 
 
-def draw_point_on_screenshot(img, x, y, radius=DEFAULT_HIGHLIGHT_RADIUS, color="red"):
+def draw_point_on_screenshot(img: Image.Image, x: int, y: int,
+                            radius: int = DEFAULT_HIGHLIGHT_RADIUS,
+                            color: str = "red") -> Image.Image:
     """スクリーンショット上の指定座標にハイライト（赤い点）を描画する"""
+    from PIL import ImageDraw
     draw = ImageDraw.Draw(img)
 
     # ディスプレイのスケーリング（Retina等）を考慮
@@ -31,10 +35,11 @@ def draw_point_on_screenshot(img, x, y, radius=DEFAULT_HIGHLIGHT_RADIUS, color="
     return img
 
 
-def screenshot(highlight_pos=None, quality=DEFAULT_SCREENSHOT_QUALITY):
+def screenshot(highlight_pos: Optional[Dict[str, int]] = None,
+               quality: int = DEFAULT_SCREENSHOT_QUALITY) -> Dict[str, Any]:
     """
     画面のスクリーンショットを撮り、Base64文字列で返し、現在のマウス位置も提供する
-    
+
     Args:
         highlight_pos: ハイライト位置 {"x": int, "y": int}
         quality: JPEG品質（1-100）。デフォルト85で高品質かつ軽量
@@ -62,7 +67,7 @@ def screenshot(highlight_pos=None, quality=DEFAULT_SCREENSHOT_QUALITY):
     return {"status": "success", "data": img_str, "mouse_position": {"x": x, "y": y}}
 
 
-def get_screen_size():
+def get_screen_size() -> Dict[str, Any]:
     """画面サイズを取得する。物理解像度と論理解像度の比率（スケール）も返す"""
     width, height = pyautogui.size()
     # スクリーンショットを一時的に撮って物理サイズを確認
@@ -70,12 +75,12 @@ def get_screen_size():
     phys_width, phys_height = shot.size
     scale_x = phys_width / width
     scale_y = phys_height / height
-    
+
     return {
-        "status": "success", 
-        "width": width, 
+        "status": "success",
+        "width": width,
         "height": height,
         "physical_width": phys_width,
         "physical_height": phys_height,
-        "scale": scale_x 
+        "scale": scale_x
     }

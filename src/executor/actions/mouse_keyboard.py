@@ -1,4 +1,5 @@
 """マウスとキーボード操作"""
+from typing import Dict, Any, List, Optional
 import pyautogui
 import time
 import AppKit
@@ -21,18 +22,20 @@ pyautogui.PAUSE = DEFAULT_SPEED_PROFILE["PAUSE"]
 from actions.clipboard_utils import copy_text
 
 
-def click(x, y, clicks=1, button="left", duration=None):
+def click(x: int, y: int, clicks: int = 1, button: str = "left",
+          duration: Optional[float] = None) -> Dict[str, Any]:
     """指定された座標に移動しながらクリックする"""
     if duration is None:
         duration = DEFAULT_SPEED_PROFILE["CLICK_DURATION"]
     try:
-        pyautogui.click(x=x, y=y, clicks=clicks, button=button,duration=duration, tween=pyautogui.easeInOutQuad)
+        pyautogui.click(x=x, y=y, clicks=clicks, button=button, duration=duration,
+                       tween=pyautogui.easeInOutQuad)
         return {"status": "success"}
     except Exception as e:
         return {"status": "error", "message": f"Failed to click: {str(e)}"}
 
 
-def type_text(text):
+def type_text(text: str) -> Dict[str, Any]:
     """テキストを入力する（osascript経由で日本語なども忠実にテキスト入力）"""
     import subprocess
 
@@ -54,7 +57,8 @@ def type_text(text):
     except Exception as e:
         return {"status": "error", "message": f"Failed to type text via osascript: {str(e)}"}
 
-def press_key(key):
+
+def press_key(key: str) -> Dict[str, Any]:
     """特定のキーを押す"""
     try:
         if not isinstance(key, str):
@@ -67,7 +71,7 @@ def press_key(key):
         return {"status": "error", "message": f"Failed to press key: {str(e)}"}
 
 
-def hotkey(keys):
+def hotkey(keys: List[str]) -> Dict[str, Any]:
     """ホットキーを実行する"""
     try:
         for key in keys:
@@ -81,7 +85,7 @@ def hotkey(keys):
         return {"status": "error", "message": f"Failed to execute hotkey: {str(e)}"}
 
 
-def mouse_move(x, y, duration=None):
+def mouse_move(x: int, y: int, duration: Optional[float] = None) -> Dict[str, Any]:
     """指定された座標に移動する"""
     if duration is None:
         duration = DEFAULT_SPEED_PROFILE["MOUSE_MOVE_DURATION"]
@@ -92,7 +96,7 @@ def mouse_move(x, y, duration=None):
         return {"status": "error", "message": f"Failed to move mouse: {str(e)}"}
 
 
-def scroll(amount):
+def scroll(amount: int) -> Dict[str, Any]:
     """スクロールする"""
     try:
         scroll_amount = int(amount)
@@ -105,14 +109,15 @@ def scroll(amount):
     return {"status": "success"}
 
 
-def drag(from_x, from_y, to_x, to_y, duration=None, button="left"):
+def drag(from_x: int, from_y: int, to_x: int, to_y: int,
+         duration: Optional[float] = None, button: str = "left") -> Dict[str, Any]:
     """ドラッグアンドドロップを実行する"""
     if duration is None:
         duration = DEFAULT_SPEED_PROFILE["DRAG_DURATION"]
     try:
         move_duration = DEFAULT_SPEED_PROFILE["MOUSE_MOVE_DURATION"]
-        pyautogui.moveTo(from_x, from_y, duration=move_duration,tween=pyautogui.easeInOutQuad)
-        pyautogui.dragTo(to_x, to_y, duration=duration,button=button, tween=pyautogui.easeInOutQuad)
+        pyautogui.moveTo(from_x, from_y, duration=move_duration, tween=pyautogui.easeInOutQuad)
+        pyautogui.dragTo(to_x, to_y, duration=duration, button=button, tween=pyautogui.easeInOutQuad)
         return {"status": "success"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
@@ -122,7 +127,7 @@ def drag(from_x, from_y, to_x, to_y, duration=None, button="left"):
 _cursor_hidden = False
 
 
-def set_cursor_visibility(visible):
+def set_cursor_visibility(visible: bool) -> Dict[str, Any]:
     """マウスカーソルの表示・非表示を切り替える (AppKitを使用)"""
     global _cursor_hidden
     try:

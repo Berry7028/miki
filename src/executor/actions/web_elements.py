@@ -4,6 +4,10 @@ import json
 import os
 
 from utils.sanitizer import sanitize_for_jxa_string, sanitize_applescript_string
+from utils.jxa_helpers import (
+    build_web_elements_template,
+    build_web_click_template,
+)
 
 
 def get_web_elements(app_name):
@@ -13,53 +17,8 @@ def get_web_elements(app_name):
     # アプリ名をサニタイズ（インジェクション対策）
     safe_app_name = sanitize_for_jxa_string(app_name, is_app_name=True)
 
-    jxa_script = f'''
-    const se = Application("System Events");
-    const proc = se.processes["{safe_app_name}"];
-
-    function findWebArea(root) {{
-      try {{
-        const elements = root.entireContents();
-        for (let i = 0; i < elements.length; i++) {{
-          try {{
-            if (elements[i].role() === "AXWebArea") {{
-              return elements[i];
-            }}
-          }} catch (e) {{}}
-        }}
-      }} catch (e) {{}}
-      return null;
-    }}
-
-    if (proc.windows.length === 0) {{
-      JSON.stringify({{ error: "No windows found" }});
-    }} else {{
-      const webArea = findWebArea(proc.windows[0]);
-      if (webArea !== null) {{
-        const webElements = webArea.entireContents();
-        const result = [];
-
-        for (let i = 0; i < Math.min(webElements.length, 100); i++) {{
-          try {{
-            const elem = webElements[i];
-            const props = elem.properties();
-            result.push({{
-              role: props.role,
-              name: props.name || props.title || "",
-              value: props.value || "",
-              description: props.description || "",
-              position: props.position ? [props.position[0], props.position[1]] : [0, 0],
-              size: props.size ? [props.size[0], props.size[1]] : [0, 0]
-            }});
-          }} catch (e) {{}}
-        }}
-
-        JSON.stringify({{ elements: result }});
-      }} else {{
-        JSON.stringify({{ error: "AXWebArea not found" }});
-      }}
-    }}
-    '''
+    # 共通テンプレートを使用（コード重複の削減）
+    jxa_script = build_web_elements_template(safe_app_name)
 
     try:
         result = subprocess.run(
@@ -180,63 +139,8 @@ def click_web_element(app_name, role, name):
     safe_role = sanitize_for_jxa_string(role)
     safe_name = sanitize_for_jxa_string(name)
 
-    jxa_script = f'''
-    const se = Application("System Events");
-    const proc = se.processes["{safe_app_name}"];
-
-    function findWebArea(root) {{
-      try {{
-        const elements = root.entireContents();
-        for (let i = 0; i < elements.length; i++) {{
-          try {{
-            if (elements[i].role() === "AXWebArea") {{
-              return elements[i];
-            }}
-          }} catch (e) {{}}
-        }}
-      }} catch (e) {{}}
-      return null;
-    }}
-
-    function findElement(root, role, name) {{
-      try {{
-        const elements = root.entireContents();
-        for (let i = 0; i < elements.length; i++) {{
-          const elem = elements[i];
-          try {{
-            const props = elem.properties();
-            if (props.role === role && (props.name === name || props.title === name)) {{
-              return elem;
-            }}
-          }} catch (e) {{}}
-        }}
-      }} catch (e) {{}}
-      return null;
-    }}
-
-    if (proc.windows.length === 0) {{
-      "ERROR: No windows found";
-    }} else {{
-      const webArea = findWebArea(proc.windows[0]);
-      if (webArea !== null) {{
-        const elem = findElement(webArea, "{safe_role}", "{safe_name}");
-        if (elem !== null) {{
-          const props = elem.properties();
-          const pos = props.position;
-          const size = props.size;
-          JSON.stringify({{
-            status: "success",
-            x: pos[0] + size[0] / 2,
-            y: pos[1] + size[1] / 2
-          }});
-        }} else {{
-          "ERROR: Element not found";
-        }}
-      }} else {{
-        "ERROR: AXWebArea not found";
-      }}
-    }}
-    '''
+    # 共通テンプレートを使用（コード重複の削減）
+    jxa_script = build_web_click_template(safe_app_name, safe_role, safe_name)
 
     try:
         import pyautogui

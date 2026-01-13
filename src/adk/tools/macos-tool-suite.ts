@@ -3,6 +3,16 @@ import type { PythonBridge } from "../../core/python-bridge";
 import { PERFORMANCE_CONFIG } from "../../core/constants";
 import * as schemas from "./schemas";
 import { PythonBridgeTool } from "./python-bridge-tool";
+import type {
+  ClickParams,
+  MoveParams,
+  DragParams,
+  ElementsJsonParams,
+  WebElementsParams,
+  WaitParams,
+  ThinkParams,
+  DoneParams,
+} from "./schemas";
 
 export class MacOSToolSuite {
   private bridge: PythonBridge;
@@ -40,7 +50,7 @@ export class MacOSToolSuite {
     };
   }
 
-  public createTools(): FunctionTool<any>[] {
+  public createTools(): FunctionTool<unknown>[] {
     return [
       this.createClickTool(),
       this.createMoveTool(),
@@ -64,14 +74,14 @@ export class MacOSToolSuite {
       name: "click",
       description: "指定した正規化座標(0-1000)を単一の左クリックで操作します。",
       parameters: schemas.ClickSchema,
-      execute: async (args: any, context?: ToolContext) => {
+      execute: async (args: ClickParams, context?: ToolContext) => {
         const pos = this.normalizeToScreen(args.x, args.y);
         const result = await this.bridge.call("click", pos);
         const screenshot = await this.takePostActionScreenshot(pos);
         if (context) {
           context.state.set("last_action_pos", pos);
         }
-        const finalResult: any = { ...result };
+        const finalResult: Record<string, unknown> = { ...result };
         if (screenshot) {
           finalResult.screenshot = screenshot;
         }
@@ -85,14 +95,14 @@ export class MacOSToolSuite {
       name: "move",
       description: "マウスカーソルを指定した正規化座標(0-1000)へ移動します。",
       parameters: schemas.MoveSchema,
-      execute: async (args: any, context?: ToolContext) => {
+      execute: async (args: MoveParams, context?: ToolContext) => {
         const pos = this.normalizeToScreen(args.x, args.y);
         const result = await this.bridge.call("move", pos);
         const screenshot = await this.takePostActionScreenshot(pos);
         if (context) {
           context.state.set("last_action_pos", pos);
         }
-        const finalResult: any = { ...result };
+        const finalResult: Record<string, unknown> = { ...result };
         if (screenshot) {
           finalResult.screenshot = screenshot;
         }
@@ -106,7 +116,7 @@ export class MacOSToolSuite {
       name: "drag",
       description: "from座標からto座標へドラッグ&ドロップします。",
       parameters: schemas.DragSchema,
-      execute: async (args: any, context?: ToolContext) => {
+      execute: async (args: DragParams, context?: ToolContext) => {
         const from = this.normalizeToScreen(args.from_x, args.from_y);
         const to = this.normalizeToScreen(args.to_x, args.to_y);
         const result = await this.bridge.call("drag", {
@@ -119,7 +129,7 @@ export class MacOSToolSuite {
         if (context) {
           context.state.set("last_action_pos", from);
         }
-        const finalResult: any = { ...result };
+        const finalResult: Record<string, unknown> = { ...result };
         if (screenshot) {
           finalResult.screenshot = screenshot;
         }
@@ -169,7 +179,7 @@ export class MacOSToolSuite {
       name: "elementsJson",
       description: "macOSのアクセシビリティツリーを取得します。",
       parameters: schemas.ElementsJsonSchema,
-      execute: async (args: any, context?: ToolContext) => {
+      execute: async (args: ElementsJsonParams, context?: ToolContext) => {
         const result = await this.bridge.call("elementsJson", args);
         if (context && result.status === "success" && result.ui_data) {
           context.state.set("last_ui_snapshot_app", args.app_name);
@@ -194,7 +204,7 @@ export class MacOSToolSuite {
       name: "webElements",
       description: "ブラウザ内のDOM要素一覧を取得します。",
       parameters: schemas.WebElementsSchema,
-      execute: async (args: any, context?: ToolContext) => {
+      execute: async (args: WebElementsParams, context?: ToolContext) => {
         const result = await this.bridge.call("webElements", args);
         if (context && result.status === "success") {
           context.state.set("current_app", args.app_name);
@@ -218,7 +228,7 @@ export class MacOSToolSuite {
       name: "wait",
       description: "指定秒数待機します。",
       parameters: schemas.WaitSchema,
-      execute: async (args: any) => {
+      execute: async (args: WaitParams) => {
         await new Promise((resolve) => setTimeout(resolve, args.seconds * 1000));
         return { status: "success", message: `${args.seconds}秒待機しました` };
       },
@@ -230,7 +240,7 @@ export class MacOSToolSuite {
       name: "think",
       description: "タスクの計画や実行後の検証を明示的に記録します。",
       parameters: schemas.ThinkSchema,
-      execute: async (args: any) => {
+      execute: async (args: ThinkParams) => {
         return { status: "success", thought: args.thought, phase: args.phase };
       },
     });
@@ -241,7 +251,7 @@ export class MacOSToolSuite {
       name: "done",
       description: "すべてのタスクが完了したことを報告します。",
       parameters: schemas.DoneSchema,
-      execute: async (args: any) => {
+      execute: async (args: DoneParams) => {
         return { status: "success", message: args.message };
       },
     });

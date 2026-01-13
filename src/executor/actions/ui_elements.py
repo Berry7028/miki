@@ -13,6 +13,10 @@ from .constants import (
 )
 from utils.text_input import type_text_via_clipboard
 from utils.sanitizer import sanitize_for_jxa_string
+from utils.jxa_helpers import (
+    build_click_element_template,
+    build_focus_element_template,
+)
 
 
 def get_ui_elements(app_name):
@@ -173,46 +177,8 @@ def click_element(app_name, role, name):
     safe_role = sanitize_for_jxa_string(role)
     safe_name = sanitize_for_jxa_string(name)
 
-    jxa_script = f'''
-    const se = Application("System Events");
-    const proc = se.processes["{safe_app_name}"];
-
-    function findElementRecursive(elem, role, name, depth) {{
-      if (depth > 5) return null;
-      try {{
-        const props = elem.properties();
-        if (props.role === role && (props.name === name || props.title === name)) {{
-          return elem;
-        }}
-        
-        const children = elem.uiElements();
-        for (let i = 0; i < children.length; i++) {{
-          const found = findElementRecursive(children[i], role, name, depth + 1);
-          if (found) return found;
-        }}
-      }} catch (e) {{}}
-      return null;
-    }}
-
-    if (proc.windows.length === 0) {{
-      "ERROR: No windows found";
-    }} else {{
-      const elem = findElementRecursive(proc.windows[0], "{safe_role}", "{safe_name}", 0);
-      if (elem !== null) {{
-        const props = elem.properties();
-        const pos = props.position;
-        const size = props.size;
-        // 座標とサイズをJSONで返す
-        JSON.stringify({{
-          status: "success",
-          x: pos[0] + size[0] / 2,
-          y: pos[1] + size[1] / 2
-        }});
-      }} else {{
-        "ERROR: Element not found";
-      }}
-    }}
-    '''
+    # 共通テンプレートを使用（コード重複の削減）
+    jxa_script = build_click_element_template(safe_app_name, safe_role, safe_name)
 
     try:
         result = subprocess.run(
@@ -249,39 +215,8 @@ def focus_element(app_name, role, name):
     safe_role = sanitize_for_jxa_string(role)
     safe_name = sanitize_for_jxa_string(name)
 
-    jxa_script = f'''
-    const se = Application("System Events");
-    const proc = se.processes["{safe_app_name}"];
-
-    function findElementRecursive(elem, role, name, depth) {{
-      if (depth > 5) return null;
-      try {{
-        const props = elem.properties();
-        if (props.role === role && (props.name === name || props.title === name)) {{
-          return elem;
-        }}
-        
-        const children = elem.uiElements();
-        for (let i = 0; i < children.length; i++) {{
-          const found = findElementRecursive(children[i], role, name, depth + 1);
-          if (found) return found;
-        }}
-      }} catch (e) {{}}
-      return null;
-    }}
-
-    if (proc.windows.length === 0) {{
-      "ERROR: No windows found";
-    }} else {{
-      const elem = findElementRecursive(proc.windows[0], "{safe_role}", "{safe_name}", 0);
-      if (elem !== null) {{
-        elem.focused = true;
-        "success";
-      }} else {{
-        "ERROR: Element not found";
-      }}
-    }}
-    '''
+    # 共通テンプレートを使用（コード重複の削減）
+    jxa_script = build_focus_element_template(safe_app_name, safe_role, safe_name)
 
     try:
         result = subprocess.run(

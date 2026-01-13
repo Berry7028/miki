@@ -1,8 +1,9 @@
 """Clipboard utilities for macOS."""
+from typing import Dict, Any
 import subprocess
 
 
-def copy_text(text):
+def copy_text(text: str) -> Dict[str, Any]:
     """
     Copy text to clipboard.
     Prefer pbcopy (handles UTF-8 reliably), fall back to pyperclip if needed.
