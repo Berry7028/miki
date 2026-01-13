@@ -11,6 +11,7 @@ const Overlay = () => {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [trail, setTrail] = useState<{ x: number; y: number }[]>([]);
   const [isStopping, setIsStopping] = useState(false);
+  const [isStopButtonHovered, setIsStopButtonHovered] = useState(false);
   const requestRef = useRef<number>();
 
   useEffect(() => {
@@ -250,11 +251,15 @@ const Overlay = () => {
           <button
             onClick={handleStop}
             disabled={isStopping}
+            onMouseEnter={() => !isStopping && setIsStopButtonHovered(true)}
+            onMouseLeave={() => setIsStopButtonHovered(false)}
             style={{
               padding: "12px 24px",
               background: isStopping
                 ? "#555"
-                : "#ff6b6b",
+                : isStopButtonHovered
+                  ? "#ff5252"
+                  : "#ff6b6b",
               color: "#1f242c",
               border: "none",
               borderRadius: 8,
@@ -267,18 +272,7 @@ const Overlay = () => {
               alignItems: "center",
               gap: 8,
               boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-            }}
-            onMouseEnter={(e) => {
-              if (!isStopping) {
-                e.currentTarget.style.background = "#ff5252";
-                e.currentTarget.style.transform = "translateY(-1px)";
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!isStopping) {
-                e.currentTarget.style.background = "#ff6b6b";
-                e.currentTarget.style.transform = "translateY(0)";
-              }
+              transform: isStopButtonHovered && !isStopping ? "translateY(-1px)" : "translateY(0)",
             }}
           >
             <svg
