@@ -171,3 +171,38 @@ if (originalFindAgent) {
     return originalFindAgent.call(this, agentName);
   };
 }
+
+// パッチ: ツール実行結果に含まれるスクリーンショットを画像パーツとして展開する
+const originalCallLlmAsync = (LlmAgent as any).prototype.callLlmAsync;
+(LlmAgent as any).prototype.callLlmAsync = async function* patchedCallLlmAsync(
+  invocationContext: any,
+  llmRequest: any,
+  modelResponseEvent: any
+) {
+  if (llmRequest && llmRequest.contents) {
+    for (const content of llmRequest.contents) {
+      if (content.role === "user" && content.parts) {
+        const newParts = [];
+        for (const part of content.parts) {
+          newParts.push(part);
+          if (part.functionResponse && part.functionResponse.response) {
+            const response = part.functionResponse.response;
+            if (response.screenshot && response.screenshot.inlineData) {
+              newParts.push({
+                inlineData: response.screenshot.inlineData,
+              });
+              delete response.screenshot;
+            }
+          }
+        }
+        content.parts = newParts;
+      }
+    }
+  }
+  yield* originalCallLlmAsync.call(
+    this,
+    invocationContext,
+    llmRequest,
+    modelResponseEvent
+  );
+};

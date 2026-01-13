@@ -2,7 +2,6 @@ import { FunctionTool, type ToolContext } from "@google/adk";
 import type { PythonBridge } from "../../core/python-bridge";
 import { PERFORMANCE_CONFIG } from "../../core/constants";
 import * as schemas from "./schemas";
-import { PythonBridgeTool } from "./python-bridge-tool";
 
 export class MacOSToolSuite {
   private bridge: PythonBridge;
@@ -129,38 +128,70 @@ export class MacOSToolSuite {
   }
 
   private createScrollTool() {
-    return new PythonBridgeTool({
+    return new FunctionTool({
       name: "scroll",
       description: "垂直方向にスクロールします。正の値で下方向、負の値で上方向。",
       parameters: schemas.ScrollSchema,
-      bridge: this.bridge,
+      execute: async (args: any) => {
+        const result = await this.bridge.call("scroll", args);
+        const screenshot = await this.takePostActionScreenshot();
+        const finalResult: any = { ...result };
+        if (screenshot) {
+          finalResult.screenshot = screenshot;
+        }
+        return finalResult;
+      },
     });
   }
 
   private createTypeTool() {
-    return new PythonBridgeTool({
+    return new FunctionTool({
       name: "type",
       description: "フォーカス中の入力欄にテキストを入力します。",
       parameters: schemas.TypeSchema,
-      bridge: this.bridge,
+      execute: async (args: any) => {
+        const result = await this.bridge.call("type", args);
+        const screenshot = await this.takePostActionScreenshot();
+        const finalResult: any = { ...result };
+        if (screenshot) {
+          finalResult.screenshot = screenshot;
+        }
+        return finalResult;
+      },
     });
   }
 
   private createPressTool() {
-    return new PythonBridgeTool({
+    return new FunctionTool({
       name: "press",
       description: "EnterやEscなどの単一キーを送信します。",
       parameters: schemas.PressSchema,
-      bridge: this.bridge,
+      execute: async (args: any) => {
+        const result = await this.bridge.call("press", args);
+        const screenshot = await this.takePostActionScreenshot();
+        const finalResult: any = { ...result };
+        if (screenshot) {
+          finalResult.screenshot = screenshot;
+        }
+        return finalResult;
+      },
     });
   }
 
   private createHotkeyTool() {
-    return new PythonBridgeTool({
+    return new FunctionTool({
       name: "hotkey",
       description: "修飾キーを含む複数キーの同時押下を送信します。",
       parameters: schemas.HotkeySchema,
-      bridge: this.bridge,
+      execute: async (args: any) => {
+        const result = await this.bridge.call("hotkey", args);
+        const screenshot = await this.takePostActionScreenshot();
+        const finalResult: any = { ...result };
+        if (screenshot) {
+          finalResult.screenshot = screenshot;
+        }
+        return finalResult;
+      },
     });
   }
 
@@ -171,21 +202,34 @@ export class MacOSToolSuite {
       parameters: schemas.ElementsJsonSchema,
       execute: async (args: any, context?: ToolContext) => {
         const result = await this.bridge.call("elementsJson", args);
+        const screenshot = await this.takePostActionScreenshot();
         if (context && result.status === "success" && result.ui_data) {
           context.state.set("last_ui_snapshot_app", args.app_name);
           context.state.set("current_app", args.app_name);
         }
-        return result;
+        const finalResult: any = { ...result };
+        if (screenshot) {
+          finalResult.screenshot = screenshot;
+        }
+        return finalResult;
       },
     });
   }
 
   private createFocusElementTool() {
-    return new PythonBridgeTool({
+    return new FunctionTool({
       name: "focusElement",
       description: "要素をフォーカスします。",
       parameters: schemas.FocusElementSchema,
-      bridge: this.bridge,
+      execute: async (args: any) => {
+        const result = await this.bridge.call("focusElement", args);
+        const screenshot = await this.takePostActionScreenshot();
+        const finalResult: any = { ...result };
+        if (screenshot) {
+          finalResult.screenshot = screenshot;
+        }
+        return finalResult;
+      },
     });
   }
 
@@ -196,20 +240,33 @@ export class MacOSToolSuite {
       parameters: schemas.WebElementsSchema,
       execute: async (args: any, context?: ToolContext) => {
         const result = await this.bridge.call("webElements", args);
+        const screenshot = await this.takePostActionScreenshot();
         if (context && result.status === "success") {
           context.state.set("current_app", args.app_name);
         }
-        return result;
+        const finalResult: any = { ...result };
+        if (screenshot) {
+          finalResult.screenshot = screenshot;
+        }
+        return finalResult;
       },
     });
   }
 
   private createOsaTool() {
-    return new PythonBridgeTool({
+    return new FunctionTool({
       name: "osa",
       description: "任意のAppleScriptを実行します。",
       parameters: schemas.OsaSchema,
-      bridge: this.bridge,
+      execute: async (args: any) => {
+        const result = await this.bridge.call("osa", args);
+        const screenshot = await this.takePostActionScreenshot();
+        const finalResult: any = { ...result };
+        if (screenshot) {
+          finalResult.screenshot = screenshot;
+        }
+        return finalResult;
+      },
     });
   }
 
@@ -220,7 +277,12 @@ export class MacOSToolSuite {
       parameters: schemas.WaitSchema,
       execute: async (args: any) => {
         await new Promise((resolve) => setTimeout(resolve, args.seconds * 1000));
-        return { status: "success", message: `${args.seconds}秒待機しました` };
+        const screenshot = await this.takePostActionScreenshot();
+        const finalResult: any = { status: "success", message: `${args.seconds}秒待機しました` };
+        if (screenshot) {
+          finalResult.screenshot = screenshot;
+        }
+        return finalResult;
       },
     });
   }
