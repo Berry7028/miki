@@ -12,6 +12,7 @@ let tray;
 let controllerProcess;
 let controllerReader;
 let isQuitting = false;
+let chatHideTimeout = null; // Track chat hide timeout
 
 // Generate nonces for CSP
 let styleNonces = new Map(); // Map to store nonces per webContents ID
@@ -404,6 +405,12 @@ function ensureController() {
       if (payload.event === "status") {
         console.log("Status event received:", payload.state);
         if (payload.state === "running" || payload.state === "thinking") {
+          // Clear any pending chat hide timeout
+          if (chatHideTimeout) {
+            clearTimeout(chatHideTimeout);
+            chatHideTimeout = null;
+          }
+
           if (!overlayWindow || overlayWindow.isDestroyed()) {
             console.log("Creating overlay window...");
             overlayWindow = createOverlayWindow();
@@ -421,13 +428,20 @@ function ensureController() {
           if (chatWindow && !chatWindow.isDestroyed() && chatWindow.isVisible()) {
             chatWindow.webContents.send("miki:chat-visibility", { visible: false });
             // アニメーション完了後にウィンドウを非表示
-            setTimeout(() => {
+            chatHideTimeout = setTimeout(() => {
               if (chatWindow && !chatWindow.isDestroyed()) {
                 chatWindow.hide();
               }
+              chatHideTimeout = null;
             }, 350); // アニメーション時間 + buffer
           }
         } else if (payload.state === "idle") {
+          // Clear any pending chat hide timeout
+          if (chatHideTimeout) {
+            clearTimeout(chatHideTimeout);
+            chatHideTimeout = null;
+          }
+
           if (overlayWindow && !overlayWindow.isDestroyed()) {
             overlayWindow.webContents.send("miki:backend", { event: "fadeout" });
             // フェードアウトアニメーション完了後にウィンドウを破棄
@@ -444,12 +458,18 @@ function ensureController() {
           }
           // チャットウィンドウを再表示
           if (chatWindow && !chatWindow.isDestroyed()) {
-            chatWindow.webContents.send("miki:chat-visibility", { visible: true });
             chatWindow.show();
+            chatWindow.webContents.send("miki:chat-visibility", { visible: true });
             chatWindow.webContents.send("miki:focus-input");
           }
         }
       } else if (payload.event === "completed") {
+        // Clear any pending chat hide timeout
+        if (chatHideTimeout) {
+          clearTimeout(chatHideTimeout);
+          chatHideTimeout = null;
+        }
+
         if (overlayWindow && !overlayWindow.isDestroyed()) {
           overlayWindow.webContents.send("miki:backend", { event: "fadeout" });
           // フェードアウトアニメーション完了後にウィンドウを破棄
@@ -466,8 +486,8 @@ function ensureController() {
         }
         // チャットウィンドウを再表示
         if (chatWindow && !chatWindow.isDestroyed()) {
-          chatWindow.webContents.send("miki:chat-visibility", { visible: true });
           chatWindow.show();
+          chatWindow.webContents.send("miki:chat-visibility", { visible: true });
           chatWindow.webContents.send("miki:focus-input");
         }
       }
