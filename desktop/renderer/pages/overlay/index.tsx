@@ -30,6 +30,7 @@ const Overlay = () => {
           setThinkingText("");
           setIsStopping(false);
         } else if (payload.state === "stopping") {
+          setVisible(true);
           setIsStopping(true);
         }
       } else if (payload.event === "action_update") {
