@@ -1,0 +1,14 @@
+// タイムアウト定数
+
+export const TIMEOUT_CONSTANTS = {
+  PYTHON: {
+    DEFAULT: 30000,
+    BROWSER_DETECTION: 5000,
+    UI_ELEMENTS_JSON: 10000,
+    CLICK_ELEMENT: 5000,
+    APPLESCRIPT: 30000,
+  },
+  OVERLAY: {
+    MOUSE_UPDATE_INTERVAL_MS: 16, // ~60fps
+  },
+} as const;

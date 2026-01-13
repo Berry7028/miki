@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, memo } from "react";
 import { createRoot } from "react-dom/client";
 import createCache from "@emotion/cache";
 import { CacheProvider } from "@emotion/react";
@@ -35,7 +35,7 @@ async function createEmotionCache() {
   } catch (error) {
     console.warn("Failed to get nonce, styles may be blocked by CSP:", error);
   }
-  
+
   return createCache({
     key: "miki-chat",
     nonce: nonce || undefined,
@@ -395,6 +395,79 @@ const ChatApp = () => {
     return null;
   };
 
+  // Memoized message component for performance
+  const MemoizedMessage = memo(({ msg }: { msg: Message }) => {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: msg.type === "user" ? "flex-end" : "flex-start",
+          mb: 2,
+        }}
+      >
+        <Stack direction="row" spacing={1.5} sx={{ maxWidth: "85%" }}>
+          {msg.type !== "user" && (
+            <Avatar
+              sx={{
+                width: 28,
+                height: 28,
+                bgcolor: "#3a3f47",
+                color: "#b0b0b0",
+              }}
+            >
+              {msg.type === "action" ? (
+                <AutoFixHigh sx={{ fontSize: 16 }} />
+              ) : msg.type === "tool" ? (
+                <Build sx={{ fontSize: 16 }} />
+              ) : (
+                <SmartToy sx={{ fontSize: 16 }} />
+              )}
+            </Avatar>
+          )}
+          <Paper
+            sx={{
+              p: 2,
+              color: msg.type === "user" ? "#ffffff" : "text.primary",
+              ...getMessageStyle(msg.type),
+            }}
+          >
+            {getMessageLabel(msg) && (
+              <Typography
+                variant="caption"
+                sx={{
+                  display: "block",
+                  mb: 1,
+                  color: msg.type === "thinking" ? "#e6d6b8" : "#79b8ff",
+                  fontWeight: 700,
+                  letterSpacing: "0.05em",
+                  fontSize: "0.65rem",
+                }}
+              >
+                {getMessageLabel(msg)}
+              </Typography>
+            )}
+            <ActionContent msg={msg} />
+            <Typography
+              variant="caption"
+              sx={{
+                display: "block",
+                mt: 1,
+                opacity: 0.6,
+                textAlign: msg.type === "user" ? "right" : "left",
+                fontSize: "0.7rem",
+              }}
+            >
+              {new Date(msg.timestamp).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </Typography>
+          </Paper>
+        </Stack>
+      </Box>
+    );
+  }, (prevProps, nextProps) => prevProps.msg.timestamp === nextProps.msg.timestamp);
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -447,74 +520,7 @@ const ChatApp = () => {
           }}
         >
           {messages.map((msg, i) => (
-            <Box
-              key={i}
-              sx={{
-                display: "flex",
-                justifyContent: msg.type === "user" ? "flex-end" : "flex-start",
-                mb: 2,
-              }}
-            >
-              <Stack direction="row" spacing={1.5} sx={{ maxWidth: "85%" }}>
-                {msg.type !== "user" && (
-                  <Avatar
-                    sx={{
-                      width: 28,
-                      height: 28,
-                      bgcolor: "#3a3f47",
-                      color: "#b0b0b0",
-                    }}
-                  >
-                    {msg.type === "action" ? (
-                      <AutoFixHigh sx={{ fontSize: 16 }} />
-                    ) : msg.type === "tool" ? (
-                      <Build sx={{ fontSize: 16 }} />
-                    ) : (
-                      <SmartToy sx={{ fontSize: 16 }} />
-                    )}
-                  </Avatar>
-                )}
-                <Paper
-                  sx={{
-                    p: 2,
-                    color: msg.type === "user" ? "#ffffff" : "text.primary",
-                    ...getMessageStyle(msg.type),
-                  }}
-                >
-                  {getMessageLabel(msg) && (
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        display: "block",
-                        mb: 1,
-                        color: msg.type === "thinking" ? "#e6d6b8" : "#79b8ff",
-                        fontWeight: 700,
-                        letterSpacing: "0.05em",
-                        fontSize: "0.65rem",
-                      }}
-                    >
-                    {getMessageLabel(msg)}
-                  </Typography>
-                )}
-                <ActionContent msg={msg} />
-                <Typography
-                  variant="caption"
-                    sx={{
-                      display: "block",
-                      mt: 1,
-                      opacity: 0.6,
-                      textAlign: msg.type === "user" ? "right" : "left",
-                      fontSize: "0.7rem",
-                    }}
-                  >
-                    {new Date(msg.timestamp).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </Typography>
-                </Paper>
-              </Stack>
-            </Box>
+            <MemoizedMessage key={i} msg={msg} />
           ))}
           <div ref={messagesEndRef} />
         </Box>
@@ -585,13 +591,69 @@ const ChatApp = () => {
   );
 };
 
+// Error Boundary for catching React rendering errors
+class ChatErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error("Chat error boundary caught an error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              height: "100vh",
+              bgcolor: "#0e0f12",
+              color: "text.secondary",
+              p: 2,
+            }}
+          >
+            <SmartToy sx={{ fontSize: 48, mb: 2, opacity: 0.5 }} />
+            <Typography variant="h6" gutterBottom>
+              エラーが発生しました
+            </Typography>
+            <Typography variant="body2" align="center" sx={{ mb: 2 }}>
+              チャットウィンドウの読み込み中にエラーが発生しました。再度開いてください。
+            </Typography>
+            <IconButton onClick={() => window.location.reload()} size="small">
+              <AutoFixHigh fontSize="small" />
+            </IconButton>
+          </Box>
+        </ThemeProvider>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 const root = createRoot(document.getElementById("root")!);
 
 // Initialize app with Emotion cache
 createEmotionCache().then((cache) => {
   root.render(
     <CacheProvider value={cache}>
-      <ChatApp />
+      <ChatErrorBoundary>
+        <ChatApp />
+      </ChatErrorBoundary>
     </CacheProvider>
   );
 });
