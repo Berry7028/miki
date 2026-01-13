@@ -17,9 +17,3 @@ body {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
-
-/* Stop button hover effect enhancement */
-@keyframes pulse {
-  0%, 100% { box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3); }
-  50% { box-shadow: 0 2px 16px rgba(255, 107, 107, 0.5); }
-}
