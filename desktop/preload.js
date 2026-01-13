@@ -33,5 +33,10 @@ contextBridge.exposeInMainWorld("miki", {
     const listener = () => callback();
     ipcRenderer.on("miki:focus-input", listener);
     return () => ipcRenderer.removeListener("miki:focus-input", listener);
+  },
+  onChatVisibility: (callback) => {
+    const listener = (_event, payload) => callback(payload);
+    ipcRenderer.on("miki:chat-visibility", listener);
+    return () => ipcRenderer.removeListener("miki:chat-visibility", listener);
   }
 });
