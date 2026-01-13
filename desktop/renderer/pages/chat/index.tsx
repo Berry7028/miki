@@ -304,18 +304,42 @@ const ChatApp = () => {
   }, []);
 
   useEffect(() => {
+    let visibilityTimeout: number | null = null;
+    let animationTimeout: number | null = null;
+
+    const clearPendingTimeouts = () => {
+      if (visibilityTimeout !== null) {
+        clearTimeout(visibilityTimeout);
+        visibilityTimeout = null;
+      }
+      if (animationTimeout !== null) {
+        clearTimeout(animationTimeout);
+        animationTimeout = null;
+      }
+    };
+
     const unsubscribe = window.miki?.onChatVisibility?.((payload) => {
+      clearPendingTimeouts();
+
       if (payload.visible) {
         setIsAnimating(true);
-        setTimeout(() => setIsVisible(true), 50);
-        setTimeout(() => setIsAnimating(false), 300);
+        setIsVisible(true);
+        animationTimeout = window.setTimeout(() => {
+          setIsAnimating(false);
+        }, 300);
       } else {
         setIsAnimating(true);
         setIsVisible(false);
-        setTimeout(() => setIsAnimating(false), 300);
+        animationTimeout = window.setTimeout(() => {
+          setIsAnimating(false);
+        }, 300);
       }
     });
-    return () => unsubscribe?.();
+
+    return () => {
+      clearPendingTimeouts();
+      unsubscribe?.();
+    };
   }, []);
 
   const handleSend = async () => {
