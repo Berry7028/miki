@@ -7,8 +7,16 @@ Miki Executor - MacOS操作実行エンジン
 import sys
 import json
 import time
+import logging
 import pyautogui
 import io
+
+# ロギングの設定
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8')
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', line_buffering=True)
@@ -82,8 +90,17 @@ def main():
 
             print(json.dumps(result, ensure_ascii=False))
             sys.stdout.flush()
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON decode error: {e}")
+            print(json.dumps({"status": "error", "message": "Invalid JSON format", "error_type": "json_decode"}, ensure_ascii=False))
+            sys.stdout.flush()
+        except (KeyError, TypeError) as e:
+            logger.error(f"Invalid command structure: {e}")
+            print(json.dumps({"status": "error", "message": "Invalid command structure", "error_type": "validation"}, ensure_ascii=False))
+            sys.stdout.flush()
         except Exception as e:
-            print(json.dumps({"status": "error", "message": str(e)}, ensure_ascii=False))
+            logger.exception("Unexpected error in main loop")
+            print(json.dumps({"status": "error", "message": "Unexpected error", "error_type": "internal"}, ensure_ascii=False))
             sys.stdout.flush()
 
 

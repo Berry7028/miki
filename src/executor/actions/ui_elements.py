@@ -1,4 +1,5 @@
 """UI要素の取得と操作"""
+from typing import Dict, Any, Optional
 import subprocess
 import json
 import time
@@ -19,7 +20,7 @@ from utils.jxa_helpers import (
 )
 
 
-def get_ui_elements(app_name):
+def get_ui_elements(app_name: str) -> Dict[str, Any]:
     """
     AppleScriptのGUI Scriptingを使用して、指定されたアプリのGUI要素一覧を効率的に取得する。
     entire contentsを使用せず、一括プロパティ取得を利用することで高速化。
@@ -85,7 +86,7 @@ def get_ui_elements(app_name):
         return {"status": "error", "message": str(e)}
 
 
-def get_ui_elements_json(app_name, max_depth=DEFAULT_UI_MAX_DEPTH):
+def get_ui_elements_json(app_name: str, max_depth: int = DEFAULT_UI_MAX_DEPTH) -> Dict[str, Any]:
     """
     UI要素をJSON形式で詳細に取得（JXA使用）
     properties()とactions()を使って、UI要素の詳細情報を再帰的に取得する
@@ -168,7 +169,7 @@ def get_ui_elements_json(app_name, max_depth=DEFAULT_UI_MAX_DEPTH):
         return {"status": "error", "message": str(e)}
 
 
-def click_element(app_name, role, name):
+def click_element(app_name: str, role: str, name: str) -> Dict[str, Any]:
     """
     UI要素をroleとnameで検索してクリック
     """
@@ -206,7 +207,7 @@ def click_element(app_name, role, name):
         return {"status": "error", "message": str(e)}
 
 
-def focus_element(app_name, role, name):
+def focus_element(app_name: str, role: str, name: str) -> Dict[str, Any]:
     """
     UI要素にフォーカスを当てる
     """
@@ -236,7 +237,7 @@ def focus_element(app_name, role, name):
         return {"status": "error", "message": str(e)}
 
 
-def type_to_element(app_name, role, name, text):
+def type_to_element(app_name: str, role: str, name: str, text: str) -> Dict[str, Any]:
     """
     UI要素をフォーカスしてテキスト入力
     """

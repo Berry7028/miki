@@ -1,4 +1,5 @@
 """Web要素の取得と操作（ブラウザ内）"""
+from typing import Dict, Any, List, Optional
 import subprocess
 import json
 import os
@@ -10,7 +11,7 @@ from utils.jxa_helpers import (
 )
 
 
-def get_web_elements(app_name):
+def get_web_elements(app_name: str) -> Dict[str, Any]:
     """
     ブラウザ内のWeb要素を取得（AXWebArea配下）
     """
@@ -38,7 +39,7 @@ def get_web_elements(app_name):
         return {"status": "error", "message": str(e)}
 
 
-def get_default_browser():
+def get_default_browser() -> Dict[str, Any]:
     """
     macOSのデフォルトブラウザ名を取得する
     """
@@ -130,7 +131,7 @@ def get_default_browser():
     }
 
 
-def click_web_element(app_name, role, name):
+def click_web_element(app_name: str, role: str, name: str) -> Dict[str, Any]:
     """
     ブラウザ内のWeb要素をクリック
     """

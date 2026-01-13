@@ -104,21 +104,47 @@ class WindowManager {
     win.loadFile(path.join(__dirname, "../renderer/pages/overlay/index.html"));
 
     // マウス位置の同期を開始
-    const positionTimer = setInterval(() => {
-      if (win.isDestroyed()) {
-        clearInterval(positionTimer);
-        return;
-      }
-      const point = screen.getCursorScreenPoint();
-      win.webContents.send("miki:mouse-pos", point);
-    }, 16); // ~60fps
+    let positionTimer = null;
 
-    const webContentsId = win.webContents.id;
-    win.on("closed", () => {
-      clearInterval(positionTimer);
-      this.cspManager.deleteNonce(webContentsId);
-      this.windows.overlay = null;
-    });
+    try {
+      positionTimer = setInterval(() => {
+        if (win.isDestroyed()) {
+          if (positionTimer) {
+            clearInterval(positionTimer);
+            positionTimer = null;
+          }
+          return;
+        }
+        const point = screen.getCursorScreenPoint();
+        win.webContents.send("miki:mouse-pos", point);
+      }, 16); // ~60fps
+
+      const webContentsId = win.webContents.id;
+
+      // エラーハンドリング: ウィンドウエラー時にタイマーをクリーンアップ
+      win.on("unresponsive", () => {
+        if (positionTimer) {
+          clearInterval(positionTimer);
+          positionTimer = null;
+        }
+      });
+
+      win.on("closed", () => {
+        if (positionTimer) {
+          clearInterval(positionTimer);
+          positionTimer = null;
+        }
+        this.cspManager.deleteNonce(webContentsId);
+        this.windows.overlay = null;
+      });
+    } catch (error) {
+      // ウィンドウ作成中にエラーが発生した場合のクリーンアップ
+      if (positionTimer) {
+        clearInterval(positionTimer);
+        positionTimer = null;
+      }
+      throw error;
+    }
 
     this.windows.overlay = win;
     return win;
