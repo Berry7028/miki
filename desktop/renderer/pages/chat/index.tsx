@@ -218,6 +218,8 @@ const ChatApp = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentTool, setCurrentTool] = useState<string>("");
   const [thinkingText, setThinkingText] = useState<string>("");
+  const [isVisible, setIsVisible] = useState(true);
+  const [isAnimating, setIsAnimating] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -297,6 +299,21 @@ const ChatApp = () => {
   useEffect(() => {
     const unsubscribe = window.miki?.onFocusInput(() => {
       inputRef.current?.focus();
+    });
+    return () => unsubscribe?.();
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = window.miki?.onChatVisibility?.((payload) => {
+      if (payload.visible) {
+        setIsAnimating(true);
+        setTimeout(() => setIsVisible(true), 50);
+        setTimeout(() => setIsAnimating(false), 300);
+      } else {
+        setIsAnimating(true);
+        setIsVisible(false);
+        setTimeout(() => setIsAnimating(false), 300);
+      }
     });
     return () => unsubscribe?.();
   }, []);
@@ -395,6 +412,16 @@ const ChatApp = () => {
     return null;
   };
 
+  // Animation style for chat widget visibility
+  const containerStyle: React.CSSProperties = {
+    transition: isAnimating
+      ? "opacity 0.3s ease-in-out, transform 0.3s ease-in-out"
+      : "",
+    opacity: isVisible ? 1 : 0,
+    transform: isVisible ? "scale(1)" : "scale(0.95)",
+    pointerEvents: isVisible ? "auto" : "none",
+  };
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -408,6 +435,10 @@ const ChatApp = () => {
           border: "1px solid rgba(255,255,255,0.1)",
           overflow: "hidden",
           boxShadow: "0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)",
+          transition: containerStyle.transition,
+          opacity: containerStyle.opacity,
+          transform: containerStyle.transform,
+          pointerEvents: containerStyle.pointerEvents,
         }}
       >
         <Box
