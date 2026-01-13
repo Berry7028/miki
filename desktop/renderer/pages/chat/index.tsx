@@ -304,14 +304,9 @@ const ChatApp = () => {
   }, []);
 
   useEffect(() => {
-    let visibilityTimeout: number | null = null;
     let animationTimeout: number | null = null;
 
     const clearPendingTimeouts = () => {
-      if (visibilityTimeout !== null) {
-        clearTimeout(visibilityTimeout);
-        visibilityTimeout = null;
-      }
       if (animationTimeout !== null) {
         clearTimeout(animationTimeout);
         animationTimeout = null;
