@@ -56,16 +56,16 @@ const zodV4ToSchema = (schema: any): JsonSchema => {
 
   switch (def.type) {
     case "string":
-      result.type = Type.STRING;
+      result.type = "string";
       return result;
     case "number":
-      result.type = Type.NUMBER;
+      result.type = "number";
       return result;
     case "boolean":
-      result.type = Type.BOOLEAN;
+      result.type = "boolean";
       return result;
     case "array":
-      result.type = Type.ARRAY;
+      result.type = "array";
       if (def.element) {
         result.items = zodV4ToSchema(def.element);
       }
@@ -82,7 +82,7 @@ const zodV4ToSchema = (schema: any): JsonSchema => {
         }
       }
       return {
-        type: Type.OBJECT,
+        type: "object",
         description: result.description,
         properties,
         required: required.length > 0 ? required : [],
@@ -91,13 +91,13 @@ const zodV4ToSchema = (schema: any): JsonSchema => {
     case "literal": {
       const literalValue = def.values ? def.values[0] : undefined;
       if (literalValue === null) {
-        result.type = Type.NULL;
+        result.type = "null";
       } else if (typeof literalValue === "string") {
-        result.type = Type.STRING;
+        result.type = "string";
       } else if (typeof literalValue === "number") {
-        result.type = Type.NUMBER;
+        result.type = "number";
       } else if (typeof literalValue === "boolean") {
-        result.type = Type.BOOLEAN;
+        result.type = "boolean";
       }
       if (literalValue !== undefined) {
         result.enum = [literalValue];
@@ -106,7 +106,7 @@ const zodV4ToSchema = (schema: any): JsonSchema => {
     }
     case "enum": {
       const values = def.entries ? Object.values(def.entries) : def.values || [];
-      result.type = Type.STRING;
+      result.type = "string";
       result.enum = values;
       return result;
     }
@@ -118,7 +118,7 @@ const zodV4ToSchema = (schema: any): JsonSchema => {
     case "nullable": {
       const inner = zodV4ToSchema(def.innerType);
       return {
-        anyOf: [inner, { type: Type.NULL }],
+        anyOf: [inner, { type: "null" }],
         description: result.description,
       };
     }
@@ -128,7 +128,7 @@ const zodV4ToSchema = (schema: any): JsonSchema => {
       return defaultValue === undefined ? inner : { ...inner, default: defaultValue };
     }
     case "null":
-      result.type = Type.NULL;
+      result.type = "null";
       return result;
     case "unknown":
     case "any":
@@ -155,6 +155,7 @@ const originalProcessLlmRequest = (BuiltInCodeExecutor as any).prototype.process
   try {
     originalProcessLlmRequest.call(this, llmRequest);
   } catch (e: any) {
+    console.error("[ADK PATCH] processLlmRequest error:", e);
     if (e.message && e.message.includes("gemini-3-flash-preview")) {
       return;
     }
@@ -199,10 +200,54 @@ const originalCallLlmAsync = (LlmAgent as any).prototype.callLlmAsync;
       }
     }
   }
-  yield* originalCallLlmAsync.call(
-    this,
-    invocationContext,
-    llmRequest,
-    modelResponseEvent
-  );
+
+  try {
+    const generator = originalCallLlmAsync.call(
+      this,
+      invocationContext,
+      llmRequest,
+      modelResponseEvent
+    );
+
+    while (true) {
+      const { value: event, done } = await generator.next();
+      if (done) break;
+
+      // レスポンスの加工
+      if (event && event.content && event.content.parts) {
+        // text パーツが空文字のみで、他に functionCall がある場合は除去
+        const hasFunctionCall = event.content.parts.some((p: any) => p.functionCall);
+        if (hasFunctionCall) {
+          event.content.parts = event.content.parts.filter((p: any) => {
+            if (p.text !== undefined && p.text.trim() === "") return false;
+            return true;
+          });
+        }
+
+        for (const part of event.content.parts) {
+          if (part.functionCall) {
+            console.log("[ADK PATCH] Detected functionCall:", part.functionCall.name, part.functionCall.args);
+            // args が文字列ならオブジェクトに変換
+            if (typeof part.functionCall.args === "string") {
+              try {
+                part.functionCall.args = JSON.parse(part.functionCall.args);
+              } catch (e) {}
+            }
+            if (!part.functionCall.args) {
+              part.functionCall.args = {};
+            }
+          }
+        }
+      }
+      yield event;
+    }
+  } catch (e: any) {
+    console.error("[ADK PATCH] callLlmAsync error:", e);
+    // MALFORMED_FUNCTION_CALL の場合、詳細を出力して、もし可能なら空のレスポンスを返して続行させる
+    if (e.code === "MALFORMED_FUNCTION_CALL" || (e.message && e.message.includes("MALFORMED"))) {
+      console.error("[ADK PATCH] Malformed function call detected. Attempting to recover...");
+      return;
+    }
+    throw e;
+  }
 };

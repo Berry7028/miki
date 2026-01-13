@@ -33,26 +33,43 @@ def click(x, y, clicks=1, button="left", duration=None):
 
 
 def type_text(text):
-    """テキストを入力する（osascript経由で日本語なども忠実にテキスト入力）"""
+    """テキストを入力する（クリップボード経由で日本語なども確実にペースト）"""
     import subprocess
+    from actions.clipboard_utils import copy_text
+    import time
 
-    osa_script = f'''
+    copy_res = copy_text(text)
+    if copy_res["status"] != "success":
+        return copy_res
+
+    osa_script = '''
     tell application "System Events"
-        keystroke "{text.replace('"', '\\"')}"
+        keystroke "v" using {command down}
     end tell
     '''
     try:
+        time.sleep(0.05)
         result = subprocess.run(
             ["osascript", "-e", osa_script],
             capture_output=True,
             text=True
         )
         if result.returncode == 0:
-            return {"status": "success", "method": "osascript"}
+            return {"status": "success", "method": "clipboard_paste"}
         else:
-            return {"status": "error", "message": f"osascript error: {result.stderr}"}
+            osa_script_fallback = f'''
+            tell application "System Events"
+                keystroke "{text.replace('"', '\\"')}"
+            end tell
+            '''
+            subprocess.run(["osascript", "-e", osa_script_fallback])
+            return {"status": "success", "method": "osascript_keystroke_fallback"}
     except Exception as e:
-        return {"status": "error", "message": f"Failed to type text via osascript: {str(e)}"}
+        try:
+            pyautogui.write(text)
+            return {"status": "success", "method": "pyautogui_fallback"}
+        except:
+            return {"status": "error", "message": f"Failed to type text: {str(e)}"}
 
 def press_key(key):
     """特定のキーを押す"""

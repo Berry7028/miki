@@ -2,8 +2,8 @@
 export const ClickSchema = {
   type: "object",
   properties: {
-    x: { type: "number", description: "正規化X座標 (0-1000)" },
-    y: { type: "number", description: "正規化Y座標 (0-1000)" },
+    x: { type: "integer", description: "正規化X座標 (0-1000)" },
+    y: { type: "integer", description: "正規化Y座標 (0-1000)" },
   },
   required: ["x", "y"],
 } as any;
@@ -11,8 +11,8 @@ export const ClickSchema = {
 export const MoveSchema = {
   type: "object",
   properties: {
-    x: { type: "number", description: "正規化X座標 (0-1000)" },
-    y: { type: "number", description: "正規化Y座標 (0-1000)" },
+    x: { type: "integer", description: "正規化X座標 (0-1000)" },
+    y: { type: "integer", description: "正規化Y座標 (0-1000)" },
   },
   required: ["x", "y"],
 } as any;
@@ -20,10 +20,10 @@ export const MoveSchema = {
 export const DragSchema = {
   type: "object",
   properties: {
-    from_x: { type: "number", description: "開始X" },
-    from_y: { type: "number", description: "開始Y" },
-    to_x: { type: "number", description: "終了X" },
-    to_y: { type: "number", description: "終了Y" },
+    from_x: { type: "integer", description: "開始X" },
+    from_y: { type: "integer", description: "開始Y" },
+    to_x: { type: "integer", description: "終了X" },
+    to_y: { type: "integer", description: "終了Y" },
   },
   required: ["from_x", "from_y", "to_x", "to_y"],
 } as any;
@@ -31,7 +31,7 @@ export const DragSchema = {
 export const ScrollSchema = {
   type: "object",
   properties: {
-    amount: { type: "number", description: "スクロール量 (正:下, 負:上)" },
+    amount: { type: "integer", description: "スクロール量 (正:下, 負:上)" },
   },
   required: ["amount"],
 } as any;
@@ -111,10 +111,7 @@ export const ThinkSchema = {
   type: "object",
   properties: {
     thought: { type: "string" },
-    phase: { 
-      type: "string", 
-      enum: ["planning", "verification", "reflection"] 
-    },
+    phase: { type: "string" },
   },
   required: ["thought", "phase"],
 } as any;
