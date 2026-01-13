@@ -61,7 +61,9 @@ export class PythonBridge {
       } catch (e) {
         // JSONパースエラー: 非JSON行（警告・デバッグ出力など）を無視
         // resolverをshiftせず、次の有効なJSON行を待つ
+        const errorMessage = e instanceof Error ? e.message : String(e);
         console.warn(`Non-JSON output from Python (ignored): ${line}`);
+        console.debug(`Parse error details: ${errorMessage}`);
       }
     });
 

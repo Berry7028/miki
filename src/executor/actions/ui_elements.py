@@ -12,6 +12,7 @@ from .constants import (
     DEFAULT_FOCUS_ELEMENT_TIMEOUT,
 )
 from utils.text_input import type_text_via_clipboard
+from utils.sanitizer import sanitize_for_jxa_string
 
 
 def get_ui_elements(app_name):
@@ -19,10 +20,13 @@ def get_ui_elements(app_name):
     AppleScriptのGUI Scriptingを使用して、指定されたアプリのGUI要素一覧を効率的に取得する。
     entire contentsを使用せず、一括プロパティ取得を利用することで高速化。
     """
+    # アプリ名をサニタイズ（インジェクション対策）
+    safe_app_name = sanitize_for_jxa_string(app_name, is_app_name=True)
+
     script = f'''
     tell application "System Events"
-        if not (exists application process "{app_name}") then return "ERROR: Process not found"
-        tell application process "{app_name}"
+        if not (exists application process "{safe_app_name}") then return "ERROR: Process not found"
+        tell application process "{safe_app_name}"
             set elements_data to {{}}
             repeat with win in windows
                 try
@@ -82,14 +86,17 @@ def get_ui_elements_json(app_name, max_depth=DEFAULT_UI_MAX_DEPTH):
     UI要素をJSON形式で詳細に取得（JXA使用）
     properties()とactions()を使って、UI要素の詳細情報を再帰的に取得する
     """
+    # アプリ名をサニタイズ（インジェクション対策）
+    safe_app_name = sanitize_for_jxa_string(app_name, is_app_name=True)
+
     jxa_script = f'''
     ObjC.import('stdlib');
 
     const se = Application("System Events");
-    if (!se.processes["{app_name}"].exists()) {{
+    if (!se.processes["{safe_app_name}"].exists()) {{
       JSON.stringify({{ error: "Process not found" }});
     }} else {{
-      const proc = se.processes["{app_name}"];
+      const proc = se.processes["{safe_app_name}"];
 
       function inspectElement(elem, depth) {{
         if (depth > {max_depth}) return null;
@@ -161,9 +168,14 @@ def click_element(app_name, role, name):
     """
     UI要素をroleとnameで検索してクリック
     """
+    # パラメータをサニタイズ（インジェクション対策）
+    safe_app_name = sanitize_for_jxa_string(app_name, is_app_name=True)
+    safe_role = sanitize_for_jxa_string(role)
+    safe_name = sanitize_for_jxa_string(name)
+
     jxa_script = f'''
     const se = Application("System Events");
-    const proc = se.processes["{app_name}"];
+    const proc = se.processes["{safe_app_name}"];
 
     function findElementRecursive(elem, role, name, depth) {{
       if (depth > 5) return null;
@@ -185,7 +197,7 @@ def click_element(app_name, role, name):
     if (proc.windows.length === 0) {{
       "ERROR: No windows found";
     }} else {{
-      const elem = findElementRecursive(proc.windows[0], "{role}", "{name}", 0);
+      const elem = findElementRecursive(proc.windows[0], "{safe_role}", "{safe_name}", 0);
       if (elem !== null) {{
         const props = elem.properties();
         const pos = props.position;
@@ -232,9 +244,14 @@ def focus_element(app_name, role, name):
     """
     UI要素にフォーカスを当てる
     """
+    # パラメータをサニタイズ（インジェクション対策）
+    safe_app_name = sanitize_for_jxa_string(app_name, is_app_name=True)
+    safe_role = sanitize_for_jxa_string(role)
+    safe_name = sanitize_for_jxa_string(name)
+
     jxa_script = f'''
     const se = Application("System Events");
-    const proc = se.processes["{app_name}"];
+    const proc = se.processes["{safe_app_name}"];
 
     function findElementRecursive(elem, role, name, depth) {{
       if (depth > 5) return null;
@@ -256,7 +273,7 @@ def focus_element(app_name, role, name):
     if (proc.windows.length === 0) {{
       "ERROR: No windows found";
     }} else {{
-      const elem = findElementRecursive(proc.windows[0], "{role}", "{name}", 0);
+      const elem = findElementRecursive(proc.windows[0], "{safe_role}", "{safe_name}", 0);
       if (elem !== null) {{
         elem.focused = true;
         "success";

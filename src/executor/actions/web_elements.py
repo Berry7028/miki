@@ -3,14 +3,19 @@ import subprocess
 import json
 import os
 
+from utils.sanitizer import sanitize_for_jxa_string, sanitize_applescript_string
+
 
 def get_web_elements(app_name):
     """
     ブラウザ内のWeb要素を取得（AXWebArea配下）
     """
+    # アプリ名をサニタイズ（インジェクション対策）
+    safe_app_name = sanitize_for_jxa_string(app_name, is_app_name=True)
+
     jxa_script = f'''
     const se = Application("System Events");
-    const proc = se.processes["{app_name}"];
+    const proc = se.processes["{safe_app_name}"];
 
     function findWebArea(root) {{
       try {{
@@ -113,7 +118,9 @@ def get_default_browser():
     browser_name = None
 
     # Bundle IDからアプリ名を取得（Finder経由）
-    osa_cmd = f'tell application "Finder" to get name of (application file id "{bundle_id}")'
+    # bundle_id をサニタイズ（インジェクション対策）
+    safe_bundle_id = sanitize_applescript_string(bundle_id)
+    osa_cmd = f'tell application "Finder" to get name of (application file id "{safe_bundle_id}")'
     try:
         browser_name = subprocess.check_output(
             ['osascript', '-e', osa_cmd], text=True).strip()
@@ -123,8 +130,10 @@ def get_default_browser():
     # Finderで解決できない場合はSpotlightで検索
     if not browser_name:
         try:
+            # bundle_id は安全な値（事前定義または検証済み）だが念のためエスケープ
+            safe_bundle_id_for_mdfind = bundle_id.replace("'", "'\\''")
             app_paths = subprocess.check_output(
-                ["mdfind", f"kMDItemCFBundleIdentifier == '{bundle_id}'"],
+                ["mdfind", f"kMDItemCFBundleIdentifier == '{safe_bundle_id_for_mdfind}'"],
                 text=True
             ).splitlines()
             if app_paths:
@@ -166,9 +175,14 @@ def click_web_element(app_name, role, name):
     """
     ブラウザ内のWeb要素をクリック
     """
+    # パラメータをサニタイズ（インジェクション対策）
+    safe_app_name = sanitize_for_jxa_string(app_name, is_app_name=True)
+    safe_role = sanitize_for_jxa_string(role)
+    safe_name = sanitize_for_jxa_string(name)
+
     jxa_script = f'''
     const se = Application("System Events");
-    const proc = se.processes["{app_name}"];
+    const proc = se.processes["{safe_app_name}"];
 
     function findWebArea(root) {{
       try {{
@@ -205,7 +219,7 @@ def click_web_element(app_name, role, name):
     }} else {{
       const webArea = findWebArea(proc.windows[0]);
       if (webArea !== null) {{
-        const elem = findElement(webArea, "{role}", "{name}");
+        const elem = findElement(webArea, "{safe_role}", "{safe_name}");
         if (elem !== null) {{
           const props = elem.properties();
           const pos = props.position;

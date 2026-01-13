@@ -127,7 +127,9 @@ class ControllerManager extends EventEmitter {
         // Emit event for other potential listeners
         this.emit("payload", payload);
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
         console.error("Failed to parse controller output:", line);
+        console.debug("Parse error details:", errorMessage);
       }
     });
 
