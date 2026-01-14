@@ -53,6 +53,7 @@ MENU_ITEMS=(
   "build-backend|⏳ バックエンドをビルド|build_backend|slow"
   "build-executor|⏳ Pythonエグゼキュータをビルド|build_executor|slow"
   "dist|⏳ 配布用パッケージをビルド|build_dist|slow"
+  "test|🧪 テストを実行|run_tests|safe"
   "install|📦 依存関係をインストール|install_deps|safe"
   "setup-python|🐍 Python仮想環境をセットアップ|setup_python|safe"
   "doctor|🔍 状態チェックと次の推奨操作|doctor|info"
@@ -309,6 +310,7 @@ function print_help() {
   echo "  ${GREEN}build-backend${NC}      - バックエンドをビルド"
   echo "  ${GREEN}build-executor${NC}     - Pythonエグゼキュータをビルド"
   echo "  ${GREEN}dist${NC}               - 配布用パッケージをビルド"
+  echo "  ${GREEN}test${NC}               - テストを実行"
   echo "  ${GREEN}install${NC}            - Node依存関係をインストール"
   echo "  ${GREEN}setup-python${NC}       - Python仮想環境をセットアップ/再生成"
   echo "  ${GREEN}doctor${NC}             - 状態チェックと次の推奨操作を表示"
@@ -585,7 +587,13 @@ function setup_python() {
 }
 
 function run_tests() {
-  echo -e "${RED}テストは未実装です${NC}"
+  if ! preflight_node; then
+    return 1
+  fi
+  echo -e "${BLUE}テストを実行します...${NC}"
+  cd "$PROJECT_ROOT"
+  npm test
+  echo -e "${GREEN}✓ テスト完了${NC}"
 }
 
 function open_logs() {
