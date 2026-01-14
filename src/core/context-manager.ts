@@ -208,7 +208,7 @@ export class ContextManager {
   /**
    * Recursively compress object data
    */
-  private compressObject(obj: any, depth: number = 0): any {
+  private compressObject(obj: unknown, depth: number = 0): unknown {
     if (depth > HISTORY_CONFIG.MAX_UI_DEPTH) {
       return "[truncated]";
     }
@@ -222,7 +222,7 @@ export class ContextManager {
     }
 
     if (obj && typeof obj === "object") {
-      const compressed: any = {};
+      const compressed: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(obj)) {
         // Skip verbose fields
         if (key === "children" && Array.isArray(value) && value.length > HISTORY_CONFIG.MAX_UI_CHILDREN) {
