@@ -144,13 +144,13 @@ This document provides a test plan for manually verifying the JSON validation an
 
 ### Code Review
 - [ ] `src/adk/adk-patches.ts` has `setDebugMode()` function
-- [ ] `isValidJSON()` helper function exists
-- [ ] `getJSONParseError()` helper function exists
+- [ ] `validateJSON()` helper function exists (returns {valid, error})
 - [ ] BuiltInCodeExecutor patch is commented out
 - [ ] Retry logic uses WeakMap for tracking
 - [ ] Max attempts is set to 3
 - [ ] Error messages are in Japanese as specified
 - [ ] Debug logs are conditional on debugMode flag
+- [ ] Error IDs are descriptive for debugging
 
 ### Orchestrator Integration
 - [ ] `src/adk/orchestrator.ts` imports `setDebugMode`

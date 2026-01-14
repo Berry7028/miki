@@ -9,7 +9,7 @@ This document describes the JSON validation and retry mechanism implemented in t
 The `BuiltInCodeExecutor` patch has been disabled as per requirements. The original patch that handled errors for `gemini-3-flash-preview` has been commented out in `src/adk/adk-patches.ts`.
 
 ### 2. JSON Syntax Validation
-Before parsing JSON arguments in function calls, the system now validates the JSON syntax using the `isValidJSON()` helper function. This prevents parse errors from being silently ignored.
+Before parsing JSON arguments in function calls, the system now validates the JSON syntax using the `validateJSON()` helper function. This prevents parse errors from being silently ignored and returns both validation status and error message in a single call.
 
 ### 3. Retry Mechanism
 When a JSON parse error is detected:
@@ -41,8 +41,7 @@ To enable debug mode, start the application with the `--debug` flag:
 ### Files Modified
 1. **src/adk/adk-patches.ts**
    - Added `setDebugMode()` function to control debug logging
-   - Added `isValidJSON()` helper function
-   - Added `getJSONParseError()` helper function
+   - Added `validateJSON()` helper function (returns both validity and error message)
    - Modified `callLlmAsync` patch to validate and retry JSON parsing
    - Disabled BuiltInCodeExecutor patch
 
