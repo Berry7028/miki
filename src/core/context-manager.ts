@@ -16,11 +16,11 @@ export interface MessagePart {
   text?: string;
   functionCall?: {
     name: string;
-    args: any;
+    args: Record<string, unknown>;
   };
   functionResponse?: {
     name: string;
-    response: any;
+    response: Record<string, unknown> | unknown;
   };
   inlineData?: {
     mimeType: string;
@@ -71,10 +71,21 @@ export class ContextManager {
    * Update context snapshot (compact representation of progress)
    */
   updateSnapshot(snapshot: Partial<ContextSnapshot>): void {
-    this.contextSnapshot = {
-      ...this.contextSnapshot,
-      ...snapshot,
-    } as ContextSnapshot;
+    if (this.contextSnapshot === null) {
+      // Initialize with defaults if null
+      this.contextSnapshot = {
+        goal: "",
+        completedActions: [],
+        currentPhase: "",
+        keyObservations: [],
+        ...snapshot,
+      };
+    } else {
+      this.contextSnapshot = {
+        ...this.contextSnapshot,
+        ...snapshot,
+      };
+    }
   }
 
   /**
@@ -99,21 +110,22 @@ export class ContextManager {
     let score = 0.5; // base score
 
     for (const part of message.parts) {
+      const lowerText = part.text?.toLowerCase();
+      
       // Error messages are important
-      if (part.text?.toLowerCase().includes("error") || 
-          part.text?.toLowerCase().includes("エラー")) {
+      if (lowerText && (lowerText.includes("error") || lowerText.includes("エラー"))) {
         score += 0.3;
       }
 
       // Done/completion messages are important
       if (part.functionCall?.name === "done" ||
-          part.text?.toLowerCase().includes("完了")) {
+          (lowerText && lowerText.includes("完了"))) {
         score += 0.3;
       }
 
       // Think messages with planning are important
       if (part.functionCall?.name === "think" &&
-          part.functionCall?.args?.phase === "planning") {
+          (part.functionCall?.args as Record<string, unknown>)?.phase === "planning") {
         score += 0.2;
       }
 

@@ -3,24 +3,24 @@
  * Intercepts and manages conversation history with intelligent compression
  */
 
-import type { Plugin, InvocationContext, ModelRequest, ModelResponse, FunctionResponse } from "@google/adk";
+import { BasePlugin, type InvocationContext, type ModelRequest, type ModelResponse, type FunctionResponse } from "@google/adk";
 import { ContextManager, type Message } from "../../core/context-manager";
 
-export class ContextManagementPlugin implements Plugin {
-  name = "ContextManagementPlugin";
+export class ContextManagementPlugin extends BasePlugin {
   private contextManager: ContextManager;
 
   constructor(contextManager: ContextManager) {
+    super("context_management");
     this.contextManager = contextManager;
   }
 
-  async beforeModelRequest(
+  override async beforeModelRequest(
     invocationContext: InvocationContext,
     modelRequest: ModelRequest
   ): Promise<ModelRequest> {
     // Apply context compression to the request before sending to LLM
     if (modelRequest.contents && Array.isArray(modelRequest.contents)) {
-      const compressedContents = modelRequest.contents.map((content: any) => {
+      const compressedContents = modelRequest.contents.map((content) => {
         const message: Message = {
           role: content.role,
           parts: content.parts || [],
@@ -44,7 +44,7 @@ export class ContextManagementPlugin implements Plugin {
     return modelRequest;
   }
 
-  async afterModelResponse(
+  override async afterModelResponse(
     invocationContext: InvocationContext,
     modelResponse: ModelResponse
   ): Promise<void> {
@@ -57,7 +57,7 @@ export class ContextManagementPlugin implements Plugin {
     }
   }
 
-  async afterFunctionExecution(
+  override async afterFunctionExecution(
     invocationContext: InvocationContext,
     functionResponse: FunctionResponse
   ): Promise<void> {
