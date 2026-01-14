@@ -201,8 +201,8 @@ function createOverlayWindow() {
     }
   });
 
-  // Note: Mouse events are handled via CSS pointer-events in overlay component
-  // win.setIgnoreMouseEvents(true);
+  // Note: overlay is click-through by default; renderer toggles when hovering Stop Agent.
+  win.setIgnoreMouseEvents(true);
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   win.setAlwaysOnTop(true, "screen-saver");
 
@@ -766,4 +766,11 @@ ipcMain.handle("miki:openSystemPreferences", (_event, pane) => {
 ipcMain.handle("miki:getStyleNonce", (event) => {
   const webContentsId = event.sender.id;
   return styleNonces.get(webContentsId) || "";
+});
+
+ipcMain.handle("miki:setOverlayMousePassthrough", (_event, ignore) => {
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayWindow.setIgnoreMouseEvents(Boolean(ignore));
+  }
+  return true;
 });

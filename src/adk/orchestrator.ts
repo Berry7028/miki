@@ -1,5 +1,6 @@
 import { EventEmitter } from "node:events";
 import { LlmAgent, Runner, InMemorySessionService, LoggingPlugin, type ToolContext, isFinalResponse, getFunctionCalls } from "@google/adk";
+import { setDebugMode } from "./adk-patches";
 import "./adk-patches";
 import { PythonBridge } from "../core/python-bridge";
 import { MacOSToolSuite } from "./tools/macos-tool-suite";
@@ -26,6 +27,9 @@ export class MacOSAgentOrchestrator extends EventEmitter {
     this.apiKey = apiKey;
     this.debugMode = debugMode;
     this.sessionService = new InMemorySessionService();
+
+    // Set debug mode for adk-patches
+    setDebugMode(debugMode);
 
     // PythonBridgeの初期化
     this.pythonBridge = new PythonBridge(

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
+import type { MikiAPI } from "../../shared/types";
 
 const TRAIL_LENGTH = 8;
 
@@ -13,6 +14,9 @@ const Overlay = () => {
   const [isStopping, setIsStopping] = useState(false);
   const [isStopButtonHovered, setIsStopButtonHovered] = useState(false);
   const requestRef = useRef<number>();
+  const stopButtonRef = useRef<HTMLButtonElement | null>(null);
+  const mousePassthroughRef = useRef(true);
+  const showControlsRef = useRef(false);
 
   useEffect(() => {
     console.log("Overlay component mounted");
@@ -50,6 +54,28 @@ const Overlay = () => {
     const unsubscribeMouse = window.miki?.onMousePos((pos: { x: number; y: number }) => {
       setMousePos(pos);
       setTrail((prev) => [pos, ...prev].slice(0, TRAIL_LENGTH));
+
+      const stopButton = stopButtonRef.current;
+      if (!showControlsRef.current || !stopButton) {
+        if (!mousePassthroughRef.current) {
+          mousePassthroughRef.current = true;
+          window.miki?.setOverlayMousePassthrough(true);
+        }
+        return;
+      }
+
+      const rect = stopButton.getBoundingClientRect();
+      const isInside =
+        pos.x >= rect.left &&
+        pos.x <= rect.right &&
+        pos.y >= rect.top &&
+        pos.y <= rect.bottom;
+
+      const nextIgnore = !isInside;
+      if (mousePassthroughRef.current !== nextIgnore) {
+        mousePassthroughRef.current = nextIgnore;
+        window.miki?.setOverlayMousePassthrough(nextIgnore);
+      }
     });
 
     return () => {
@@ -75,7 +101,7 @@ const Overlay = () => {
     left: 0,
     right: 0,
     bottom: 0,
-    pointerEvents: "none",
+    pointerEvents: "auto",
     zIndex: 9999,
     opacity: visible ? 1 : 0,
     transition: "opacity 0.5s ease-in-out",
@@ -83,6 +109,15 @@ const Overlay = () => {
   };
 
   const isThinking = status === "thinking" || status === "running";
+  const showControls = isThinking || isStopping || status === "stopping";
+
+  useEffect(() => {
+    showControlsRef.current = showControls;
+    if (!showControls && !mousePassthroughRef.current) {
+      mousePassthroughRef.current = true;
+      window.miki?.setOverlayMousePassthrough(true);
+    }
+  }, [showControls]);
 
   return (
     <div style={overlayStyle}>
@@ -94,6 +129,7 @@ const Overlay = () => {
           right: 0,
           height: "15vh",
           background: "linear-gradient(to bottom, rgba(150, 150, 150, 0.15) 0%, rgba(150, 150, 150, 0) 100%)",
+          pointerEvents: "none",
         }}
       />
       <div
@@ -104,6 +140,7 @@ const Overlay = () => {
           right: 0,
           height: "15vh",
           background: "linear-gradient(to top, rgba(150, 150, 150, 0.15) 0%, rgba(150, 150, 150, 0) 100%)",
+          pointerEvents: "none",
         }}
       />
       <div
@@ -114,6 +151,7 @@ const Overlay = () => {
           left: 0,
           width: "15vw",
           background: "linear-gradient(to right, rgba(150, 150, 150, 0.15) 0%, rgba(150, 150, 150, 0) 100%)",
+          pointerEvents: "none",
         }}
       />
       <div
@@ -124,6 +162,7 @@ const Overlay = () => {
           right: 0,
           width: "15vw",
           background: "linear-gradient(to left, rgba(150, 150, 150, 0.15) 0%, rgba(150, 150, 150, 0) 100%)",
+          pointerEvents: "none",
         }}
       />
 
@@ -158,7 +197,7 @@ const Overlay = () => {
       ))}
 
       {/* Status display and stop button at bottom center */}
-      {(isThinking || isStopping || status === "stopping") && (
+      {showControls && (
         <div
           style={{
             position: "fixed",
@@ -250,6 +289,7 @@ const Overlay = () => {
 
           {/* Stop button */}
           <button
+            ref={stopButtonRef}
             onClick={handleStop}
             disabled={isStopping}
             onMouseEnter={() => !isStopping && setIsStopButtonHovered(true)}

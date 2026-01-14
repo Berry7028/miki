@@ -1,6 +1,13 @@
 import { FunctionTool, BuiltInCodeExecutor, LlmAgent } from "@google/adk";
 import { Type } from "@google/genai";
 
+// Global debug mode flag
+let debugMode = false;
+
+export function setDebugMode(enabled: boolean) {
+  debugMode = enabled;
+}
+
 type ZodV4Def = {
   type?: string;
   shape?: Record<string, unknown>;
@@ -149,16 +156,23 @@ const zodV4ToSchema = (schema: any): JsonSchema => {
   return declaration;
 };
 
-// skip error for gemini-3-flash-preview
 const originalProcessLlmRequest = (BuiltInCodeExecutor as any).prototype.processLlmRequest;
 (BuiltInCodeExecutor as any).prototype.processLlmRequest = function patchedProcessLlmRequest(llmRequest: any) {
   try {
     originalProcessLlmRequest.call(this, llmRequest);
   } catch (e: any) {
-    console.error("[ADK PATCH] processLlmRequest error:", e);
-    if (e.message && e.message.includes("gemini-3-flash-preview")) {
+    const isUnsupportedCodeExecution =
+      e?.message?.includes("code execution tool is not supported") &&
+      e?.message?.includes("gemini-3-flash-preview");
+
+    if (isUnsupportedCodeExecution) {
+      if (debugMode) {
+        console.log("[ADK PATCH] Skipping unsupported code execution tool for gemini-3-flash-preview");
+      }
       return;
     }
+
+    console.error("[ADK PATCH] processLlmRequest error:", e);
     throw e;
   }
 };
@@ -173,8 +187,23 @@ if (originalFindAgent) {
   };
 }
 
+// Helper function to validate JSON syntax and get error message
+function validateJSON(str: string): { valid: boolean; error: string } {
+  try {
+    JSON.parse(str);
+    return { valid: true, error: "" };
+  } catch (e: any) {
+    return { valid: false, error: e.message || "Invalid JSON syntax" };
+  }
+}
+
 // パッチ: ツール実行結果に含まれるスクリーンショットを画像パーツとして展開する
+// JSON構文エラーが発生した場合は、AIに修正を依頼する（最大3回まで）
 const originalCallLlmAsync = (LlmAgent as any).prototype.callLlmAsync;
+
+// Track retry attempts per invocation context
+const retryAttemptsMap = new WeakMap<any, number>();
+
 (LlmAgent as any).prototype.callLlmAsync = async function* patchedCallLlmAsync(
   invocationContext: any,
   llmRequest: any,
@@ -226,12 +255,80 @@ const originalCallLlmAsync = (LlmAgent as any).prototype.callLlmAsync;
 
         for (const part of event.content.parts) {
           if (part.functionCall) {
-            console.log("[ADK PATCH] Detected functionCall:", part.functionCall.name, part.functionCall.args);
+            if (debugMode) {
+              console.log("[ADK PATCH] Detected functionCall:", part.functionCall.name, part.functionCall.args);
+            }
+            
             // args が文字列ならオブジェクトに変換
             if (typeof part.functionCall.args === "string") {
-              try {
-                part.functionCall.args = JSON.parse(part.functionCall.args);
-              } catch (e) {}
+              const argsString = part.functionCall.args;
+              
+              // JSON構文の事前チェック
+              const validation = validateJSON(argsString);
+              if (!validation.valid) {
+                if (debugMode) {
+                  console.error("[ADK PATCH] JSON parse error detected:", validation.error);
+                }
+                
+                // 現在の試行回数を取得
+                const currentAttempts = retryAttemptsMap.get(invocationContext) || 0;
+                const maxAttempts = 3;
+                
+                if (currentAttempts < maxAttempts) {
+                  // 試行回数をインクリメント
+                  retryAttemptsMap.set(invocationContext, currentAttempts + 1);
+                  
+                  // エラーメッセージを表示
+                  console.log("このアクションは正しく実行されませんでした");
+                  
+                  if (debugMode) {
+                    console.log(`[ADK PATCH] Retry attempt ${currentAttempts + 1}/${maxAttempts}`);
+                    console.log(`[ADK PATCH] Invalid JSON: ${argsString}`);
+                    console.log(`[ADK PATCH] Error: ${validation.error}`);
+                  }
+                  
+                  // AIに修正を依頼するため、エラー情報を含むレスポンスを返す
+                  yield {
+                    id: event.id || `retry-${currentAttempts + 1}-error`,
+                    content: {
+                      role: "model",
+                      parts: [{
+                        text: `JSON構文エラーが発生しました。以下のJSONを修正してください。\nエラー: ${validation.error}\n不正なJSON: ${argsString}\n\n正しいJSON形式でもう一度functionCallを送信してください。`
+                      }]
+                    }
+                  };
+                  
+                  // このイベントの処理を中断
+                  continue;
+                } else {
+                  // 最大試行回数を超えた場合
+                  console.error("ユーザーのタスクを正しく実行できませんでした");
+                  
+                  if (debugMode) {
+                    console.error(`[ADK PATCH] Maximum retry attempts (${maxAttempts}) exceeded`);
+                  }
+                  
+                  // エラーを通知するレスポンスを返す
+                  yield {
+                    id: event.id || "max-retry-exceeded-error",
+                    content: {
+                      role: "model",
+                      parts: [{
+                        text: "JSON構文エラーが解決できませんでした。タスクを正しく実行できません。"
+                      }]
+                    }
+                  };
+                  
+                  // 試行回数をリセット
+                  retryAttemptsMap.delete(invocationContext);
+                  continue;
+                }
+              }
+              
+              // JSONが有効な場合はパース（validation.valid === trueが保証されている）
+              part.functionCall.args = JSON.parse(argsString);
+              // 成功したら試行回数をリセット
+              retryAttemptsMap.delete(invocationContext);
             }
             if (!part.functionCall.args) {
               part.functionCall.args = {};
