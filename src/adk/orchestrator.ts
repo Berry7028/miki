@@ -6,6 +6,8 @@ import { MacOSToolSuite } from "./tools/macos-tool-suite";
 import { MainAgentFactory } from "./agents/main-agent";
 import { MacOSErrorHandlerPlugin } from "./errors/error-handler";
 import { PERFORMANCE_CONFIG } from "../core/constants";
+import { ContextManager } from "../core/context-manager";
+import { ContextManagementPlugin } from "./plugins/context-plugin";
 
 export class MacOSAgentOrchestrator extends EventEmitter {
   private pythonBridge: PythonBridge;
@@ -13,6 +15,7 @@ export class MacOSAgentOrchestrator extends EventEmitter {
   private rootAgent!: LlmAgent;
   private runner!: Runner;
   private sessionService: InMemorySessionService;
+  private contextManager: ContextManager;
   private screenSize: { width: number; height: number } = { width: 0, height: 0 };
   private defaultBrowser: string = "Safari";
   private defaultBrowserId: string = "";
@@ -26,6 +29,7 @@ export class MacOSAgentOrchestrator extends EventEmitter {
     this.apiKey = apiKey;
     this.debugMode = debugMode;
     this.sessionService = new InMemorySessionService();
+    this.contextManager = new ContextManager();
 
     // PythonBridgeの初期化
     this.pythonBridge = new PythonBridge(
@@ -73,7 +77,8 @@ export class MacOSAgentOrchestrator extends EventEmitter {
 
       // プラグインの設定
       const plugins = [
-        new MacOSErrorHandlerPlugin()
+        new MacOSErrorHandlerPlugin(),
+        new ContextManagementPlugin(this.contextManager)
       ];
 
       if (this.debugMode) {
@@ -115,6 +120,15 @@ export class MacOSAgentOrchestrator extends EventEmitter {
     this.log("info", `タスク開始 - ゴール: ${goal}`);
     this.stopRequested = false;
     this.emitStatus("running");
+
+    // Initialize context tracking
+    this.contextManager.clear();
+    this.contextManager.updateSnapshot({
+      goal,
+      completedActions: [],
+      currentPhase: "planning",
+      keyObservations: [],
+    });
 
     if (!this.apiKey) {
       const errorMsg = "APIキーが設定されていません。設定画面でAPIキーを保存してください。";
@@ -160,6 +174,7 @@ export class MacOSAgentOrchestrator extends EventEmitter {
       });
 
       let stepCount = 0;
+      const completedActions: string[] = [];
 
       for await (const event of stream) {
         this.log("info", `イベントを受信しました: ${event.id || "no-id"}`);
@@ -186,10 +201,21 @@ export class MacOSAgentOrchestrator extends EventEmitter {
                 thought: args.thought,
                 message: `[${phaseLabel}] ${args.thought}`
               });
+              
+              // Update context snapshot with current phase
+              this.contextManager.updateSnapshot({
+                currentPhase: args.phase,
+              });
             } else if (call.name === "done") {
               const args = call.args as any;
               this.log("success", `完了: ${args.message}`);
               this.emit("completed", args.message);
+              
+              // Update context snapshot on completion
+              this.contextManager.updateSnapshot({
+                currentPhase: "completed",
+                keyObservations: [args.message],
+              });
             } else {
               this.log("action", `アクション: ${call.name} ${JSON.stringify(call.args)}`);
               this.emit("action_update", {
@@ -197,8 +223,20 @@ export class MacOSAgentOrchestrator extends EventEmitter {
                 action: call.name,
                 params: call.args
               });
+              
+              // Track completed actions
+              completedActions.push(call.name);
+              this.contextManager.updateSnapshot({
+                completedActions,
+              });
             }
           }
+        }
+
+        // Emit context stats for monitoring
+        if (this.debugMode && stepCount % 5 === 0) {
+          const stats = this.contextManager.getStats();
+          this.log("info", `Context stats: ${stats.messageCount} messages, ~${stats.estimatedTokens} tokens`);
         }
 
         if (isFinalResponse(event)) {
@@ -237,6 +275,7 @@ export class MacOSAgentOrchestrator extends EventEmitter {
 
   async reset(): Promise<void> {
     this.stopRequested = true;
+    this.contextManager.clear();
     this.emit("reset");
     this.log("info", "リセットしました。");
   }
@@ -245,8 +284,17 @@ export class MacOSAgentOrchestrator extends EventEmitter {
     this.log("hint", `ヒントを追加: ${text}`);
   }
 
+  getContextStats() {
+    return this.contextManager.getStats();
+  }
+
+  getContextSnapshot() {
+    return this.contextManager.getSnapshot();
+  }
+
   destroy(): void {
     this.pythonBridge.destroy();
+    this.contextManager.clear();
     this.removeAllListeners();
   }
 }
