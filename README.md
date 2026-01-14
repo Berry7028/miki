@@ -133,6 +133,54 @@ pyinstaller --name miki-executor --onedir src/executor/main.py --distpath deskto
 ## Distribution Build
 Distribution builds can be executed all at once using `dev.sh`.
 
+## Testing
+
+The project includes comprehensive tests for core functionality using [Vitest](https://vitest.dev/).
+
+### Running Tests
+
+```bash
+# Run all tests once
+npm test
+
+# Run tests in watch mode (auto-rerun on file changes)
+npm run test:watch
+
+# Run tests with UI
+npm run test:ui
+
+# Run tests with coverage report
+npm run test:coverage
+```
+
+### Test Structure
+
+Tests are located alongside source files with the `.test.ts` extension:
+
+- `src/core/python-bridge.test.ts` - Tests for Python bridge communication logic
+- `src/adk/tools/macos-tool-suite.test.ts` - Tests for macOS tool suite and coordinate normalization
+- `src/adk/orchestrator.test.ts` - Tests for agent orchestrator event handling
+
+The test suite covers:
+- Coordinate normalization for different screen sizes
+- PythonBridge retry mechanisms and timeout handling
+- MacOSAgentOrchestrator event emission patterns
+- Tool execution logic and response formatting
+
+### Adding New Tests
+
+To add tests for a new module:
+
+1. Create a new file with `.test.ts` extension next to the source file
+2. Import testing utilities from Vitest:
+   ```typescript
+   import { describe, it, expect, vi } from 'vitest';
+   ```
+3. Write test cases using Vitest's familiar API (similar to Jest)
+4. Run `npm test` to verify your tests pass
+
+
+
 
 ## Keyboard Shortcuts
 

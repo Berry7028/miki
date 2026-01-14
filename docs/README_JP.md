@@ -133,6 +133,54 @@ pyinstaller --name miki-executor --onedir src/executor/main.py --distpath deskto
 ## 配布ビルド
 配布用のビルドは `dev.sh` を用いて一括実行できます。
 
+## テスト
+
+プロジェクトには[Vitest](https://vitest.dev/)を使用したコア機能の包括的なテストが含まれています。
+
+### テストの実行
+
+```bash
+# すべてのテストを1回実行
+npm test
+
+# ウォッチモードでテストを実行（ファイル変更時に自動再実行）
+npm run test:watch
+
+# UIでテストを実行
+npm run test:ui
+
+# カバレッジレポート付きでテストを実行
+npm run test:coverage
+```
+
+### テスト構造
+
+テストはソースファイルと並べて `.test.ts` 拡張子で配置されています：
+
+- `src/core/python-bridge.test.ts` - Python ブリッジ通信ロジックのテスト
+- `src/adk/tools/macos-tool-suite.test.ts` - macOS ツールスイートと座標正規化のテスト
+- `src/adk/orchestrator.test.ts` - エージェントオーケストレータのイベント処理テスト
+
+テストスイートは以下をカバーしています：
+- 異なる画面サイズの座標正規化
+- PythonBridge のリトライメカニズムとタイムアウト処理
+- MacOSAgentOrchestrator のイベント発行パターン
+- ツール実行ロジックとレスポンス整形
+
+### 新しいテストの追加
+
+新しいモジュールのテストを追加するには：
+
+1. ソースファイルの隣に `.test.ts` 拡張子の新しいファイルを作成
+2. Vitest からテストユーティリティをインポート：
+   ```typescript
+   import { describe, it, expect, vi } from 'vitest';
+   ```
+3. Vitest の馴染みのある API を使用してテストケースを記述（Jest に類似）
+4. `npm test` を実行してテストが成功することを確認
+
+
+
 
 ## ショートカットキー
 
