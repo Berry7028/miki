@@ -158,7 +158,7 @@ const Overlay = () => {
       ))}
 
       {/* Status display and stop button at bottom center */}
-      {(isThinking || isStopping) && (
+      {(isThinking || isStopping || status === "stopping") && (
         <div
           style={{
             position: "fixed",
