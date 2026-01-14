@@ -153,6 +153,14 @@ You can send requests directly to AI from the chat window.
 
 For a detailed explanation of the system architecture, see the [Architecture documentation](./docs/ARCHITECTURE.md).
 
+## Contributing
+
+Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for setup steps, coding standards, and PR guidelines.
+
+## License
+
+This project is licensed under the [MIT License](./LICENSE).
+
 ## Security Notes
 
 - `desktop/renderer/index.html` and `desktop/renderer/chat.html` use Tailwind CDN,
