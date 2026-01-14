@@ -233,6 +233,7 @@ export class MacOSAgentOrchestrator extends EventEmitter {
   stop(): void {
     this.stopRequested = true;
     this.log("info", "停止要求を受け付けました。");
+    this.emit("stopped");
   }
 
   async reset(): Promise<void> {

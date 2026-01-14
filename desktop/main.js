@@ -201,7 +201,8 @@ function createOverlayWindow() {
     }
   });
 
-  win.setIgnoreMouseEvents(true);
+  // Note: Mouse events are handled via CSS pointer-events in overlay component
+  // win.setIgnoreMouseEvents(true);
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   win.setAlwaysOnTop(true, "screen-saver");
 
