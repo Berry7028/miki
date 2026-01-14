@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
+import type { MikiAPI } from "../../shared/types";
 
 const TRAIL_LENGTH = 8;
 
