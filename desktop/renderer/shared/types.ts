@@ -40,6 +40,7 @@ export interface MikiAPI {
   onBackendEvent: (callback: (payload: BackendEvent) => void) => () => void;
   onMousePos: (callback: (pos: { x: number; y: number }) => void) => () => void;
   onFocusInput: (callback: () => void) => () => void;
+  onChatVisibility: (callback: (payload: { visible: boolean }) => void) => () => void;
 }
 
 declare global {

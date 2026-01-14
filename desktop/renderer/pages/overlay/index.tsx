@@ -7,28 +7,43 @@ const Overlay = () => {
   const [visible, setVisible] = useState(false);
   const [status, setStatus] = useState<string>("idle");
   const [currentAction, setCurrentAction] = useState<any>(null);
+  const [thinkingText, setThinkingText] = useState<string>("");
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [trail, setTrail] = useState<{ x: number; y: number }[]>([]);
+  const [isStopping, setIsStopping] = useState(false);
+  const [isStopButtonHovered, setIsStopButtonHovered] = useState(false);
   const requestRef = useRef<number>();
 
   useEffect(() => {
     console.log("Overlay component mounted");
-    
+
     const unsubscribeBackend = window.miki?.onBackendEvent((payload: any) => {
       console.log("Overlay received event:", payload);
       if (payload.event === "status") {
         setStatus(payload.state);
         if (payload.state === "running" || payload.state === "thinking") {
           setVisible(true);
+          setIsStopping(false);
         } else if (payload.state === "idle") {
           setVisible(false);
           setCurrentAction(null);
+          setThinkingText("");
+          setIsStopping(false);
+        } else if (payload.state === "stopping") {
+          setVisible(true);
+          setIsStopping(true);
         }
       } else if (payload.event === "action_update") {
         setCurrentAction(payload);
+      } else if (payload.event === "thinking") {
+        // Prefer explicit thought field from think action, fall back to message
+        const content = payload.thought || payload.message || "Thinking...";
+        setThinkingText(content);
       } else if (payload.event === "fadeout" || payload.event === "completed") {
         setVisible(false);
         setCurrentAction(null);
+        setThinkingText("");
+        setIsStopping(false);
       }
     });
 
@@ -42,6 +57,17 @@ const Overlay = () => {
       unsubscribeMouse?.();
     };
   }, []);
+
+  // Stop button handler
+  const handleStop = async () => {
+    try {
+      setIsStopping(true);
+      await window.miki?.stop();
+    } catch (error) {
+      console.error("Stop failed:", error);
+      setIsStopping(false);
+    }
+  };
 
   const overlayStyle: React.CSSProperties = {
     position: "fixed",
@@ -131,6 +157,138 @@ const Overlay = () => {
         </div>
       ))}
 
+      {/* Status display and stop button at bottom center */}
+      {(isThinking || isStopping || status === "stopping") && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 40,
+            left: "50%",
+            transform: "translateX(-50%)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 16,
+            pointerEvents: "auto",
+            zIndex: 10000,
+          }}
+        >
+          {/* Thinking text */}
+          {thinkingText && !isStopping && (
+            <div
+              style={{
+                padding: "12px 20px",
+                background: "#2e3339",
+                borderRadius: 12,
+                boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+                border: "1px solid rgba(255,255,255,0.1)",
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 12,
+                maxWidth: 400,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 13,
+                  fontWeight: 400,
+                  color: "#e6d6b8",
+                  fontStyle: "italic",
+                  lineHeight: 1.5,
+                  whiteSpace: "pre-wrap",
+                }}
+              >
+                💭 {thinkingText}
+              </span>
+            </div>
+          )}
+
+          {/* Current action status */}
+          <div
+            style={{
+              padding: "12px 20px",
+              background: "#2e3339",
+              borderRadius: 12,
+              boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              minWidth: 200,
+              justifyContent: "center",
+            }}
+          >
+            <div
+              style={{
+                width: 16,
+                height: 16,
+                border: isStopping
+                  ? "2px solid #ff6b6b"
+                  : "2px solid #555",
+                borderTop: isStopping
+                  ? "2px solid transparent"
+                  : "2px solid #b0b0b0",
+                borderRadius: "50%",
+                animation: isStopping ? "spin 0.6s linear infinite" : "spin 1s linear infinite",
+              }}
+            />
+            <span
+              style={{
+                fontSize: 14,
+                fontWeight: 600,
+                color: "#d0d0d0",
+              }}
+            >
+              {isStopping
+                ? "Stopping..."
+                : (currentAction?.action
+                  ? `${currentAction.action.charAt(0).toUpperCase() + currentAction.action.slice(1)}...`
+                  : "Processing...")
+              }
+            </span>
+          </div>
+
+          {/* Stop button */}
+          <button
+            onClick={handleStop}
+            disabled={isStopping}
+            onMouseEnter={() => !isStopping && setIsStopButtonHovered(true)}
+            onMouseLeave={() => setIsStopButtonHovered(false)}
+            style={{
+              padding: "12px 24px",
+              background: isStopping
+                ? "#555"
+                : isStopButtonHovered
+                  ? "#ff5252"
+                  : "#ff6b6b",
+              color: "#1f242c",
+              border: "none",
+              borderRadius: 8,
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: isStopping ? "not-allowed" : "pointer",
+              opacity: isStopping ? 0.6 : 1,
+              transition: "all 0.2s ease",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+              transform: isStopButtonHovered && !isStopping ? "translateY(-1px)" : "translateY(0)",
+            }}
+          >
+            <svg
+              width={16}
+              height={16}
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <rect x="6" y="6" width="12" height="12" rx="2" />
+            </svg>
+            Stop Agent
+          </button>
+        </div>
+      )}
+
       <div
         style={{
           position: "absolute",
@@ -144,7 +302,7 @@ const Overlay = () => {
       >
         <div style={{ display: "flex", alignItems: "center" }}>
           <CursorSVG color="#b0b0b0" />
-          
+
           {(status === "thinking" || status === "running") && (
             <div
               style={{
@@ -163,7 +321,7 @@ const Overlay = () => {
               }}
             >
               <LoadingSpinner />
-              {currentAction?.action 
+              {currentAction?.action
                 ? `${currentAction.action.charAt(0).toUpperCase() + currentAction.action.slice(1)}...`
                 : (currentAction?.message || "Thinking...")
               }
