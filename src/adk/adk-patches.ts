@@ -156,21 +156,26 @@ const zodV4ToSchema = (schema: any): JsonSchema => {
   return declaration;
 };
 
-// Disable BuiltInCodeExecutor patch as per requirements
-// The original patch has been commented out
+const originalProcessLlmRequest = (BuiltInCodeExecutor as any).prototype.processLlmRequest;
+(BuiltInCodeExecutor as any).prototype.processLlmRequest = function patchedProcessLlmRequest(llmRequest: any) {
+  try {
+    originalProcessLlmRequest.call(this, llmRequest);
+  } catch (e: any) {
+    const isUnsupportedCodeExecution =
+      e?.message?.includes("code execution tool is not supported") &&
+      e?.message?.includes("gemini-3-flash-preview");
 
-// const originalProcessLlmRequest = (BuiltInCodeExecutor as any).prototype.processLlmRequest;
-// (BuiltInCodeExecutor as any).prototype.processLlmRequest = function patchedProcessLlmRequest(llmRequest: any) {
-//   try {
-//     originalProcessLlmRequest.call(this, llmRequest);
-//   } catch (e: any) {
-//     console.error("[ADK PATCH] processLlmRequest error:", e);
-//     if (e.message && e.message.includes("gemini-3-flash-preview")) {
-//       return;
-//     }
-//     throw e;
-//   }
-// };
+    if (isUnsupportedCodeExecution) {
+      if (debugMode) {
+        console.log("[ADK PATCH] Skipping unsupported code execution tool for gemini-3-flash-preview");
+      }
+      return;
+    }
+
+    console.error("[ADK PATCH] processLlmRequest error:", e);
+    throw e;
+  }
+};
 
 const originalFindAgent = (LlmAgent as any).prototype.findAgent;
 if (originalFindAgent) {
