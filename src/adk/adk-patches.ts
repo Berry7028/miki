@@ -1,6 +1,13 @@
 import { FunctionTool, BuiltInCodeExecutor, LlmAgent } from "@google/adk";
 import { Type } from "@google/genai";
 
+// Global debug mode flag
+let debugMode = false;
+
+export function setDebugMode(enabled: boolean) {
+  debugMode = enabled;
+}
+
 type ZodV4Def = {
   type?: string;
   shape?: Record<string, unknown>;
@@ -149,19 +156,21 @@ const zodV4ToSchema = (schema: any): JsonSchema => {
   return declaration;
 };
 
-// skip error for gemini-3-flash-preview
-const originalProcessLlmRequest = (BuiltInCodeExecutor as any).prototype.processLlmRequest;
-(BuiltInCodeExecutor as any).prototype.processLlmRequest = function patchedProcessLlmRequest(llmRequest: any) {
-  try {
-    originalProcessLlmRequest.call(this, llmRequest);
-  } catch (e: any) {
-    console.error("[ADK PATCH] processLlmRequest error:", e);
-    if (e.message && e.message.includes("gemini-3-flash-preview")) {
-      return;
-    }
-    throw e;
-  }
-};
+// Disable BuiltInCodeExecutor patch as per requirements
+// The original patch has been commented out
+
+// const originalProcessLlmRequest = (BuiltInCodeExecutor as any).prototype.processLlmRequest;
+// (BuiltInCodeExecutor as any).prototype.processLlmRequest = function patchedProcessLlmRequest(llmRequest: any) {
+//   try {
+//     originalProcessLlmRequest.call(this, llmRequest);
+//   } catch (e: any) {
+//     console.error("[ADK PATCH] processLlmRequest error:", e);
+//     if (e.message && e.message.includes("gemini-3-flash-preview")) {
+//       return;
+//     }
+//     throw e;
+//   }
+// };
 
 const originalFindAgent = (LlmAgent as any).prototype.findAgent;
 if (originalFindAgent) {
@@ -173,8 +182,33 @@ if (originalFindAgent) {
   };
 }
 
+// Helper function to validate JSON syntax
+function isValidJSON(str: string): boolean {
+  try {
+    JSON.parse(str);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+// Helper function to extract JSON parse error details
+function getJSONParseError(str: string): string {
+  try {
+    JSON.parse(str);
+    return "";
+  } catch (e: any) {
+    return e.message || "Invalid JSON syntax";
+  }
+}
+
 // パッチ: ツール実行結果に含まれるスクリーンショットを画像パーツとして展開する
+// JSON構文エラーが発生した場合は、AIに修正を依頼する（最大3回まで）
 const originalCallLlmAsync = (LlmAgent as any).prototype.callLlmAsync;
+
+// Track retry attempts per invocation context
+const retryAttemptsMap = new WeakMap<any, number>();
+
 (LlmAgent as any).prototype.callLlmAsync = async function* patchedCallLlmAsync(
   invocationContext: any,
   llmRequest: any,
@@ -226,12 +260,86 @@ const originalCallLlmAsync = (LlmAgent as any).prototype.callLlmAsync;
 
         for (const part of event.content.parts) {
           if (part.functionCall) {
-            console.log("[ADK PATCH] Detected functionCall:", part.functionCall.name, part.functionCall.args);
+            if (debugMode) {
+              console.log("[ADK PATCH] Detected functionCall:", part.functionCall.name, part.functionCall.args);
+            }
+            
             // args が文字列ならオブジェクトに変換
             if (typeof part.functionCall.args === "string") {
+              const argsString = part.functionCall.args;
+              
+              // JSON構文の事前チェック
+              if (!isValidJSON(argsString)) {
+                const errorMsg = getJSONParseError(argsString);
+                console.error("[ADK PATCH] JSON parse error detected:", errorMsg);
+                
+                // 現在の試行回数を取得
+                const currentAttempts = retryAttemptsMap.get(invocationContext) || 0;
+                const maxAttempts = 3;
+                
+                if (currentAttempts < maxAttempts) {
+                  // 試行回数をインクリメント
+                  retryAttemptsMap.set(invocationContext, currentAttempts + 1);
+                  
+                  // エラーメッセージを表示
+                  console.log("このアクションは正しく実行されませんでした");
+                  
+                  if (debugMode) {
+                    console.log(`[ADK PATCH] Retry attempt ${currentAttempts + 1}/${maxAttempts}`);
+                    console.log(`[ADK PATCH] Invalid JSON: ${argsString}`);
+                    console.log(`[ADK PATCH] Error: ${errorMsg}`);
+                  }
+                  
+                  // AIに修正を依頼するため、エラー情報を含むレスポンスを返す
+                  yield {
+                    id: event.id || "error-response",
+                    content: {
+                      role: "model",
+                      parts: [{
+                        text: `JSON構文エラーが発生しました。以下のJSONを修正してください。\nエラー: ${errorMsg}\n不正なJSON: ${argsString}\n\n正しいJSON形式でもう一度functionCallを送信してください。`
+                      }]
+                    }
+                  };
+                  
+                  // このイベントの処理を中断
+                  continue;
+                } else {
+                  // 最大試行回数を超えた場合
+                  console.error("ユーザーのタスクを正しく実行できませんでした");
+                  
+                  if (debugMode) {
+                    console.error(`[ADK PATCH] Maximum retry attempts (${maxAttempts}) exceeded`);
+                  }
+                  
+                  // エラーを通知するレスポンスを返す
+                  yield {
+                    id: event.id || "max-retry-error",
+                    content: {
+                      role: "model",
+                      parts: [{
+                        text: "JSON構文エラーが解決できませんでした。タスクを正しく実行できません。"
+                      }]
+                    }
+                  };
+                  
+                  // 試行回数をリセット
+                  retryAttemptsMap.delete(invocationContext);
+                  continue;
+                }
+              }
+              
+              // JSONが有効な場合はパース
               try {
-                part.functionCall.args = JSON.parse(part.functionCall.args);
-              } catch (e) {}
+                part.functionCall.args = JSON.parse(argsString);
+                // 成功したら試行回数をリセット
+                retryAttemptsMap.delete(invocationContext);
+              } catch (e) {
+                // これは到達しないはずだが、念のため
+                if (debugMode) {
+                  console.error("[ADK PATCH] Unexpected JSON parse error:", e);
+                }
+                part.functionCall.args = {};
+              }
             }
             if (!part.functionCall.args) {
               part.functionCall.args = {};
