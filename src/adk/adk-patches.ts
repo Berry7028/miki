@@ -182,23 +182,13 @@ if (originalFindAgent) {
   };
 }
 
-// Helper function to validate JSON syntax
-function isValidJSON(str: string): boolean {
+// Helper function to validate JSON syntax and get error message
+function validateJSON(str: string): { valid: boolean; error: string } {
   try {
     JSON.parse(str);
-    return true;
-  } catch (e) {
-    return false;
-  }
-}
-
-// Helper function to extract JSON parse error details
-function getJSONParseError(str: string): string {
-  try {
-    JSON.parse(str);
-    return "";
+    return { valid: true, error: "" };
   } catch (e: any) {
-    return e.message || "Invalid JSON syntax";
+    return { valid: false, error: e.message || "Invalid JSON syntax" };
   }
 }
 
@@ -269,9 +259,9 @@ const retryAttemptsMap = new WeakMap<any, number>();
               const argsString = part.functionCall.args;
               
               // JSON構文の事前チェック
-              if (!isValidJSON(argsString)) {
-                const errorMsg = getJSONParseError(argsString);
-                console.error("[ADK PATCH] JSON parse error detected:", errorMsg);
+              const validation = validateJSON(argsString);
+              if (!validation.valid) {
+                console.error("[ADK PATCH] JSON parse error detected:", validation.error);
                 
                 // 現在の試行回数を取得
                 const currentAttempts = retryAttemptsMap.get(invocationContext) || 0;
@@ -287,16 +277,16 @@ const retryAttemptsMap = new WeakMap<any, number>();
                   if (debugMode) {
                     console.log(`[ADK PATCH] Retry attempt ${currentAttempts + 1}/${maxAttempts}`);
                     console.log(`[ADK PATCH] Invalid JSON: ${argsString}`);
-                    console.log(`[ADK PATCH] Error: ${errorMsg}`);
+                    console.log(`[ADK PATCH] Error: ${validation.error}`);
                   }
                   
                   // AIに修正を依頼するため、エラー情報を含むレスポンスを返す
                   yield {
-                    id: event.id || "error-response",
+                    id: event.id || `retry-${currentAttempts + 1}-error`,
                     content: {
                       role: "model",
                       parts: [{
-                        text: `JSON構文エラーが発生しました。以下のJSONを修正してください。\nエラー: ${errorMsg}\n不正なJSON: ${argsString}\n\n正しいJSON形式でもう一度functionCallを送信してください。`
+                        text: `JSON構文エラーが発生しました。以下のJSONを修正してください。\nエラー: ${validation.error}\n不正なJSON: ${argsString}\n\n正しいJSON形式でもう一度functionCallを送信してください。`
                       }]
                     }
                   };
@@ -313,7 +303,7 @@ const retryAttemptsMap = new WeakMap<any, number>();
                   
                   // エラーを通知するレスポンスを返す
                   yield {
-                    id: event.id || "max-retry-error",
+                    id: event.id || "max-retry-exceeded-error",
                     content: {
                       role: "model",
                       parts: [{
@@ -328,18 +318,10 @@ const retryAttemptsMap = new WeakMap<any, number>();
                 }
               }
               
-              // JSONが有効な場合はパース
-              try {
-                part.functionCall.args = JSON.parse(argsString);
-                // 成功したら試行回数をリセット
-                retryAttemptsMap.delete(invocationContext);
-              } catch (e) {
-                // これは到達しないはずだが、念のため
-                if (debugMode) {
-                  console.error("[ADK PATCH] Unexpected JSON parse error:", e);
-                }
-                part.functionCall.args = {};
-              }
+              // JSONが有効な場合はパース（validation.valid === trueが保証されている）
+              part.functionCall.args = JSON.parse(argsString);
+              // 成功したら試行回数をリセット
+              retryAttemptsMap.delete(invocationContext);
             }
             if (!part.functionCall.args) {
               part.functionCall.args = {};
