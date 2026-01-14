@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld("miki", {
       return "";
     }
   },
+  setOverlayMousePassthrough: (ignore) => ipcRenderer.invoke("miki:setOverlayMousePassthrough", ignore),
   start: (goal) => ipcRenderer.invoke("miki:start", goal),
   hint: (text) => ipcRenderer.invoke("miki:hint", text),
   stop: () => ipcRenderer.invoke("miki:stop"),
