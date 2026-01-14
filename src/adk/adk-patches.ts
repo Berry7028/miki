@@ -261,7 +261,9 @@ const retryAttemptsMap = new WeakMap<any, number>();
               // JSON構文の事前チェック
               const validation = validateJSON(argsString);
               if (!validation.valid) {
-                console.error("[ADK PATCH] JSON parse error detected:", validation.error);
+                if (debugMode) {
+                  console.error("[ADK PATCH] JSON parse error detected:", validation.error);
+                }
                 
                 // 現在の試行回数を取得
                 const currentAttempts = retryAttemptsMap.get(invocationContext) || 0;
