@@ -153,6 +153,10 @@ pyinstaller --name miki-executor --onedir src/executor/main.py --distpath deskto
 
 システムアーキテクチャの詳細については、[アーキテクチャドキュメント](./ARCHITECTURE_JP.md)を参照してください。
 
+## コンテキスト管理
+
+Miki は manus スタイルのアプローチに着想を得た、洗練されたコンテキスト管理システムを実装しています。コンテキストの管理、圧縮、優先順位付けの詳細については、[コンテキスト管理ドキュメント](./CONTEXT_MANAGEMENT_JP.md)を参照してください。
+
 ## セキュリティメモ
 
 - `desktop/renderer/index.html` と `desktop/renderer/chat.html` は Tailwind CDN を使うため、

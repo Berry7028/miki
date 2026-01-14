@@ -153,6 +153,10 @@ You can send requests directly to AI from the chat window.
 
 For a detailed explanation of the system architecture, see the [Architecture documentation](./docs/ARCHITECTURE.md).
 
+## Context Management
+
+Miki implements a sophisticated context management system inspired by manus-style approaches. For details on how context is managed, compressed, and prioritized, see the [Context Management documentation](./docs/CONTEXT_MANAGEMENT.md).
+
 ## Security Notes
 
 - `desktop/renderer/index.html` and `desktop/renderer/chat.html` use Tailwind CDN,
