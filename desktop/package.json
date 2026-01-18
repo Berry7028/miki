@@ -24,6 +24,7 @@
     "react-dom": "^19.2.3"
   },
   "devDependencies": {
+    "@google/adk": "^0.2.2",
     "@google/generative-ai": "^0.24.1",
     "dotenv": "^17.2.3",
     "electron": "^35.7.5",
