@@ -10,16 +10,16 @@ The project uses [Vitest](https://vitest.dev/) as the testing framework. Vitest 
 
 ```bash
 # Run all tests once
-npm test
+bun test
 
 # Run tests in watch mode (auto-rerun on file changes)
-npm run test:watch
+bun run test:watch
 
 # Run tests with UI (opens a browser-based interface)
-npm run test:ui
+bun run test:ui
 
 # Run tests with coverage report
-npm run test:coverage
+bun run test:coverage
 ```
 
 ## Test Structure
