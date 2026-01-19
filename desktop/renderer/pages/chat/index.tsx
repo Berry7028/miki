@@ -225,6 +225,7 @@ const ChatApp = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { t } = useI18n();
+  const tRef = useRef(t);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -239,6 +240,10 @@ const ChatApp = () => {
   }, []);
 
   useEffect(() => {
+    tRef.current = t;
+  }, [t]);
+
+  useEffect(() => {
     const unsubscribe = window.miki?.onBackendEvent((payload) => {
       if (payload.event === "status") {
         if (payload.state === "running") setIsProcessing(true);
@@ -248,11 +253,11 @@ const ChatApp = () => {
           setThinkingText("");
         }
       } else if (payload.event === "thinking") {
-        setThinkingText(payload.message || t("chat.thinking"));
+        setThinkingText(payload.message || tRef.current("chat.thinking"));
         // Prefer explicit thought field from think action, fall back to message for backwards compatibility
         // payload.thought: explicit thought content from think(phase, thought)
         // payload.message: formatted message with phase label (e.g., "[計画] ...")
-        const content = payload.thought || payload.message || t("chat.thinking");
+        const content = payload.thought || payload.message || tRef.current("chat.thinking");
         addMessage({
           type: "thinking",
           content,
@@ -265,7 +270,9 @@ const ChatApp = () => {
           type: "tool",
           content:
             payload.message ||
-            t("chat.toolRunning", { toolName: payload.toolName || t("chat.toolFallback") }),
+            tRef.current("chat.toolRunning", {
+              toolName: payload.toolName || tRef.current("chat.toolFallback"),
+            }),
           timestamp: payload.timestamp || Date.now(),
           toolName: payload.toolName,
           toolInput: payload.toolInput,
@@ -283,7 +290,7 @@ const ChatApp = () => {
       } else if (payload.event === "completed") {
         addMessage({
           type: "ai",
-          content: payload.message || payload.result || t("chat.done"),
+          content: payload.message || payload.result || tRef.current("chat.done"),
           timestamp: payload.timestamp || Date.now(),
         });
         setIsProcessing(false);
@@ -291,7 +298,7 @@ const ChatApp = () => {
       } else if (payload.event === "error") {
         addMessage({
           type: "error",
-          content: payload.message || t("chat.errorOccurred"),
+          content: payload.message || tRef.current("chat.errorOccurred"),
           timestamp: payload.timestamp || Date.now(),
         });
         setIsProcessing(false);
@@ -299,7 +306,7 @@ const ChatApp = () => {
     });
 
     return () => unsubscribe?.();
-  }, [addMessage, t]);
+  }, [addMessage]);
 
   useEffect(() => {
     const unsubscribe = window.miki?.onFocusInput(() => {

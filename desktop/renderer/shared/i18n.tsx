@@ -31,7 +31,7 @@ const getValue = (data: TranslationData, key: string) =>
   }, data as any);
 
 const interpolate = (text: string, values?: InterpolationValues) =>
-  text.replace(/\{\{(\w+)\}\}/g, (_match, key) => String(values?.[key] ?? ""));
+  text.replace(/\{\{([^}]+)\}\}/g, (_match, key) => String(values?.[key] ?? ""));
 
 const normalizeLocale = (locale: string | undefined | null): Locale => {
   if (locale && supportedLocales.includes(locale as Locale)) {

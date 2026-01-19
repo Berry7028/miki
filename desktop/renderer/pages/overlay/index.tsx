@@ -19,6 +19,11 @@ const Overlay = () => {
   const mousePassthroughRef = useRef(true);
   const showControlsRef = useRef(false);
   const { t } = useI18n();
+  const tRef = useRef(t);
+
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
 
   useEffect(() => {
     console.log("Overlay component mounted");
@@ -41,10 +46,10 @@ const Overlay = () => {
         }
       } else if (payload.event === "action_update") {
         setCurrentAction(payload);
-    } else if (payload.event === "thinking") {
-      // Prefer explicit thought field from think action, fall back to message
-      const content = payload.thought || payload.message || t("overlay.thinking");
-      setThinkingText(content);
+      } else if (payload.event === "thinking") {
+        // Prefer explicit thought field from think action, fall back to message
+        const content = payload.thought || payload.message || tRef.current("overlay.thinking");
+        setThinkingText(content);
       } else if (payload.event === "fadeout" || payload.event === "completed") {
         setVisible(false);
         setCurrentAction(null);
@@ -84,7 +89,7 @@ const Overlay = () => {
       unsubscribeBackend?.();
       unsubscribeMouse?.();
     };
-  }, [t]);
+  }, []);
 
   // Stop button handler
   const handleStop = async () => {
