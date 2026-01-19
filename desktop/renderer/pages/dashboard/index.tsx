@@ -20,6 +20,7 @@ import {
   Avatar,
   LinearProgress,
   IconButton,
+  MenuItem,
 } from "@mui/material";
 import {
   CheckCircle,
@@ -35,6 +36,7 @@ import {
 } from "@mui/icons-material";
 import { theme } from "../../shared/theme";
 import type { BackendEvent, SetupStatus } from "../../shared/types";
+import { I18nProvider, useI18n } from "../../shared/i18n";
 
 // Create Emotion cache with nonce for CSP
 async function createEmotionCache() {
@@ -52,24 +54,6 @@ async function createEmotionCache() {
   });
 }
 
-const setupSteps = [
-  {
-    title: "Configure MIKI AI",
-    subtitle: "Enter your OpenAI or Anthropic API key.",
-    icon: <VpnKey />,
-  },
-  {
-    title: "Enable Accessibility",
-    subtitle: "Allow MIKI to control your screen for automation.",
-    icon: <Settings />,
-  },
-  {
-    title: "Let MIKI see your workflow",
-    subtitle: "Screen recording permission is required for context-aware help.",
-    icon: <Visibility />,
-  },
-];
-
 const App = () => {
   const [apiKey, setApiKey] = useState("");
   const [isEditingApiKey, setIsEditingApiKey] = useState(false);
@@ -78,6 +62,25 @@ const App = () => {
   const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null);
   const [setupStep, setSetupStep] = useState(0);
   const [taskTokenUsage, setTaskTokenUsage] = useState<number | null>(null);
+  const { t, locale, setLocale } = useI18n();
+
+  const setupSteps = [
+    {
+      title: t("dashboard.setup.configureTitle"),
+      subtitle: t("dashboard.setup.configureSubtitle"),
+      icon: <VpnKey />,
+    },
+    {
+      title: t("dashboard.setup.accessTitle"),
+      subtitle: t("dashboard.setup.accessSubtitle"),
+      icon: <Settings />,
+    },
+    {
+      title: t("dashboard.setup.screenTitle"),
+      subtitle: t("dashboard.setup.screenSubtitle"),
+      icon: <Visibility />,
+    },
+  ];
 
   const appendLog = useCallback((event: BackendEvent) => {
     setLogs((prev) => [event, ...prev].slice(0, 100));
@@ -109,9 +112,9 @@ const App = () => {
           setTaskTokenUsage(payload.totalTokens);
         }
       } else if (payload.event === "completed") {
-        appendLog({ ...payload, type: "success", message: payload.message || "Completed" });
+        appendLog({ ...payload, type: "success", message: payload.message || t("dashboard.completed") });
       } else if (payload.event === "error") {
-        appendLog({ ...payload, type: "error", message: payload.message || "Error" });
+        appendLog({ ...payload, type: "error", message: payload.message || t("dashboard.error") });
       } else if (payload.event === "status" && payload.state === "running") {
         setTaskTokenUsage((prev) => (prev === null ? prev : 0));
       }
@@ -123,12 +126,12 @@ const App = () => {
       unsubscribe?.();
       clearInterval(setupInterval);
     };
-  }, [appendLog]);
+  }, [appendLog, t]);
 
   const handleSaveApiKey = async () => {
     if (!apiKey.trim()) return;
     await window.miki?.setApiKey(apiKey);
-    setSaveStatus("Saved");
+    setSaveStatus(t("dashboard.saved"));
     setIsEditingApiKey(false);
     setTimeout(() => setSaveStatus(""), 3000);
   };
@@ -152,15 +155,15 @@ const App = () => {
   const logLabel = (type?: BackendEvent["type"]) => {
     switch (type) {
       case "action":
-        return { label: "ACTION", color: "rgba(100, 120, 150, 0.3)", text: "#8fa0b0" };
+        return { label: t("log.action"), color: "rgba(100, 120, 150, 0.3)", text: "#8fa0b0" };
       case "success":
-        return { label: "SUCCESS", color: "rgba(70, 150, 90, 0.3)", text: "#8fbe8f" };
+        return { label: t("log.success"), color: "rgba(70, 150, 90, 0.3)", text: "#8fbe8f" };
       case "error":
-        return { label: "ERROR", color: "rgba(180, 60, 60, 0.3)", text: "#d08080" };
+        return { label: t("log.error"), color: "rgba(180, 60, 60, 0.3)", text: "#d08080" };
       case "thinking":
-        return { label: "TASK", color: "rgba(150, 150, 150, 0.3)", text: "#b0b0b0" };
+        return { label: t("log.task"), color: "rgba(150, 150, 150, 0.3)", text: "#b0b0b0" };
       default:
-        return { label: "INFO", color: "rgba(255, 255, 255, 0.1)", text: "#9a9a9a" };
+        return { label: t("log.info"), color: "rgba(255, 255, 255, 0.1)", text: "#9a9a9a" };
     }
   };
 
@@ -201,12 +204,12 @@ const App = () => {
                 <Terminal sx={{ fontSize: 18, color: "primary.main" }} />
               </Box>
               <Typography variant="subtitle1" sx={{ fontWeight: 700, letterSpacing: "0.08em" }}>
-                MIKI DESKTOP
+                {t("app.name")}
               </Typography>
             </Stack>
             <Stack direction="row" spacing={2} alignItems="center">
               <Chip
-                label="SYSTEM READY"
+                label={t("dashboard.systemReady")}
                 sx={{
                   bgcolor: "#2e5a3a",
                   color: "#90ee90",
@@ -214,6 +217,17 @@ const App = () => {
                   border: "1px solid rgba(100, 200, 100, 0.3)",
                 }}
               />
+              <TextField
+                select
+                size="small"
+                label={t("dashboard.language")}
+                value={locale}
+                onChange={(e) => setLocale(e.target.value)}
+                sx={{ minWidth: 140 }}
+              >
+                <MenuItem value="en">{t("locales.en")}</MenuItem>
+                <MenuItem value="ja">{t("locales.ja")}</MenuItem>
+              </TextField>
               <IconButton size="small" sx={{ bgcolor: "rgba(255,255,255,0.05)" }}>
                 <Settings fontSize="small" />
               </IconButton>
@@ -236,10 +250,12 @@ const App = () => {
               <Stack spacing={3}>
                 <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <Stack direction="row" spacing={1.5} alignItems="center">
-                    <Typography variant="h1">Dashboard</Typography>
+                    <Typography variant="h1">{t("dashboard.title")}</Typography>
                     {taskTokenUsage !== null && (
                       <Chip
-                        label={`Task Tokens: ${taskTokenUsage.toLocaleString()}`}
+                        label={t("dashboard.taskTokens", {
+                          count: taskTokenUsage.toLocaleString(),
+                        })}
                         sx={{
                           bgcolor: "rgba(90, 120, 160, 0.2)",
                           color: "#b8c7d8",
@@ -250,7 +266,7 @@ const App = () => {
                     )}
                   </Stack>
                   <Chip
-                    label="v2.4.0"
+                    label={t("dashboard.version")}
                     sx={{
                       bgcolor: "#2e3339",
                       border: "1px solid rgba(255,255,255,0.15)",
@@ -262,9 +278,9 @@ const App = () => {
 
                 <Paper sx={{ p: 3.5, display: "flex", justifyContent: "space-between" }}>
                   <Stack spacing={1}>
-                    <Typography variant="h6">Quick Trigger</Typography>
+                    <Typography variant="h6">{t("dashboard.quickTrigger")}</Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Launch the chat overlay instantly from anywhere.
+                      {t("dashboard.quickTriggerDescription")}
                     </Typography>
                   </Stack>
                   <Button
@@ -272,7 +288,7 @@ const App = () => {
                     startIcon={<Bolt />}
                     sx={{ minWidth: 180, justifyContent: "space-between" }}
                   >
-                    Cmd + Shift + Space
+                    {t("dashboard.shortcut")}
                   </Button>
                 </Paper>
 
@@ -293,20 +309,20 @@ const App = () => {
                           </Avatar>
                           <Box>
                             <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                              API Configuration
+                              {t("dashboard.apiConfiguration")}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                              {hasApiKey ? "Connected" : "Not Connected"}
+                              {hasApiKey ? t("dashboard.connected") : t("dashboard.notConnected")}
                             </Typography>
                           </Box>
                         </Stack>
                         <Typography variant="caption" color="text.secondary">
-                          OPENAI API KEY
+                          {t("dashboard.apiKeyLabel")}
                         </Typography>
                         <TextField
                           fullWidth
                           type={isEditingApiKey ? "text" : "password"}
-                          placeholder="sk-...."
+                          placeholder={t("dashboard.apiKeyPlaceholder")}
                           value={apiKey}
                           onChange={(e) => setApiKey(e.target.value)}
                           InputProps={{
@@ -319,10 +335,10 @@ const App = () => {
                         />
                         <Stack direction="row" spacing={2} alignItems="center" justifyContent="flex-end">
                           <Button variant="text" onClick={() => setIsEditingApiKey(true)}>
-                            Change Key
+                            {t("dashboard.changeKey")}
                           </Button>
                           <Button variant="contained" onClick={handleSaveApiKey} disabled={!apiKey.trim()}>
-                            Verify & Save
+                            {t("dashboard.verifySave")}
                           </Button>
                         </Stack>
                         {saveStatus && (
@@ -349,10 +365,10 @@ const App = () => {
                           </Avatar>
                           <Box>
                             <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                              System Permissions
+                              {t("dashboard.systemPermissions")}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                              Review system access
+                              {t("dashboard.reviewSystemAccess")}
                             </Typography>
                           </Box>
                         </Stack>
@@ -368,16 +384,16 @@ const App = () => {
                         >
                           <Stack spacing={0.5}>
                             <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                              Accessibility
+                              {t("dashboard.accessibility")}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                              Granted
+                              {t("dashboard.granted")}
                             </Typography>
                           </Stack>
                           {setupStatus?.hasAccessibility ? (
                             <Chip
                               icon={<CheckCircle sx={{ fontSize: 16 }} />}
-                              label="Granted"
+                              label={t("dashboard.granted")}
                               size="small"
                               color="success"
                             />
@@ -388,7 +404,7 @@ const App = () => {
                               color="warning"
                               onClick={() => window.miki?.openSystemPreferences("accessibility")}
                             >
-                              Allow
+                              {t("dashboard.allow")}
                             </Button>
                           )}
                         </Paper>
@@ -404,16 +420,18 @@ const App = () => {
                         >
                           <Stack spacing={0.5}>
                             <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                              Screen Recording
+                              {t("dashboard.screenRecording")}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                              {setupStatus?.hasScreenRecording ? "Granted" : "Action Required"}
+                              {setupStatus?.hasScreenRecording
+                                ? t("dashboard.granted")
+                                : t("dashboard.actionRequired")}
                             </Typography>
                           </Stack>
                           {setupStatus?.hasScreenRecording ? (
                             <Chip
                               icon={<CheckCircle sx={{ fontSize: 16 }} />}
-                              label="Granted"
+                              label={t("dashboard.granted")}
                               size="small"
                               color="success"
                             />
@@ -424,7 +442,7 @@ const App = () => {
                               color="warning"
                               onClick={() => window.miki?.openSystemPreferences("screen-recording")}
                             >
-                              Allow
+                              {t("dashboard.allow")}
                             </Button>
                           )}
                         </Paper>
@@ -448,7 +466,7 @@ const App = () => {
                   }}
                 >
                   <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                    Execution Log
+                    {t("dashboard.executionLog")}
                   </Typography>
                   <IconButton size="small" onClick={() => setLogs([])} sx={{ opacity: 0.6 }}>
                     <Settings fontSize="small" />
@@ -519,7 +537,7 @@ const App = () => {
                       sx={{ height: "100%", opacity: 0.5 }}
                     >
                       <Terminal sx={{ fontSize: 32 }} />
-                      <Typography variant="body2">No logs yet</Typography>
+                      <Typography variant="body2">{t("dashboard.noLogsYet")}</Typography>
                     </Stack>
                   )}
                 </Box>
@@ -544,10 +562,13 @@ const App = () => {
           <Box sx={{ px: 4, pt: 4 }}>
             <Stack direction="row" alignItems="center" justifyContent="space-between">
               <Typography variant="subtitle2" sx={{ letterSpacing: "0.1em" }}>
-                SETUP WIZARD
+                {t("dashboard.setupWizard")}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                Step {setupStep + 1} of {setupSteps.length}
+                {t("dashboard.stepOf", {
+                  current: setupStep + 1,
+                  total: setupSteps.length,
+                })}
               </Typography>
             </Stack>
             <LinearProgress
@@ -589,17 +610,17 @@ const App = () => {
               {setupStep === 0 && (
                 <Stack spacing={2} sx={{ width: "100%" }}>
                   <Typography variant="body2" color="text.secondary">
-                    Where do I find my API key?
+                    {t("dashboard.whereFindApiKey")}
                   </Typography>
                   <TextField
                     fullWidth
                     type="password"
-                    placeholder="sk-..."
+                    placeholder={t("dashboard.apiKeyPlaceholderShort")}
                     value={apiKey}
                     onChange={(e) => setApiKey(e.target.value)}
                   />
                   <Typography variant="caption" color="text.secondary">
-                    Your key is encrypted and stored locally. It is never shared with our servers.
+                    {t("dashboard.apiKeySecureNote")}
                   </Typography>
                 </Stack>
               )}
@@ -609,7 +630,7 @@ const App = () => {
                   {setupStatus?.hasAccessibility ? (
                     <Chip
                       icon={<CheckCircle sx={{ fontSize: 18 }} />}
-                      label="Accessibility Granted"
+                      label={t("dashboard.accessibilityGranted")}
                       color="success"
                       sx={{ alignSelf: "center" }}
                     />
@@ -619,7 +640,7 @@ const App = () => {
                       startIcon={<Settings />}
                       onClick={() => window.miki?.openSystemPreferences("accessibility")}
                     >
-                      Open System Preferences
+                      {t("dashboard.openSystemPreferences")}
                     </Button>
                   )}
                 </Stack>
@@ -630,7 +651,7 @@ const App = () => {
                   {setupStatus?.hasScreenRecording ? (
                     <Chip
                       icon={<CheckCircle sx={{ fontSize: 18 }} />}
-                      label="Screen Recording Granted"
+                      label={t("dashboard.screenRecordingGranted")}
                       color="success"
                       sx={{ alignSelf: "center" }}
                     />
@@ -640,12 +661,12 @@ const App = () => {
                       startIcon={<Visibility />}
                       onClick={() => window.miki?.openSystemPreferences("screen-recording")}
                     >
-                      Open System Preferences
+                      {t("dashboard.openSystemPreferences")}
                     </Button>
                   )}
                   <Chip
                     icon={<Lock sx={{ fontSize: 18 }} />}
-                    label="This data is processed locally and never leaves your device."
+                    label={t("dashboard.localProcessingOnly")}
                     sx={{
                       bgcolor: "#2a2e34",
                       color: "text.secondary",
@@ -662,7 +683,7 @@ const App = () => {
               onClick={() => setSetupStep(setupStep - 1)}
               startIcon={<ArrowForward sx={{ transform: "rotate(180deg)" }} />}
             >
-              Back
+              {t("dashboard.back")}
             </Button>
             <Box sx={{ flexGrow: 1 }} />
             {setupStep < setupSteps.length - 1 ? (
@@ -672,7 +693,7 @@ const App = () => {
                 disabled={setupStep === 0 && !apiKey.trim()}
                 endIcon={<ArrowForward />}
               >
-                Next Step
+                {t("dashboard.nextStep")}
               </Button>
             ) : (
               <Button
@@ -680,7 +701,7 @@ const App = () => {
                 onClick={handleSetupFinish}
                 disabled={!setupStatus?.hasScreenRecording}
               >
-                Finish Setup
+                {t("dashboard.finishSetup")}
               </Button>
             )}
           </DialogActions>
@@ -697,7 +718,9 @@ const root = createRoot(container!);
 createEmotionCache().then((cache) => {
   root.render(
     <CacheProvider value={cache}>
-      <App />
+      <I18nProvider>
+        <App />
+      </I18nProvider>
     </CacheProvider>
   );
 });

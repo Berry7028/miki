@@ -26,6 +26,7 @@ import {
 } from "@mui/icons-material";
 import { theme } from "../../shared/theme";
 import type { BackendEvent } from "../../shared/types";
+import { I18nProvider, useI18n } from "../../shared/i18n";
 
 // Create Emotion cache with nonce for CSP
 async function createEmotionCache() {
@@ -54,6 +55,7 @@ interface Message {
 
 const ActionContent = ({ msg }: { msg: Message }) => {
   const { content, type, toolName, toolInput } = msg;
+  const { t } = useI18n();
 
   if (type === "action" && content.startsWith("アクション: ")) {
     try {
@@ -70,7 +72,7 @@ const ActionContent = ({ msg }: { msg: Message }) => {
                 variant="caption"
                 sx={{ fontWeight: "bold", color: "#79b8ff", display: "block", mb: 0.5 }}
               >
-                BATCH
+                {t("chat.batchLabel")}
               </Typography>
               <Box sx={{ ml: 1.5, borderLeft: "1px solid rgba(121, 184, 255, 0.2)", pl: 1.5 }}>
                 {action.params.actions.map((subAction: any, idx: number) => (
@@ -104,7 +106,7 @@ const ActionContent = ({ msg }: { msg: Message }) => {
                   variant="caption"
                   sx={{ mt: 0.5, display: "block", opacity: 0.7, fontSize: "0.65rem" }}
                 >
-                  Phase: {action.params.phase}
+                  {t("chat.phaseLabel", { phase: action.params.phase })}
                 </Typography>
               )}
             </Box>
@@ -222,6 +224,7 @@ const ChatApp = () => {
   const [isAnimating, setIsAnimating] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { t } = useI18n();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -245,11 +248,11 @@ const ChatApp = () => {
           setThinkingText("");
         }
       } else if (payload.event === "thinking") {
-        setThinkingText(payload.message || "Thinking...");
+        setThinkingText(payload.message || t("chat.thinking"));
         // Prefer explicit thought field from think action, fall back to message for backwards compatibility
         // payload.thought: explicit thought content from think(phase, thought)
         // payload.message: formatted message with phase label (e.g., "[計画] ...")
-        const content = payload.thought || payload.message || "Thinking...";
+        const content = payload.thought || payload.message || t("chat.thinking");
         addMessage({
           type: "thinking",
           content,
@@ -260,7 +263,9 @@ const ChatApp = () => {
         setCurrentTool(payload.toolName || "");
         addMessage({
           type: "tool",
-          content: payload.message || `${payload.toolName} running...`,
+          content:
+            payload.message ||
+            t("chat.toolRunning", { toolName: payload.toolName || t("chat.toolFallback") }),
           timestamp: payload.timestamp || Date.now(),
           toolName: payload.toolName,
           toolInput: payload.toolInput,
@@ -278,7 +283,7 @@ const ChatApp = () => {
       } else if (payload.event === "completed") {
         addMessage({
           type: "ai",
-          content: payload.message || payload.result || "Done.",
+          content: payload.message || payload.result || t("chat.done"),
           timestamp: payload.timestamp || Date.now(),
         });
         setIsProcessing(false);
@@ -286,7 +291,7 @@ const ChatApp = () => {
       } else if (payload.event === "error") {
         addMessage({
           type: "error",
-          content: payload.message || "An error occurred.",
+          content: payload.message || t("chat.errorOccurred"),
           timestamp: payload.timestamp || Date.now(),
         });
         setIsProcessing(false);
@@ -294,7 +299,7 @@ const ChatApp = () => {
     });
 
     return () => unsubscribe?.();
-  }, [addMessage]);
+  }, [addMessage, t]);
 
   useEffect(() => {
     const unsubscribe = window.miki?.onFocusInput(() => {
@@ -350,7 +355,7 @@ const ChatApp = () => {
     } catch (error: any) {
       addMessage({
         type: "error",
-        content: "Error: " + error.message,
+        content: t("chat.errorPrefix", { message: error.message }),
         timestamp: Date.now(),
       });
       setIsProcessing(false);
@@ -363,7 +368,7 @@ const ChatApp = () => {
     } catch (error: any) {
       addMessage({
         type: "error",
-        content: "Error stopping agent: " + error.message,
+        content: t("chat.errorStopping", { message: error.message }),
         timestamp: Date.now(),
       });
     }
@@ -425,9 +430,9 @@ const ChatApp = () => {
 
   // Helper function to get label text
   const getMessageLabel = (msg: Message) => {
-    if (msg.type === "tool") return `TOOL: ${msg.toolName}`;
-    if (msg.type === "thinking") return "思考中";
-    if (msg.type === "action") return "ACTION";
+    if (msg.type === "tool") return t("chat.toolLabel", { toolName: msg.toolName || "" });
+    if (msg.type === "thinking") return t("chat.thinkingLabel");
+    if (msg.type === "action") return t("chat.actionLabel");
     return null;
   };
 
@@ -476,7 +481,7 @@ const ChatApp = () => {
                   bgcolor: "rgba(255,255,255,0.06)",
                   "&:hover": { bgcolor: "rgba(255,100,100,0.15)", color: "#ff6b6b" },
                 }}
-                title="Clear Chat"
+                title={t("chat.clearChat")}
               >
                 <DeleteOutline fontSize="small" />
               </IconButton>
@@ -590,7 +595,7 @@ const ChatApp = () => {
               multiline
               maxRows={3}
               inputRef={inputRef}
-              placeholder="Ask Miki to automate a task..."
+              placeholder={t("chat.askPlaceholder")}
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -627,7 +632,7 @@ const ChatApp = () => {
             </IconButton>
           </Paper>
           <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
-            Enter to send, Shift+Enter for new line
+            {t("chat.enterToSend")}
           </Typography>
         </Box>
       </Box>
@@ -641,7 +646,9 @@ const root = createRoot(document.getElementById("root")!);
 createEmotionCache().then((cache) => {
   root.render(
     <CacheProvider value={cache}>
-      <ChatApp />
+      <I18nProvider>
+        <ChatApp />
+      </I18nProvider>
     </CacheProvider>
   );
 });

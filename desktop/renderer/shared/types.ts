@@ -35,6 +35,8 @@ export interface MikiAPI {
   reset: () => Promise<void>;
   getApiKey: () => Promise<string>;
   setApiKey: (apiKey: string) => Promise<boolean>;
+  getLocale: () => Promise<string>;
+  setLocale: (locale: string) => Promise<string>;
   getSetupStatus: () => Promise<SetupStatus>;
   markSetupCompleted: () => Promise<boolean>;
   openSystemPreferences: (pane: "accessibility" | "screen-recording") => Promise<boolean>;

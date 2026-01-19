@@ -1,0 +1,92 @@
+{
+  "app": {
+    "name": "MIKI DESKTOP"
+  },
+  "tray": {
+    "settings": "Settings",
+    "quit": "Quit"
+  },
+  "dashboard": {
+    "systemReady": "SYSTEM READY",
+    "title": "Dashboard",
+    "version": "v2.4.0",
+    "taskTokens": "Task Tokens: {{count}}",
+    "quickTrigger": "Quick Trigger",
+    "quickTriggerDescription": "Launch the chat overlay instantly from anywhere.",
+    "shortcut": "Cmd + Shift + Space",
+    "apiConfiguration": "API Configuration",
+    "connected": "Connected",
+    "notConnected": "Not Connected",
+    "apiKeyLabel": "OPENAI API KEY",
+    "apiKeyPlaceholder": "sk-....",
+    "apiKeyPlaceholderShort": "sk-...",
+    "changeKey": "Change Key",
+    "verifySave": "Verify & Save",
+    "saved": "Saved",
+    "systemPermissions": "System Permissions",
+    "reviewSystemAccess": "Review system access",
+    "accessibility": "Accessibility",
+    "screenRecording": "Screen Recording",
+    "granted": "Granted",
+    "actionRequired": "Action Required",
+    "allow": "Allow",
+    "executionLog": "Execution Log",
+    "noLogsYet": "No logs yet",
+    "setupWizard": "SETUP WIZARD",
+    "stepOf": "Step {{current}} of {{total}}",
+    "whereFindApiKey": "Where do I find my API key?",
+    "apiKeySecureNote": "Your key is encrypted and stored locally. It is never shared with our servers.",
+    "accessibilityGranted": "Accessibility Granted",
+    "openSystemPreferences": "Open System Preferences",
+    "screenRecordingGranted": "Screen Recording Granted",
+    "localProcessingOnly": "This data is processed locally and never leaves your device.",
+    "back": "Back",
+    "nextStep": "Next Step",
+    "finishSetup": "Finish Setup",
+    "language": "Language",
+    "setup": {
+      "configureTitle": "Configure MIKI AI",
+      "configureSubtitle": "Enter your OpenAI or Anthropic API key.",
+      "accessTitle": "Enable Accessibility",
+      "accessSubtitle": "Allow MIKI to control your screen for automation.",
+      "screenTitle": "Let MIKI see your workflow",
+      "screenSubtitle": "Screen recording permission is required for context-aware help."
+    },
+    "completed": "Completed",
+    "error": "Error"
+  },
+  "log": {
+    "action": "ACTION",
+    "success": "SUCCESS",
+    "error": "ERROR",
+    "task": "TASK",
+    "info": "INFO"
+  },
+  "chat": {
+    "clearChat": "Clear Chat",
+    "thinking": "Thinking...",
+    "thinkingLabel": "THINKING",
+    "actionLabel": "ACTION",
+    "toolLabel": "TOOL: {{toolName}}",
+    "toolRunning": "{{toolName}} running...",
+    "toolFallback": "Tool",
+    "done": "Done.",
+    "errorOccurred": "An error occurred.",
+    "errorPrefix": "Error: {{message}}",
+    "errorStopping": "Error stopping agent: {{message}}",
+    "askPlaceholder": "Ask Miki to automate a task...",
+    "enterToSend": "Enter to send, Shift+Enter for new line",
+    "batchLabel": "BATCH",
+    "phaseLabel": "Phase: {{phase}}"
+  },
+  "overlay": {
+    "thinking": "Thinking...",
+    "processing": "Processing...",
+    "stopping": "Stopping...",
+    "stopAgent": "Stop Agent"
+  },
+  "locales": {
+    "en": "English",
+    "ja": "Japanese"
+  }
+}

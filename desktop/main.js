@@ -13,6 +13,12 @@ let controllerProcess;
 let controllerReader;
 let isQuitting = false;
 let chatHideTimeout = null; // Track chat hide timeout
+const localeDir = path.join(__dirname, "renderer", "locales");
+const supportedLocales = ["en", "ja"];
+const defaultLocale = "en";
+let currentLocale = defaultLocale;
+let localeStrings = {};
+let fallbackLocaleStrings = {};
 
 // Generate nonces for CSP
 let styleNonces = new Map(); // Map to store nonces per webContents ID
@@ -31,6 +37,94 @@ function setNonceForWindow(webContents) {
 // Get existing nonce for a webContents
 function getNonceForWindow(webContentsId) {
   return styleNonces.get(webContentsId) || "";
+}
+
+function normalizeLocale(locale) {
+  if (locale && supportedLocales.includes(locale)) {
+    return locale;
+  }
+  return defaultLocale;
+}
+
+function getLocaleValue(localeData, key) {
+  return key.split(".").reduce((acc, part) => {
+    if (acc && typeof acc === "object" && part in acc) {
+      return acc[part];
+    }
+    return undefined;
+  }, localeData);
+}
+
+function loadLocaleStrings(locale) {
+  const normalized = normalizeLocale(locale);
+  const localePath = path.join(localeDir, `${normalized}.json`);
+  try {
+    return JSON.parse(fs.readFileSync(localePath, "utf-8"));
+  } catch (error) {
+    console.warn("Failed to load locale strings:", error);
+    return {};
+  }
+}
+
+function tMain(key) {
+  const value = getLocaleValue(localeStrings, key) ?? getLocaleValue(fallbackLocaleStrings, key);
+  return typeof value === "string" ? value : key;
+}
+
+function localeFilePath() {
+  return path.join(ensureEnvDir(), ".locale");
+}
+
+function readLocale() {
+  try {
+    const localePath = localeFilePath();
+    if (fs.existsSync(localePath)) {
+      const value = fs.readFileSync(localePath, "utf-8").trim();
+      return normalizeLocale(value);
+    }
+  } catch (error) {
+    console.warn("Failed to read locale:", error);
+  }
+  return defaultLocale;
+}
+
+function writeLocale(locale) {
+  const normalized = normalizeLocale(locale);
+  fs.writeFileSync(localeFilePath(), normalized, "utf-8");
+  return normalized;
+}
+
+fallbackLocaleStrings = loadLocaleStrings(defaultLocale);
+currentLocale = readLocale();
+localeStrings = loadLocaleStrings(currentLocale);
+
+function buildTrayMenu() {
+  return Menu.buildFromTemplate([
+    {
+      label: tMain("tray.settings"),
+      click: () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.show();
+          mainWindow.focus();
+        } else {
+          mainWindow = createWindow();
+        }
+      }
+    },
+    { type: "separator" },
+    {
+      label: tMain("tray.quit"),
+      click: () => {
+        isQuitting = true;
+        app.quit();
+      }
+    }
+  ]);
+}
+
+function updateTrayMenu() {
+  if (!tray) return;
+  tray.setContextMenu(buildTrayMenu());
 }
 
 // Set CSP headers with nonce support
@@ -143,30 +237,7 @@ function createTray() {
   }
 
   tray.setToolTip("miki");
-
-  const contextMenu = Menu.buildFromTemplate([
-    {
-      label: "Settings",
-      click: () => {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.show();
-          mainWindow.focus();
-        } else {
-          mainWindow = createWindow();
-        }
-      }
-    },
-    { type: "separator" },
-    {
-      label: "Quit",
-      click: () => {
-        isQuitting = true;
-        app.quit();
-      }
-    }
-  ]);
-
-  tray.setContextMenu(contextMenu);
+  updateTrayMenu();
 }
 
 function createOverlayWindow() {
@@ -749,6 +820,15 @@ ipcMain.handle("miki:getApiKey", () => readApiKey());
 ipcMain.handle("miki:setApiKey", (_event, apiKey) => {
   writeApiKey(apiKey);
   return true;
+});
+
+ipcMain.handle("miki:getLocale", () => currentLocale);
+
+ipcMain.handle("miki:setLocale", (_event, locale) => {
+  currentLocale = writeLocale(locale);
+  localeStrings = loadLocaleStrings(currentLocale);
+  updateTrayMenu();
+  return currentLocale;
 });
 
 ipcMain.handle("miki:getSetupStatus", () => getSetupStatus());
