@@ -87,11 +87,17 @@ const App = () => {
     const checkSetup = async () => {
       const s = await window.miki?.getSetupStatus();
       setSetupStatus(s);
+    };
+
+    // 初回マウント時のみステップを設定
+    const initialCheck = async () => {
+      const s = await window.miki?.getSetupStatus();
+      setSetupStatus(s);
       if (s?.needsSetup) {
         setSetupStep(0);
       }
     };
-    checkSetup();
+    initialCheck();
 
     const setupInterval = setInterval(checkSetup, 3000);
 
