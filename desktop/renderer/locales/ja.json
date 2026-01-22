@@ -1,0 +1,92 @@
+{
+  "app": {
+    "name": "MIKI DESKTOP"
+  },
+  "tray": {
+    "settings": "設定",
+    "quit": "終了"
+  },
+  "dashboard": {
+    "systemReady": "システム準備完了",
+    "title": "ダッシュボード",
+    "version": "v2.4.0",
+    "taskTokens": "タスクトークン: {{count}}",
+    "quickTrigger": "クイック起動",
+    "quickTriggerDescription": "どこからでもチャットオーバーレイを即座に起動します。",
+    "shortcut": "Cmd + Shift + Space",
+    "apiConfiguration": "API設定",
+    "connected": "接続済み",
+    "notConnected": "未接続",
+    "apiKeyLabel": "OPENAI APIキー",
+    "apiKeyPlaceholder": "sk-....",
+    "apiKeyPlaceholderShort": "sk-...",
+    "changeKey": "キーを変更",
+    "verifySave": "確認して保存",
+    "saved": "保存しました",
+    "systemPermissions": "システム権限",
+    "reviewSystemAccess": "システムアクセスを確認",
+    "accessibility": "アクセシビリティ",
+    "screenRecording": "画面収録",
+    "granted": "許可済み",
+    "actionRequired": "要対応",
+    "allow": "許可",
+    "executionLog": "実行ログ",
+    "noLogsYet": "ログはまだありません",
+    "setupWizard": "セットアップウィザード",
+    "stepOf": "ステップ {{current}} / {{total}}",
+    "whereFindApiKey": "APIキーはどこで取得できますか？",
+    "apiKeySecureNote": "キーは暗号化されローカルに保存されます。サーバーに送信されることはありません。",
+    "accessibilityGranted": "アクセシビリティ許可済み",
+    "openSystemPreferences": "システム設定を開く",
+    "screenRecordingGranted": "画面収録許可済み",
+    "localProcessingOnly": "このデータはローカルで処理され、デバイス外に出ません。",
+    "back": "戻る",
+    "nextStep": "次へ",
+    "finishSetup": "セットアップを完了",
+    "language": "言語",
+    "setup": {
+      "configureTitle": "MIKI AIの設定",
+      "configureSubtitle": "OpenAIまたはAnthropicのAPIキーを入力してください。",
+      "accessTitle": "アクセシビリティを有効化",
+      "accessSubtitle": "自動化のためにMIKIが画面を操作できるようにします。",
+      "screenTitle": "ワークフローの表示を許可",
+      "screenSubtitle": "コンテキストに応じた支援には画面収録の許可が必要です。"
+    },
+    "completed": "完了",
+    "error": "エラー"
+  },
+  "log": {
+    "action": "アクション",
+    "success": "成功",
+    "error": "エラー",
+    "task": "タスク",
+    "info": "情報"
+  },
+  "chat": {
+    "clearChat": "チャットをクリア",
+    "thinking": "思考中...",
+    "thinkingLabel": "思考中",
+    "actionLabel": "アクション",
+    "toolLabel": "ツール: {{toolName}}",
+    "toolRunning": "{{toolName}} 実行中...",
+    "toolFallback": "ツール",
+    "done": "完了しました。",
+    "errorOccurred": "エラーが発生しました。",
+    "errorPrefix": "エラー: {{message}}",
+    "errorStopping": "停止に失敗しました: {{message}}",
+    "askPlaceholder": "Mikiにタスクの自動化を依頼...",
+    "enterToSend": "Enterで送信、Shift+Enterで改行",
+    "batchLabel": "バッチ",
+    "phaseLabel": "フェーズ: {{phase}}"
+  },
+  "overlay": {
+    "thinking": "思考中...",
+    "processing": "処理中...",
+    "stopping": "停止中...",
+    "stopAgent": "エージェントを停止"
+  },
+  "locales": {
+    "en": "英語",
+    "ja": "日本語"
+  }
+}

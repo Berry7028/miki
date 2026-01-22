@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import type { MikiAPI } from "../../shared/types";
+import { I18nProvider, useI18n } from "../../shared/i18n";
 
 const TRAIL_LENGTH = 8;
 
@@ -17,6 +18,12 @@ const Overlay = () => {
   const stopButtonRef = useRef<HTMLButtonElement | null>(null);
   const mousePassthroughRef = useRef(true);
   const showControlsRef = useRef(false);
+  const { t } = useI18n();
+  const tRef = useRef(t);
+
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
 
   useEffect(() => {
     console.log("Overlay component mounted");
@@ -41,7 +48,7 @@ const Overlay = () => {
         setCurrentAction(payload);
       } else if (payload.event === "thinking") {
         // Prefer explicit thought field from think action, fall back to message
-        const content = payload.thought || payload.message || "Thinking...";
+        const content = payload.thought || payload.message || tRef.current("overlay.thinking");
         setThinkingText(content);
       } else if (payload.event === "fadeout" || payload.event === "completed") {
         setVisible(false);
@@ -279,10 +286,10 @@ const Overlay = () => {
               }}
             >
               {isStopping
-                ? "Stopping..."
+                ? t("overlay.stopping")
                 : (currentAction?.action
                   ? `${currentAction.action.charAt(0).toUpperCase() + currentAction.action.slice(1)}...`
-                  : "Processing...")
+                  : t("overlay.processing"))
               }
             </span>
           </div>
@@ -324,7 +331,7 @@ const Overlay = () => {
             >
               <rect x="6" y="6" width="12" height="12" rx="2" />
             </svg>
-            Stop Agent
+            {t("overlay.stopAgent")}
           </button>
         </div>
       )}
@@ -363,7 +370,7 @@ const Overlay = () => {
               <LoadingSpinner />
               {currentAction?.action
                 ? `${currentAction.action.charAt(0).toUpperCase() + currentAction.action.slice(1)}...`
-                : (currentAction?.message || "Thinking...")
+                : (currentAction?.message || t("overlay.thinking"))
               }
             </div>
           )}
@@ -406,5 +413,9 @@ const LoadingSpinner = () => (
 const container = document.getElementById("root");
 if (container) {
   const root = createRoot(container);
-  root.render(<Overlay />);
+  root.render(
+    <I18nProvider>
+      <Overlay />
+    </I18nProvider>
+  );
 }
