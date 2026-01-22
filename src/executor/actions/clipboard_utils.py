@@ -1,4 +1,5 @@
-"""Clipboard utilities for macOS."""
+"""Clipboard utilities."""
+import sys
 import subprocess
 
 
@@ -8,8 +9,9 @@ def copy_text(text):
     Prefer pbcopy (handles UTF-8 reliably), fall back to pyperclip if needed.
     """
     try:
-        subprocess.run(["pbcopy"], input=text, text=True, check=True)
-        return {"status": "success", "method": "pbcopy"}
+        if sys.platform == "darwin":
+            subprocess.run(["pbcopy"], input=text, text=True, check=True)
+            return {"status": "success", "method": "pbcopy"}
     except Exception:
         try:
             import pyperclip

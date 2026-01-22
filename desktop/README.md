@@ -1,6 +1,6 @@
 # miki desktop
 
-macOS向けElectronアプリの最小構成スターターです。
+macOS/Windows向けElectronアプリの最小構成スターターです。
 
 ## セットアップ
 

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { resolvePythonPath } from './python-bridge';
 
 describe('PythonBridge', () => {
   describe('coordinate normalization logic', () => {
@@ -84,6 +85,16 @@ describe('PythonBridge', () => {
       const timeout = options.timeout ?? defaultTimeout;
 
       expect(timeout).toBe(5000);
+    });
+  });
+
+  describe('resolvePythonPath', () => {
+    it('should prefer platform-specific path when no files exist', () => {
+      const windowsPath = resolvePythonPath('/repo', 'win32', false);
+      const unixPath = resolvePythonPath('/repo', 'darwin', false);
+
+      expect(windowsPath.replace(/\\/g, '/')).toBe('/repo/venv/Scripts/python.exe');
+      expect(unixPath.replace(/\\/g, '/')).toBe('/repo/venv/bin/python');
     });
   });
 });

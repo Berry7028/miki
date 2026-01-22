@@ -1,7 +1,16 @@
 """マウスとキーボード操作"""
+import sys
 import pyautogui
 import time
-import AppKit
+
+IS_MACOS = sys.platform == "darwin"
+try:
+    if IS_MACOS:
+        import AppKit
+    else:
+        AppKit = None
+except Exception:
+    AppKit = None
 
 # パフォーマンスプロファイル設定
 # 将来的に設定から切り替えやすくするため定数化
@@ -42,21 +51,22 @@ def type_text(text):
     if copy_res["status"] != "success":
         return copy_res
 
-    osa_script = '''
-    tell application "System Events"
-        keystroke "v" using {command down}
-    end tell
-    '''
     try:
-        time.sleep(0.05)
-        result = subprocess.run(
-            ["osascript", "-e", osa_script],
-            capture_output=True,
-            text=True
-        )
-        if result.returncode == 0:
-            return {"status": "success", "method": "clipboard_paste"}
-        else:
+        if IS_MACOS:
+            osa_script = '''
+            tell application "System Events"
+                keystroke "v" using {command down}
+            end tell
+            '''
+            time.sleep(0.05)
+            result = subprocess.run(
+                ["osascript", "-e", osa_script],
+                capture_output=True,
+                text=True
+            )
+            if result.returncode == 0:
+                return {"status": "success", "method": "clipboard_paste"}
+
             osa_script_fallback = f'''
             tell application "System Events"
                 keystroke "{text.replace('"', '\\"')}"
@@ -64,6 +74,10 @@ def type_text(text):
             '''
             subprocess.run(["osascript", "-e", osa_script_fallback])
             return {"status": "success", "method": "osascript_keystroke_fallback"}
+
+        time.sleep(0.05)
+        pyautogui.hotkey("command" if IS_MACOS else "ctrl", "v")
+        return {"status": "success", "method": "clipboard_paste"}
     except Exception as e:
         try:
             pyautogui.write(text)
@@ -143,6 +157,8 @@ def set_cursor_visibility(visible):
     """マウスカーソルの表示・非表示を切り替える (AppKitを使用)"""
     global _cursor_hidden
     try:
+        if AppKit is None:
+            return {"status": "error", "message": "Cursor visibility control is only supported on macOS."}
         if visible:
             if _cursor_hidden:
                 AppKit.NSCursor.unhide()

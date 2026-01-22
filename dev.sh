@@ -5,7 +5,11 @@ set -e
 PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
 DESKTOP_DIR="$PROJECT_ROOT/desktop"
 VENV_DIR="$PROJECT_ROOT/venv"
-SETUP_FLAG="$HOME/Library/Application Support/miki-desktop/.setup_completed"
+if [ "$(uname -s)" = "Darwin" ]; then
+  SETUP_FLAG="$HOME/Library/Application Support/miki-desktop/.setup_completed"
+else
+  SETUP_FLAG="$HOME/.config/miki-desktop/.setup_completed"
+fi
 RENDERER_ARTIFACT="$DESKTOP_DIR/renderer/dist"
 BACKEND_ARTIFACT="$DESKTOP_DIR/backend/controller"
 EXECUTOR_ARTIFACT="$DESKTOP_DIR/backend/executor"
@@ -129,9 +133,13 @@ function detect_state() {
   fi
 
   VENV_STATUS="missing"
+  local venv_python="$VENV_DIR/bin/python"
+  if [ "$(uname -s)" != "Darwin" ]; then
+    venv_python="$VENV_DIR/Scripts/python.exe"
+  fi
   if [ -d "$VENV_DIR" ]; then
-    if [ -x "$VENV_DIR/bin/python" ]; then
-      if "$VENV_DIR/bin/python" -V >/dev/null 2>&1; then
+    if [ -x "$venv_python" ]; then
+      if "$venv_python" -V >/dev/null 2>&1; then
         VENV_STATUS="ready"
       else
         VENV_STATUS="broken"
@@ -597,7 +605,11 @@ function run_tests() {
 }
 
 function open_logs() {
-  LOG_DIR="$HOME/Library/Application Support/miki-desktop"
+  if [ "$(uname -s)" = "Darwin" ]; then
+    LOG_DIR="$HOME/Library/Application Support/miki-desktop"
+  else
+    LOG_DIR="$HOME/.config/miki-desktop"
+  fi
   if [ -d "$LOG_DIR" ]; then
     echo -e "${BLUE}ログディレクトリを開きます: $LOG_DIR${NC}"
     open "$LOG_DIR"

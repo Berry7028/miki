@@ -311,11 +311,14 @@ function getBackendPaths() {
     : path.join(__dirname, "backend");
   const controllerEntry = path.join(backendRoot, "controller", "index.js");
   const executorOnedir = path.join(backendRoot, "executor", "miki-executor");
-  const executorOnedirBinary = path.join(executorOnedir, "miki-executor");
+  const executorBinaryName = process.platform === "win32" ? "miki-executor.exe" : "miki-executor";
+  const executorOnedirBinary = path.join(executorOnedir, executorBinaryName);
   const executorBinary = fs.existsSync(executorOnedirBinary)
     ? executorOnedirBinary
     : null;
-  const devPython = path.join(__dirname, "..", "venv", "bin", "python");
+  const devPython = process.platform === "win32"
+    ? path.join(__dirname, "..", "venv", "Scripts", "python.exe")
+    : path.join(__dirname, "..", "venv", "bin", "python");
   const devExecutor = path.join(__dirname, "..", "src", "executor", "main.py");
 
   return {
