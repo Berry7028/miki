@@ -74,15 +74,23 @@ export class CustomLlm extends BaseLlm {
 
     this.maybeAppendUserContent(llmRequest);
 
-    switch (this.provider) {
-      case "anthropic":
-        yield await this.callAnthropic(llmRequest);
-        return;
-      case "openai":
-      case "openrouter":
-      default:
-        yield await this.callOpenAI(llmRequest);
-        return;
+    try {
+      switch (this.provider) {
+        case "anthropic":
+          yield await this.callAnthropic(llmRequest);
+          return;
+        case "openai":
+        case "openrouter":
+        default:
+          yield await this.callOpenAI(llmRequest);
+          return;
+      }
+    } catch (error: any) {
+      yield {
+        errorCode: "PROVIDER_ERROR",
+        errorMessage: this.formatProviderError(error),
+      };
+      return;
     }
   }
 
@@ -181,6 +189,15 @@ export class CustomLlm extends BaseLlm {
         parts,
       },
     };
+  }
+
+  private formatProviderError(error: any): string {
+    const rawMessage = String(error?.message || error || "");
+    if (!rawMessage) return "Provider error.";
+    if (rawMessage.includes("not_found_error") && rawMessage.includes("model")) {
+      return `Model not found. Check provider/model name. (${rawMessage})`;
+    }
+    return rawMessage;
   }
 
   private buildOpenAIMessages(llmRequest: LlmRequest) {

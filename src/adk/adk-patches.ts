@@ -279,13 +279,13 @@ const retryAttemptsMap = new WeakMap<any, number>();
                   // 試行回数をインクリメント
                   retryAttemptsMap.set(invocationContext, currentAttempts + 1);
                   
-                  // エラーメッセージを表示
-                  console.log("このアクションは正しく実行されませんでした");
+                  // エラーメッセージを表示（stdout汚染を避ける）
+                  console.error("このアクションは正しく実行されませんでした");
                   
                   if (debugMode) {
-                    console.log(`[ADK PATCH] Retry attempt ${currentAttempts + 1}/${maxAttempts}`);
-                    console.log(`[ADK PATCH] Invalid JSON: ${argsString}`);
-                    console.log(`[ADK PATCH] Error: ${validation.error}`);
+                    console.error(`[ADK PATCH] Retry attempt ${currentAttempts + 1}/${maxAttempts}`);
+                    console.error(`[ADK PATCH] Invalid JSON: ${argsString}`);
+                    console.error(`[ADK PATCH] Error: ${validation.error}`);
                   }
                   
                   // AIに修正を依頼するため、エラー情報を含むレスポンスを返す
