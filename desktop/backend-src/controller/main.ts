@@ -61,7 +61,12 @@ function parseCustomLlmSettings(): CustomLlmSettings | undefined {
   const apiKey = process.env.MIKI_CUSTOM_LLM_API_KEY;
   const baseUrl = process.env.MIKI_CUSTOM_LLM_BASE_URL;
   const model = process.env.MIKI_CUSTOM_LLM_MODEL;
-  const isReady = Boolean(provider && apiKey && model && (provider === "openai" || baseUrl));
+  const isReady = Boolean(
+    provider &&
+    apiKey &&
+    model &&
+    (provider !== "openrouter" || baseUrl)
+  );
   if (!isReady) {
     return undefined;
   }
