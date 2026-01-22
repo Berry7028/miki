@@ -3,6 +3,7 @@ import * as path from "node:path";
 import * as readline from "node:readline";
 import * as dotenv from "dotenv";
 import { MacOSAgentOrchestrator } from "../../../src/adk/orchestrator";
+import type { CustomLlmSettings } from "../../../src/adk/models/custom-llm";
 
 type Command =
   | { type: "start"; goal: string }
@@ -53,10 +54,36 @@ function loadEnv() {
   }
 }
 
+function parseCustomLlmSettings(): CustomLlmSettings | undefined {
+  const enabled = process.env.MIKI_CUSTOM_LLM_ENABLED === "1";
+  if (!enabled) return undefined;
+  const provider = process.env.MIKI_CUSTOM_LLM_PROVIDER as CustomLlmSettings["provider"];
+  const apiKey = process.env.MIKI_CUSTOM_LLM_API_KEY;
+  const baseUrl = process.env.MIKI_CUSTOM_LLM_BASE_URL;
+  const model = process.env.MIKI_CUSTOM_LLM_MODEL;
+  const isReady = Boolean(
+    provider &&
+    apiKey &&
+    model &&
+    (provider !== "openrouter" || baseUrl)
+  );
+  if (!isReady) {
+    return undefined;
+  }
+  return {
+    enabled: true,
+    provider,
+    apiKey,
+    baseUrl,
+    model,
+  };
+}
+
 function ensureAgent() {
   if (agent) return;
   const apiKey = process.env.GEMINI_API_KEY || "";
-  agent = new MacOSAgentOrchestrator(apiKey, debugMode);
+  const customLlm = parseCustomLlmSettings();
+  agent = new MacOSAgentOrchestrator(apiKey, debugMode, customLlm);
   agent.on("log", (payload: { type: string; message: string; timestamp: Date }) => {
     send("log", {
       ...payload,

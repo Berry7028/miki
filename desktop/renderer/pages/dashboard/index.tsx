@@ -14,6 +14,11 @@ import {
   Grid,
   Chip,
   Stack,
+  Switch,
+  FormControlLabel,
+  FormControl,
+  Select,
+  MenuItem,
   Dialog,
   DialogContent,
   DialogActions,
@@ -31,10 +36,11 @@ import {
   Lock,
   Bolt,
   Visibility,
+  Link as LinkIcon,
   ArrowForward,
 } from "@mui/icons-material";
 import { theme } from "../../shared/theme";
-import type { BackendEvent, SetupStatus } from "../../shared/types";
+import type { BackendEvent, SetupStatus, CustomLlmSettings, CustomLlmProvider } from "../../shared/types";
 
 // Create Emotion cache with nonce for CSP
 async function createEmotionCache() {
@@ -55,7 +61,7 @@ async function createEmotionCache() {
 const setupSteps = [
   {
     title: "Configure MIKI AI",
-    subtitle: "Enter your OpenAI or Anthropic API key.",
+    subtitle: "Set your API key and optional custom provider settings.",
     icon: <VpnKey />,
   },
   {
@@ -78,6 +84,15 @@ const App = () => {
   const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null);
   const [setupStep, setSetupStep] = useState(0);
   const [taskTokenUsage, setTaskTokenUsage] = useState<number | null>(null);
+  const [customLlm, setCustomLlm] = useState<CustomLlmSettings>({
+    enabled: false,
+    provider: "openai",
+    baseUrl: "",
+    apiKey: "",
+    model: "",
+  });
+  const [customSaveStatus, setCustomSaveStatus] = useState("");
+  const [isEditingCustomKey, setIsEditingCustomKey] = useState(false);
 
   const appendLog = useCallback((event: BackendEvent) => {
     setLogs((prev) => [event, ...prev].slice(0, 100));
@@ -118,6 +133,17 @@ const App = () => {
     });
 
     window.miki?.getApiKey().then(setApiKey);
+    window.miki?.getCustomLlmSettings().then((settings) => {
+      if (settings) {
+        setCustomLlm({
+          enabled: Boolean(settings.enabled),
+          provider: settings.provider || "openai",
+          baseUrl: settings.baseUrl || "",
+          apiKey: settings.apiKey || "",
+          model: settings.model || "",
+        });
+      }
+    });
 
     return () => {
       unsubscribe?.();
@@ -136,7 +162,11 @@ const App = () => {
   const handleSetupNext = async () => {
     if (setupStep === 0) {
       if (!apiKey.trim()) return;
+      if (customLlm.enabled && !canSaveCustomFull) return;
       await window.miki?.setApiKey(apiKey);
+      if (customLlm.enabled) {
+        await window.miki?.setCustomLlmSettings(customLlm);
+      }
     }
     if (setupStep < setupSteps.length - 1) setSetupStep(setupStep + 1);
   };
@@ -148,6 +178,13 @@ const App = () => {
   };
 
   const hasApiKey = !!apiKey && apiKey.length > 0;
+  const isBaseUrlRequired = (provider?: CustomLlmProvider) => (provider ? provider === "openrouter" : false);
+  const hasCustomConfig = !customLlm.enabled
+    || Boolean(customLlm.apiKey?.trim() && customLlm.model?.trim() && customLlm.provider);
+  const canSaveCustom = !customLlm.enabled || hasCustomConfig;
+  const baseUrlRequired = customLlm.enabled && isBaseUrlRequired(customLlm.provider);
+  const hasBaseUrl = !baseUrlRequired || Boolean(customLlm.baseUrl?.trim());
+  const canSaveCustomFull = canSaveCustom && hasBaseUrl;
 
   const logLabel = (type?: BackendEvent["type"]) => {
     switch (type) {
@@ -162,6 +199,49 @@ const App = () => {
       default:
         return { label: "INFO", color: "rgba(255, 255, 255, 0.1)", text: "#9a9a9a" };
     }
+  };
+
+  const handleSaveCustom = async () => {
+    if (!canSaveCustomFull) return;
+    await window.miki?.setCustomLlmSettings(customLlm);
+    setCustomSaveStatus("Saved");
+    setIsEditingCustomKey(false);
+    setTimeout(() => setCustomSaveStatus(""), 3000);
+  };
+
+  const handleCustomToggle = async (enabled: boolean) => {
+    setCustomLlm((prev) => ({ ...prev, enabled }));
+    if (!enabled) {
+      setCustomSaveStatus("");
+      return;
+    }
+    if (customLlm.provider) {
+      const stored = await window.miki?.getCustomLlmProviderSettings(customLlm.provider);
+      setCustomLlm((prev) => ({
+        ...prev,
+        apiKey: stored?.apiKey || "",
+        baseUrl: stored?.baseUrl || "",
+        model: stored?.model || "",
+      }));
+    }
+  };
+
+  const handleCustomProvider = async (provider: CustomLlmProvider) => {
+    const stored = await window.miki?.getCustomLlmProviderSettings(provider);
+    setCustomLlm((prev) => ({
+      ...prev,
+      provider,
+      apiKey: stored?.apiKey || "",
+      baseUrl: stored?.baseUrl || "",
+      model: stored?.model || "",
+    }));
+  };
+
+  const handleCustomBaseUrl = (value: string) => {
+    setCustomLlm((prev) => ({
+      ...prev,
+      baseUrl: value,
+    }));
   };
 
   return (
@@ -328,6 +408,146 @@ const App = () => {
                         {saveStatus && (
                           <Typography variant="caption" color="secondary.light">
                             {saveStatus}
+                          </Typography>
+                        )}
+                      </Stack>
+                    </Paper>
+                  </Grid>
+                  <Grid size={{ xs: 12 }}>
+                    <Paper sx={{ p: 3.5 }}>
+                      <Stack spacing={2.5}>
+                        <Stack direction="row" spacing={1.5} alignItems="center">
+                          <Avatar
+                            sx={{
+                              bgcolor: "#3a3f47",
+                              color: "#c0c0c0",
+                              width: 34,
+                              height: 34,
+                            }}
+                          >
+                            <LinkIcon fontSize="small" />
+                          </Avatar>
+                          <Box sx={{ flexGrow: 1 }}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                              Custom Provider
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {customLlm.enabled ? "Custom provider enabled" : "Using Gemini default"}
+                            </Typography>
+                          </Box>
+                          <FormControlLabel
+                            control={
+                              <Switch
+                                checked={customLlm.enabled}
+                                onChange={(event) => handleCustomToggle(event.target.checked)}
+                              />
+                            }
+                            label={customLlm.enabled ? "On" : "Off"}
+                            sx={{ m: 0 }}
+                          />
+                        </Stack>
+                        <Grid container spacing={2}>
+                          <Grid size={{ xs: 12, md: 4 }}>
+                            <Typography variant="caption" color="text.secondary">
+                              PROVIDER
+                            </Typography>
+                            <FormControl fullWidth>
+                              <Select
+                                size="small"
+                                value={customLlm.provider || "openai"}
+                                disabled={!customLlm.enabled}
+                                onChange={(event) => handleCustomProvider(event.target.value as CustomLlmProvider)}
+                              >
+                                <MenuItem value="openai">OpenAI</MenuItem>
+                                <MenuItem value="openrouter">OpenRouter</MenuItem>
+                                <MenuItem value="anthropic">Anthropic</MenuItem>
+                              </Select>
+                            </FormControl>
+                          </Grid>
+                          <Grid size={{ xs: 12, md: 4 }}>
+                            <Typography variant="caption" color="text.secondary">
+                              BASE URL {baseUrlRequired ? "(required)" : "(optional)"}
+                            </Typography>
+                            <TextField
+                              fullWidth
+                              size="small"
+                              placeholder={
+                                customLlm.provider === "openrouter"
+                                  ? "https://openrouter.ai/api/v1"
+                                  : "https://api.anthropic.com"
+                              }
+                              value={customLlm.baseUrl || ""}
+                              disabled={!customLlm.enabled || customLlm.provider === "openai"}
+                              onChange={(event) => handleCustomBaseUrl(event.target.value)}
+                            />
+                          </Grid>
+                          <Grid size={{ xs: 12, md: 4 }}>
+                            <Typography variant="caption" color="text.secondary">
+                              MODEL
+                            </Typography>
+                            <TextField
+                              fullWidth
+                              size="small"
+                              placeholder="gpt-4o / claude-3-5-sonnet-20241022"
+                              value={customLlm.model || ""}
+                              disabled={!customLlm.enabled}
+                              onChange={(event) =>
+                                setCustomLlm((prev) => ({ ...prev, model: event.target.value }))
+                              }
+                            />
+                          </Grid>
+                          <Grid size={{ xs: 12 }}>
+                            <Typography variant="caption" color="text.secondary">
+                              API KEY
+                            </Typography>
+                            <TextField
+                              fullWidth
+                              type={isEditingCustomKey ? "text" : "password"}
+                              placeholder="sk-..."
+                              value={customLlm.apiKey || ""}
+                              disabled={!customLlm.enabled}
+                              onChange={(event) =>
+                                setCustomLlm((prev) => ({ ...prev, apiKey: event.target.value }))
+                              }
+                              InputProps={{
+                                endAdornment: (
+                                  <IconButton size="small" sx={{ color: "text.secondary" }}>
+                                    <Lock fontSize="small" />
+                                  </IconButton>
+                                ),
+                              }}
+                            />
+                          </Grid>
+                        </Grid>
+                        <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
+                          <Box>
+                            {customLlm.enabled && !canSaveCustomFull && (
+                              <Typography variant="caption" color="error">
+                                API key, provider, and model are required.
+                                {baseUrlRequired ? " Base URL is required for OpenRouter." : ""}
+                              </Typography>
+                            )}
+                          </Box>
+                          <Box sx={{ flexGrow: 1 }} />
+                          <Button
+                            variant="text"
+                            onClick={() => setIsEditingCustomKey(true)}
+                            disabled={!customLlm.enabled}
+                          >
+                            Change Key
+                          </Button>
+                          <Button variant="contained" onClick={handleSaveCustom} disabled={!canSaveCustomFull}>
+                            Save Custom Provider
+                          </Button>
+                        </Stack>
+                        {customSaveStatus && (
+                          <Typography variant="caption" color="secondary.light">
+                            {customSaveStatus}
+                          </Typography>
+                        )}
+                        {!customLlm.enabled && (
+                          <Typography variant="caption" color="text.secondary">
+                            Gemini is used by default when custom providers are disabled.
                           </Typography>
                         )}
                       </Stack>
@@ -665,16 +885,16 @@ const App = () => {
               Back
             </Button>
             <Box sx={{ flexGrow: 1 }} />
-            {setupStep < setupSteps.length - 1 ? (
-              <Button
-                variant="contained"
-                onClick={handleSetupNext}
-                disabled={setupStep === 0 && !apiKey.trim()}
-                endIcon={<ArrowForward />}
-              >
-                Next Step
-              </Button>
-            ) : (
+             {setupStep < setupSteps.length - 1 ? (
+               <Button
+                 variant="contained"
+                 onClick={handleSetupNext}
+                 disabled={setupStep === 0 && (!apiKey.trim() || (customLlm.enabled && !canSaveCustomFull))}
+                 endIcon={<ArrowForward />}
+               >
+                 Next Step
+               </Button>
+             ) : (
               <Button
                 variant="contained"
                 onClick={handleSetupFinish}

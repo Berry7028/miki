@@ -1,9 +1,26 @@
 export interface SetupStatus {
   setupCompleted: boolean;
   hasApiKey: boolean;
+  hasCustomLlmConfig: boolean;
   hasAccessibility: boolean;
   hasScreenRecording: boolean;
   needsSetup: boolean;
+}
+
+export type CustomLlmProvider = "openai" | "openrouter" | "anthropic";
+
+export interface CustomLlmSettings {
+  enabled: boolean;
+  provider?: CustomLlmProvider;
+  apiKey?: string;
+  baseUrl?: string;
+  model?: string;
+}
+
+export interface CustomLlmProviderSettings {
+  apiKey?: string;
+  baseUrl?: string;
+  model?: string;
 }
 
 export interface BackendEvent {
@@ -35,6 +52,9 @@ export interface MikiAPI {
   reset: () => Promise<void>;
   getApiKey: () => Promise<string>;
   setApiKey: (apiKey: string) => Promise<boolean>;
+  getCustomLlmSettings: () => Promise<CustomLlmSettings>;
+  getCustomLlmProviderSettings: (provider: CustomLlmProvider) => Promise<CustomLlmProviderSettings>;
+  setCustomLlmSettings: (settings: CustomLlmSettings) => Promise<boolean>;
   getSetupStatus: () => Promise<SetupStatus>;
   markSetupCompleted: () => Promise<boolean>;
   openSystemPreferences: (pane: "accessibility" | "screen-recording") => Promise<boolean>;

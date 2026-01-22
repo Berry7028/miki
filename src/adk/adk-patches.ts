@@ -161,13 +161,14 @@ const originalProcessLlmRequest = (BuiltInCodeExecutor as any).prototype.process
   try {
     originalProcessLlmRequest.call(this, llmRequest);
   } catch (e: any) {
+    const message = String(e?.message || "");
     const isUnsupportedCodeExecution =
-      e?.message?.includes("code execution tool is not supported") &&
-      e?.message?.includes("gemini-3-flash-preview");
+      message.includes("code execution tool is not supported") &&
+      (message.toLowerCase().includes("gemini") || message.toLowerCase().includes("model"));
 
     if (isUnsupportedCodeExecution) {
       if (debugMode) {
-        console.log("[ADK PATCH] Skipping unsupported code execution tool for gemini-3-flash-preview");
+        console.error("[ADK PATCH] Skipping unsupported code execution tool:", message);
       }
       return;
     }
@@ -256,7 +257,7 @@ const retryAttemptsMap = new WeakMap<any, number>();
         for (const part of event.content.parts) {
           if (part.functionCall) {
             if (debugMode) {
-              console.log("[ADK PATCH] Detected functionCall:", part.functionCall.name, part.functionCall.args);
+              console.error("[ADK PATCH] Detected functionCall:", part.functionCall.name, part.functionCall.args);
             }
             
             // args が文字列ならオブジェクトに変換
@@ -278,13 +279,13 @@ const retryAttemptsMap = new WeakMap<any, number>();
                   // 試行回数をインクリメント
                   retryAttemptsMap.set(invocationContext, currentAttempts + 1);
                   
-                  // エラーメッセージを表示
-                  console.log("このアクションは正しく実行されませんでした");
+                  // エラーメッセージを表示（stdout汚染を避ける）
+                  console.error("このアクションは正しく実行されませんでした");
                   
                   if (debugMode) {
-                    console.log(`[ADK PATCH] Retry attempt ${currentAttempts + 1}/${maxAttempts}`);
-                    console.log(`[ADK PATCH] Invalid JSON: ${argsString}`);
-                    console.log(`[ADK PATCH] Error: ${validation.error}`);
+                    console.error(`[ADK PATCH] Retry attempt ${currentAttempts + 1}/${maxAttempts}`);
+                    console.error(`[ADK PATCH] Invalid JSON: ${argsString}`);
+                    console.error(`[ADK PATCH] Error: ${validation.error}`);
                   }
                   
                   // AIに修正を依頼するため、エラー情報を含むレスポンスを返す
