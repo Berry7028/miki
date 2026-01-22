@@ -9,7 +9,13 @@ const isWindows = process.platform === "win32";
 const pythonPath = isWindows
   ? path.join(venvDir, "Scripts", "python.exe")
   : path.join(venvDir, "bin", "python");
-const pythonBin = fs.existsSync(pythonPath) ? pythonPath : (isWindows ? "python.exe" : "python3");
+let pythonBin = pythonPath;
+if (!fs.existsSync(pythonPath)) {
+  pythonBin = isWindows ? "python.exe" : "python3";
+  if (!fs.existsSync(pythonBin)) {
+    pythonBin = "python";
+  }
+}
 const pyinstallerArgs = [
   "-m",
   "pyinstaller",

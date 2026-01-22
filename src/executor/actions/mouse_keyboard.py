@@ -74,9 +74,10 @@ def type_text(text):
             '''
             subprocess.run(["osascript", "-e", osa_script_fallback])
             return {"status": "success", "method": "osascript_keystroke_fallback"}
-        time.sleep(0.05)
-        pyautogui.hotkey("ctrl", "v")
-        return {"status": "success", "method": "clipboard_paste"}
+        else:
+            time.sleep(0.05)
+            pyautogui.hotkey("ctrl", "v")
+            return {"status": "success", "method": "clipboard_paste"}
     except Exception as e:
         try:
             pyautogui.write(text)
