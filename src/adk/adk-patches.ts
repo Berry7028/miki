@@ -161,13 +161,14 @@ const originalProcessLlmRequest = (BuiltInCodeExecutor as any).prototype.process
   try {
     originalProcessLlmRequest.call(this, llmRequest);
   } catch (e: any) {
+    const message = String(e?.message || "");
     const isUnsupportedCodeExecution =
-      e?.message?.includes("code execution tool is not supported") &&
-      e?.message?.includes("gemini-3-flash-preview");
+      message.includes("code execution tool is not supported") &&
+      (message.toLowerCase().includes("gemini") || message.toLowerCase().includes("model"));
 
     if (isUnsupportedCodeExecution) {
       if (debugMode) {
-        console.log("[ADK PATCH] Skipping unsupported code execution tool for gemini-3-flash-preview");
+        console.error("[ADK PATCH] Skipping unsupported code execution tool:", message);
       }
       return;
     }
@@ -256,7 +257,7 @@ const retryAttemptsMap = new WeakMap<any, number>();
         for (const part of event.content.parts) {
           if (part.functionCall) {
             if (debugMode) {
-              console.log("[ADK PATCH] Detected functionCall:", part.functionCall.name, part.functionCall.args);
+              console.error("[ADK PATCH] Detected functionCall:", part.functionCall.name, part.functionCall.args);
             }
             
             // args が文字列ならオブジェクトに変換

@@ -204,6 +204,7 @@ export class CustomLlm extends BaseLlm {
           content: textParts || null,
           tool_calls: toolCalls.map((call) => ({
             id: call.id,
+            type: "function",
             function: {
               name: call.name,
               arguments: JSON.stringify(call.args ?? {}),

@@ -11,6 +11,7 @@ let overlayWindow;
 let tray;
 let controllerProcess;
 let controllerReader;
+let restartControllerOnExit = false;
 let isQuitting = false;
 let chatHideTimeout = null; // Track chat hide timeout
 
@@ -522,7 +523,25 @@ function ensureController() {
     controllerReader?.close();
     controllerReader = undefined;
     controllerProcess = undefined;
+    if (restartControllerOnExit) {
+      restartControllerOnExit = false;
+      ensureController();
+    }
   });
+}
+
+function restartController() {
+  if (controllerProcess) {
+    restartControllerOnExit = true;
+    try {
+      sendToController({ type: "stop" });
+    } catch (err) {
+      console.error("Failed to send stop to controller:", err);
+    }
+    controllerProcess.kill();
+    return;
+  }
+  ensureController();
 }
 
 function sendToController(payload) {
@@ -804,6 +823,7 @@ ipcMain.handle("miki:getApiKey", () => readApiKey());
 
 ipcMain.handle("miki:setApiKey", (_event, apiKey) => {
   writeApiKey(apiKey);
+  restartController();
   return true;
 });
 
@@ -823,6 +843,7 @@ ipcMain.handle("miki:getCustomLlmSettings", () => readCustomLlmSettings());
 
 ipcMain.handle("miki:setCustomLlmSettings", (_event, settings) => {
   writeCustomLlmSettings(settings || {});
+  restartController();
   return true;
 });
 

@@ -124,7 +124,7 @@ export class MacOSAgentOrchestrator extends EventEmitter {
     this.stopRequested = false;
     this.emitStatus("running");
 
-    if (!this.apiKey) {
+    if (!this.apiKey && !this.customLlm?.enabled) {
       const errorMsg = "APIキーが設定されていません。設定画面でAPIキーを保存してください。";
       this.log("error", errorMsg);
       this.emit("error", errorMsg);
