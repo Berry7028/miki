@@ -74,9 +74,8 @@ def type_text(text):
             '''
             subprocess.run(["osascript", "-e", osa_script_fallback])
             return {"status": "success", "method": "osascript_keystroke_fallback"}
-
         time.sleep(0.05)
-        pyautogui.hotkey("command" if IS_MACOS else "ctrl", "v")
+        pyautogui.hotkey("ctrl", "v")
         return {"status": "success", "method": "clipboard_paste"}
     except Exception as e:
         try:
@@ -158,7 +157,11 @@ def set_cursor_visibility(visible):
     global _cursor_hidden
     try:
         if AppKit is None:
-            return {"status": "error", "message": "Cursor visibility control is only supported on macOS."}
+            return {
+                "status": "success",
+                "visible": visible,
+                "message": "Cursor visibility control is not supported on this platform."
+            }
         if visible:
             if _cursor_hidden:
                 AppKit.NSCursor.unhide()

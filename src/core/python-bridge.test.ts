@@ -96,5 +96,13 @@ describe('PythonBridge', () => {
       expect(windowsPath.replace(/\\/g, '/')).toBe('/repo/venv/Scripts/python.exe');
       expect(unixPath.replace(/\\/g, '/')).toBe('/repo/venv/bin/python');
     });
+
+    it('should return system python fallback when venv is missing', () => {
+      const windowsFallback = resolvePythonPath('/repo', 'win32', true);
+      const unixFallback = resolvePythonPath('/repo', 'linux', true);
+
+      expect(windowsFallback).toBe('python.exe');
+      expect(unixFallback).toBe('python3');
+    });
   });
 });

@@ -11,13 +11,14 @@ export const resolvePythonPath = (
 ) => {
   const windowsPath = path.join(cwd, "venv", "Scripts", "python.exe");
   const unixPath = path.join(cwd, "venv", "bin", "python");
+  const platformPath = platform === "win32" ? windowsPath : unixPath;
   if (!preferExisting) {
-    return platform === "win32" ? windowsPath : unixPath;
+    return platformPath;
   }
-  if (platform === "win32") {
-    return fs.existsSync(windowsPath) ? windowsPath : unixPath;
+  if (fs.existsSync(platformPath)) {
+    return platformPath;
   }
-  return fs.existsSync(unixPath) ? unixPath : windowsPath;
+  return platform === "win32" ? "python.exe" : "python3";
 };
 
 export class PythonBridge {
