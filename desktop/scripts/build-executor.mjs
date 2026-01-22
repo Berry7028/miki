@@ -9,12 +9,14 @@ const isWindows = process.platform === "win32";
 const pythonPath = isWindows
   ? path.join(venvDir, "Scripts", "python.exe")
   : path.join(venvDir, "bin", "python");
-let pythonBin = pythonPath;
-if (!fs.existsSync(pythonPath)) {
-  pythonBin = isWindows ? "python.exe" : "python3";
-  if (!fs.existsSync(pythonBin)) {
-    pythonBin = "python";
-  }
+const candidates = [];
+if (fs.existsSync(pythonPath)) {
+  candidates.push(pythonPath);
+}
+if (isWindows) {
+  candidates.push("python.exe", "python");
+} else {
+  candidates.push("python3", "python");
 }
 const pyinstallerArgs = [
   "-m",
@@ -28,7 +30,17 @@ const pyinstallerArgs = [
   "-y"
 ];
 
-const result = spawnSync(pythonBin, pyinstallerArgs, { stdio: "inherit" });
+let result;
+for (const candidate of candidates) {
+  result = spawnSync(candidate, pyinstallerArgs, { stdio: "inherit" });
+  if (!result.error || result.error.code !== "ENOENT") {
+    break;
+  }
+}
+if (!result) {
+  console.error("Python executable not found.");
+  process.exit(1);
+}
 if (result.error) {
   console.error(result.error);
   process.exit(1);

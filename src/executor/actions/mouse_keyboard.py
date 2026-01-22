@@ -72,8 +72,17 @@ def type_text(text):
                 keystroke "{text.replace('"', '\\"')}"
             end tell
             '''
-            subprocess.run(["osascript", "-e", osa_script_fallback])
-            return {"status": "success", "method": "osascript_keystroke_fallback"}
+            fallback_result = subprocess.run(
+                ["osascript", "-e", osa_script_fallback],
+                capture_output=True,
+                text=True
+            )
+            if fallback_result.returncode == 0:
+                return {"status": "success", "method": "osascript_keystroke_fallback"}
+            return {
+                "status": "error",
+                "message": fallback_result.stderr.strip() or "osascript fallback failed"
+            }
         else:
             time.sleep(0.05)
             pyautogui.hotkey("ctrl", "v")
@@ -159,7 +168,7 @@ def set_cursor_visibility(visible):
     try:
         if AppKit is None:
             return {
-                "status": "success",
+                "status": "not_supported",
                 "visible": visible,
                 "message": "Cursor visibility control is not supported on this platform."
             }
