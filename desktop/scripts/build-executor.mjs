@@ -30,7 +30,7 @@ const pyinstallerArgs = [
   "-y"
 ];
 
-let result;
+let result = null;
 for (const candidate of candidates) {
   result = spawnSync(candidate, pyinstallerArgs, { stdio: "inherit" });
   if (!result.error || result.error.code !== "ENOENT") {

@@ -9,7 +9,7 @@ try:
         import AppKit
     else:
         AppKit = None
-except Exception:
+except ImportError:
     AppKit = None
 
 # パフォーマンスプロファイル設定
@@ -167,10 +167,15 @@ def set_cursor_visibility(visible):
     global _cursor_hidden
     try:
         if AppKit is None:
+            platform_label = sys.platform
+            if sys.platform.startswith("win"):
+                platform_label = "Windows"
+            elif sys.platform.startswith("linux"):
+                platform_label = "Linux"
             return {
                 "status": "not_supported",
                 "visible": visible,
-                "message": "Cursor visibility control is not supported on this platform."
+                "message": f"Cursor visibility control is not supported on this platform ({platform_label})."
             }
         if visible:
             if _cursor_hidden:
