@@ -17,6 +17,8 @@ contextBridge.exposeInMainWorld("miki", {
   reset: () => ipcRenderer.invoke("miki:reset"),
   getApiKey: () => ipcRenderer.invoke("miki:getApiKey"),
   setApiKey: (apiKey) => ipcRenderer.invoke("miki:setApiKey", apiKey),
+  getCustomLlmSettings: () => ipcRenderer.invoke("miki:getCustomLlmSettings"),
+  setCustomLlmSettings: (settings) => ipcRenderer.invoke("miki:setCustomLlmSettings", settings),
   getSetupStatus: () => ipcRenderer.invoke("miki:getSetupStatus"),
   markSetupCompleted: () => ipcRenderer.invoke("miki:markSetupCompleted"),
   openSystemPreferences: (pane) => ipcRenderer.invoke("miki:openSystemPreferences", pane),

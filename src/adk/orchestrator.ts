@@ -5,6 +5,7 @@ import "./adk-patches";
 import { PythonBridge } from "../core/python-bridge";
 import { MacOSToolSuite } from "./tools/macos-tool-suite";
 import { MainAgentFactory } from "./agents/main-agent";
+import type { CustomLlmSettings } from "./models/custom-llm";
 import { MacOSErrorHandlerPlugin } from "./errors/error-handler";
 import { PERFORMANCE_CONFIG } from "../core/constants";
 
@@ -20,12 +21,14 @@ export class MacOSAgentOrchestrator extends EventEmitter {
   private debugMode: boolean;
   private stopRequested = false;
   private apiKey: string;
+  private customLlm?: CustomLlmSettings;
   private isInitialized = false;
 
-  constructor(apiKey: string, debugMode: boolean = false) {
+  constructor(apiKey: string, debugMode: boolean = false, customLlm?: CustomLlmSettings) {
     super();
     this.apiKey = apiKey;
     this.debugMode = debugMode;
+    this.customLlm = customLlm;
     this.sessionService = new InMemorySessionService();
 
     // Set debug mode for adk-patches
@@ -72,7 +75,8 @@ export class MacOSAgentOrchestrator extends EventEmitter {
         this.toolSuite,
         this.apiKey,
         this.defaultBrowser,
-        this.defaultBrowserId
+        this.defaultBrowserId,
+        this.customLlm
       );
 
       // プラグインの設定

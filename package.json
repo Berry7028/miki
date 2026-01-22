@@ -20,6 +20,8 @@
     "@google/generative-ai": "^0.24.1",
     "@mui/icons-material": "^7.3.6",
     "@mui/material": "^7.3.6",
+    "@anthropic-ai/sdk": "^0.71.2",
+    "openai": "^6.16.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "zod": "3.25.76"

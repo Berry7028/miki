@@ -352,6 +352,23 @@ function ensureController() {
     env.GEMINI_API_KEY = apiKey;
   }
 
+  const customLlm = readCustomLlmSettings();
+  if (customLlm.enabled) {
+    env.MIKI_CUSTOM_LLM_ENABLED = "1";
+    if (customLlm.provider) {
+      env.MIKI_CUSTOM_LLM_PROVIDER = customLlm.provider;
+    }
+    if (customLlm.apiKey) {
+      env.MIKI_CUSTOM_LLM_API_KEY = customLlm.apiKey;
+    }
+    if (customLlm.baseUrl) {
+      env.MIKI_CUSTOM_LLM_BASE_URL = customLlm.baseUrl;
+    }
+    if (customLlm.model) {
+      env.MIKI_CUSTOM_LLM_MODEL = customLlm.model;
+    }
+  }
+
   // デバッグモードの環境変数を設定
   if (debugMode) {
     env.MIKI_DEBUG = "1";
@@ -530,13 +547,12 @@ function envFilePath() {
   return path.join(ensureEnvDir(), ".env");
 }
 
-function secureKeyPath() {
-  return path.join(ensureEnvDir(), ".api_key.enc");
+function secureKeyPath(name) {
+  return path.join(ensureEnvDir(), name);
 }
 
-function readApiKey() {
-  // Try to read from secure storage first
-  const securePath = secureKeyPath();
+function readSecureValue(name, legacyEnvKey) {
+  const securePath = secureKeyPath(name);
   if (fs.existsSync(securePath)) {
     try {
       const encryptedData = fs.readFileSync(securePath);
@@ -552,32 +568,30 @@ function readApiKey() {
     }
   }
 
-  // Fallback: migrate from old plain text .env file
+  if (!legacyEnvKey) {
+    return "";
+  }
+
   const envPath = envFilePath();
   if (fs.existsSync(envPath)) {
     try {
       const content = fs.readFileSync(envPath, "utf-8");
-      const match = content.match(/^GEMINI_API_KEY=(.*)$/m);
+      const match = content.match(new RegExp(`^${legacyEnvKey}=(.*)$`, "m"));
       if (match) {
         const apiKey = match[1].trim();
-        // Migrate to secure storage
         if (apiKey && safeStorage.isEncryptionAvailable()) {
           const encrypted = safeStorage.encryptString(apiKey);
           fs.writeFileSync(securePath, encrypted);
-          
-          // Verify the encrypted file can be read back before deleting plain text
           try {
             const verifyData = fs.readFileSync(securePath);
             const verifyDecrypted = safeStorage.decryptString(verifyData);
             if (verifyDecrypted.trim() === apiKey) {
-              // Migration successful, delete old plain text file
               fs.unlinkSync(envPath);
             } else {
               console.error("Migration verification failed: decrypted value doesn't match");
             }
           } catch (verifyErr) {
             console.error("Migration verification failed:", verifyErr);
-            // Don't delete the plain text file if verification fails
           }
         }
         return apiKey;
@@ -590,37 +604,73 @@ function readApiKey() {
   return "";
 }
 
-function writeApiKey(apiKey) {
-  const value = (apiKey || "").trim();
-  
+function writeSecureValue(name, value) {
+  const trimmedValue = (value || "").trim();
+
   if (!safeStorage.isEncryptionAvailable()) {
     console.error("Encryption not available, cannot store API key securely");
     return;
   }
 
-  const securePath = secureKeyPath();
+  const securePath = secureKeyPath(name);
   const envPath = envFilePath();
-  
-  if (!value) {
-    // Delete the secure file if API key is empty
+
+  if (!trimmedValue) {
     if (fs.existsSync(securePath)) {
       fs.unlinkSync(securePath);
     }
-    // Also delete old .env file if it exists
     if (fs.existsSync(envPath)) {
       fs.unlinkSync(envPath);
     }
     return;
   }
 
-  // Encrypt and store the API key
-  const encrypted = safeStorage.encryptString(value);
+  const encrypted = safeStorage.encryptString(trimmedValue);
   fs.writeFileSync(securePath, encrypted);
 
-  // Remove old plain text .env file if it exists
   if (fs.existsSync(envPath)) {
     fs.unlinkSync(envPath);
   }
+}
+
+function readApiKey() {
+  return readSecureValue(".api_key.enc", "GEMINI_API_KEY");
+}
+
+function writeApiKey(apiKey) {
+  writeSecureValue(".api_key.enc", apiKey);
+}
+
+function readCustomLlmSettings() {
+  const enabled = readSecureValue(".custom_llm_enabled.enc");
+  const provider = readSecureValue(".custom_llm_provider.enc");
+  const apiKey = readSecureValue(".custom_llm_api_key.enc");
+  const baseUrl = readSecureValue(".custom_llm_base_url.enc");
+  const model = readSecureValue(".custom_llm_model.enc");
+
+  return {
+    enabled: enabled === "1",
+    provider,
+    apiKey,
+    baseUrl,
+    model,
+  };
+}
+
+function writeCustomLlmSettings(settings) {
+  const enabled = Boolean(settings.enabled);
+  writeSecureValue(".custom_llm_enabled.enc", enabled ? "1" : "");
+  if (!enabled) {
+    writeSecureValue(".custom_llm_provider.enc", "");
+    writeSecureValue(".custom_llm_api_key.enc", "");
+    writeSecureValue(".custom_llm_base_url.enc", "");
+    writeSecureValue(".custom_llm_model.enc", "");
+    return;
+  }
+  writeSecureValue(".custom_llm_provider.enc", settings.provider || "");
+  writeSecureValue(".custom_llm_api_key.enc", settings.apiKey || "");
+  writeSecureValue(".custom_llm_base_url.enc", settings.baseUrl || "");
+  writeSecureValue(".custom_llm_model.enc", settings.model || "");
 }
 
 function setupFlagPath() {
@@ -674,6 +724,11 @@ function openSystemPreferences(pane) {
 
 function getSetupStatus() {
   const apiKey = readApiKey();
+  const customLlm = readCustomLlmSettings();
+  const baseUrlRequired = Boolean(customLlm.provider && customLlm.provider !== "openai");
+  const customConfigured = customLlm.enabled
+    ? Boolean(customLlm.apiKey && customLlm.provider && customLlm.model && (!baseUrlRequired || customLlm.baseUrl))
+    : true;
   const hasApiKey = !!apiKey;
   const hasAccessibility = checkAccessibilityPermission();
   const hasScreenRecording = checkScreenRecordingPermission();
@@ -682,9 +737,10 @@ function getSetupStatus() {
   return {
     setupCompleted,
     hasApiKey,
+    hasCustomLlmConfig: customConfigured,
     hasAccessibility,
     hasScreenRecording,
-    needsSetup: !setupCompleted || !hasApiKey || !hasAccessibility || !hasScreenRecording
+    needsSetup: !setupCompleted || !hasApiKey || !customConfigured || !hasAccessibility || !hasScreenRecording
   };
 }
 
@@ -760,6 +816,13 @@ ipcMain.handle("miki:markSetupCompleted", () => {
 
 ipcMain.handle("miki:openSystemPreferences", (_event, pane) => {
   openSystemPreferences(pane);
+  return true;
+});
+
+ipcMain.handle("miki:getCustomLlmSettings", () => readCustomLlmSettings());
+
+ipcMain.handle("miki:setCustomLlmSettings", (_event, settings) => {
+  writeCustomLlmSettings(settings || {});
   return true;
 });
 
