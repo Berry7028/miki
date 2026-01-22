@@ -178,7 +178,7 @@ const App = () => {
   };
 
   const hasApiKey = !!apiKey && apiKey.length > 0;
-  const isBaseUrlRequired = (provider?: CustomLlmProvider) => (provider ? provider !== "openai" : false);
+  const isBaseUrlRequired = (provider?: CustomLlmProvider) => (provider ? provider === "openrouter" : false);
   const hasCustomConfig = !customLlm.enabled
     || Boolean(customLlm.apiKey?.trim() && customLlm.model?.trim() && customLlm.provider);
   const canSaveCustom = !customLlm.enabled || hasCustomConfig;
@@ -220,7 +220,7 @@ const App = () => {
     setCustomLlm((prev) => ({
       ...prev,
       provider,
-      baseUrl: provider === "openai" ? "" : prev.baseUrl,
+      baseUrl: provider === "openrouter" ? prev.baseUrl : "",
     }));
   };
 
@@ -458,7 +458,11 @@ const App = () => {
                             <TextField
                               fullWidth
                               size="small"
-                              placeholder={customLlm.provider === "openai" ? "https://api.openai.com/v1" : "https://"}
+                              placeholder={
+                                customLlm.provider === "openrouter"
+                                  ? "https://openrouter.ai/api/v1"
+                                  : "https://api.anthropic.com"
+                              }
                               value={customLlm.baseUrl || ""}
                               disabled={!customLlm.enabled || customLlm.provider === "openai"}
                               onChange={(event) => handleCustomBaseUrl(event.target.value)}
@@ -507,7 +511,7 @@ const App = () => {
                             {customLlm.enabled && !canSaveCustomFull && (
                               <Typography variant="caption" color="error">
                                 API key, provider, and model are required.
-                                {baseUrlRequired ? " Base URL is required for non-OpenAI providers." : ""}
+                                {baseUrlRequired ? " Base URL is required for OpenRouter." : ""}
                               </Typography>
                             )}
                           </Box>
