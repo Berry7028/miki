@@ -744,7 +744,7 @@ function openSystemPreferences(pane) {
 function getSetupStatus() {
   const apiKey = readApiKey();
   const customLlm = readCustomLlmSettings();
-  const baseUrlRequired = Boolean(customLlm.provider && customLlm.provider !== "openai");
+  const baseUrlRequired = Boolean(customLlm.provider && customLlm.provider === "openrouter");
   const customConfigured = customLlm.enabled
     ? Boolean(customLlm.apiKey && customLlm.provider && customLlm.model && (!baseUrlRequired || customLlm.baseUrl))
     : true;
