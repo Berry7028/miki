@@ -209,18 +209,31 @@ const App = () => {
     setTimeout(() => setCustomSaveStatus(""), 3000);
   };
 
-  const handleCustomToggle = (enabled: boolean) => {
+  const handleCustomToggle = async (enabled: boolean) => {
     setCustomLlm((prev) => ({ ...prev, enabled }));
     if (!enabled) {
       setCustomSaveStatus("");
+      return;
+    }
+    if (customLlm.provider) {
+      const stored = await window.miki?.getCustomLlmProviderSettings(customLlm.provider);
+      setCustomLlm((prev) => ({
+        ...prev,
+        apiKey: stored?.apiKey || "",
+        baseUrl: stored?.baseUrl || "",
+        model: stored?.model || "",
+      }));
     }
   };
 
-  const handleCustomProvider = (provider: CustomLlmProvider) => {
+  const handleCustomProvider = async (provider: CustomLlmProvider) => {
+    const stored = await window.miki?.getCustomLlmProviderSettings(provider);
     setCustomLlm((prev) => ({
       ...prev,
       provider,
-      baseUrl: provider === "openrouter" ? prev.baseUrl : "",
+      apiKey: stored?.apiKey || "",
+      baseUrl: stored?.baseUrl || "",
+      model: stored?.model || "",
     }));
   };
 

@@ -17,6 +17,12 @@ export interface CustomLlmSettings {
   model?: string;
 }
 
+export interface CustomLlmProviderSettings {
+  apiKey?: string;
+  baseUrl?: string;
+  model?: string;
+}
+
 export interface BackendEvent {
   event: "status" | "step" | "log" | "completed" | "error" | "thinking" | "tool" | "token_usage";
   state?: "idle" | "running" | "stopping";
@@ -47,6 +53,7 @@ export interface MikiAPI {
   getApiKey: () => Promise<string>;
   setApiKey: (apiKey: string) => Promise<boolean>;
   getCustomLlmSettings: () => Promise<CustomLlmSettings>;
+  getCustomLlmProviderSettings: (provider: CustomLlmProvider) => Promise<CustomLlmProviderSettings>;
   setCustomLlmSettings: (settings: CustomLlmSettings) => Promise<boolean>;
   getSetupStatus: () => Promise<SetupStatus>;
   markSetupCompleted: () => Promise<boolean>;
