@@ -660,36 +660,110 @@ function writeApiKey(apiKey) {
   writeSecureValue(".api_key.enc", apiKey);
 }
 
+const CUSTOM_LLM_PROVIDERS = new Set(["openai", "openrouter", "anthropic"]);
+
+function normalizeCustomLlmProvider(provider) {
+  if (!provider || typeof provider !== "string") {
+    return "";
+  }
+  return CUSTOM_LLM_PROVIDERS.has(provider) ? provider : "";
+}
+
+function customLlmProviderKey(provider, key) {
+  return `.custom_llm_${key}_${provider}.enc`;
+}
+
+function migrateLegacyCustomLlmSettings(provider) {
+  const normalizedProvider = normalizeCustomLlmProvider(provider);
+  if (!normalizedProvider) {
+    return;
+  }
+
+  const legacyApiKey = readSecureValue(".custom_llm_api_key.enc");
+  const legacyBaseUrl = readSecureValue(".custom_llm_base_url.enc");
+  const legacyModel = readSecureValue(".custom_llm_model.enc");
+
+  if (!legacyApiKey && !legacyBaseUrl && !legacyModel) {
+    return;
+  }
+
+  const providerApiKey = readSecureValue(customLlmProviderKey(normalizedProvider, "api_key"));
+  const providerBaseUrl = readSecureValue(customLlmProviderKey(normalizedProvider, "base_url"));
+  const providerModel = readSecureValue(customLlmProviderKey(normalizedProvider, "model"));
+
+  if (legacyApiKey && !providerApiKey) {
+    writeSecureValue(customLlmProviderKey(normalizedProvider, "api_key"), legacyApiKey);
+  }
+  if (legacyBaseUrl && !providerBaseUrl) {
+    writeSecureValue(customLlmProviderKey(normalizedProvider, "base_url"), legacyBaseUrl);
+  }
+  if (legacyModel && !providerModel) {
+    writeSecureValue(customLlmProviderKey(normalizedProvider, "model"), legacyModel);
+  }
+
+  writeSecureValue(".custom_llm_api_key.enc", "");
+  writeSecureValue(".custom_llm_base_url.enc", "");
+  writeSecureValue(".custom_llm_model.enc", "");
+}
+
+function readCustomLlmProviderSettings(provider) {
+  const normalizedProvider = normalizeCustomLlmProvider(provider);
+  if (!normalizedProvider) {
+    return {
+      apiKey: "",
+      baseUrl: "",
+      model: ""
+    };
+  }
+
+  migrateLegacyCustomLlmSettings(normalizedProvider);
+
+  return {
+    apiKey: readSecureValue(customLlmProviderKey(normalizedProvider, "api_key")),
+    baseUrl: readSecureValue(customLlmProviderKey(normalizedProvider, "base_url")),
+    model: readSecureValue(customLlmProviderKey(normalizedProvider, "model"))
+  };
+}
+
+function writeCustomLlmProviderSettings(provider, settings) {
+  const normalizedProvider = normalizeCustomLlmProvider(provider);
+  if (!normalizedProvider) {
+    return;
+  }
+
+  writeSecureValue(customLlmProviderKey(normalizedProvider, "api_key"), settings.apiKey || "");
+  writeSecureValue(customLlmProviderKey(normalizedProvider, "base_url"), settings.baseUrl || "");
+  writeSecureValue(customLlmProviderKey(normalizedProvider, "model"), settings.model || "");
+}
+
 function readCustomLlmSettings() {
   const enabled = readSecureValue(".custom_llm_enabled.enc");
-  const provider = readSecureValue(".custom_llm_provider.enc");
-  const apiKey = readSecureValue(".custom_llm_api_key.enc");
-  const baseUrl = readSecureValue(".custom_llm_base_url.enc");
-  const model = readSecureValue(".custom_llm_model.enc");
+  const provider = normalizeCustomLlmProvider(readSecureValue(".custom_llm_provider.enc"));
+  const providerSettings = provider ? readCustomLlmProviderSettings(provider) : {
+    apiKey: "",
+    baseUrl: "",
+    model: ""
+  };
 
   return {
     enabled: enabled === "1",
     provider,
-    apiKey,
-    baseUrl,
-    model,
+    apiKey: providerSettings.apiKey,
+    baseUrl: providerSettings.baseUrl,
+    model: providerSettings.model,
   };
 }
 
 function writeCustomLlmSettings(settings) {
   const enabled = Boolean(settings.enabled);
+  const provider = normalizeCustomLlmProvider(settings.provider);
   writeSecureValue(".custom_llm_enabled.enc", enabled ? "1" : "");
-  if (!enabled) {
-    writeSecureValue(".custom_llm_provider.enc", "");
-    writeSecureValue(".custom_llm_api_key.enc", "");
-    writeSecureValue(".custom_llm_base_url.enc", "");
-    writeSecureValue(".custom_llm_model.enc", "");
+  writeSecureValue(".custom_llm_provider.enc", provider || "");
+  if (!provider) {
     return;
   }
-  writeSecureValue(".custom_llm_provider.enc", settings.provider || "");
-  writeSecureValue(".custom_llm_api_key.enc", settings.apiKey || "");
-  writeSecureValue(".custom_llm_base_url.enc", settings.baseUrl || "");
-  writeSecureValue(".custom_llm_model.enc", settings.model || "");
+
+  writeCustomLlmProviderSettings(provider, settings || {});
 }
 
 function setupFlagPath() {
@@ -840,6 +914,10 @@ ipcMain.handle("miki:openSystemPreferences", (_event, pane) => {
 });
 
 ipcMain.handle("miki:getCustomLlmSettings", () => readCustomLlmSettings());
+
+ipcMain.handle("miki:getCustomLlmProviderSettings", (_event, provider) => {
+  return readCustomLlmProviderSettings(provider);
+});
 
 ipcMain.handle("miki:setCustomLlmSettings", (_event, settings) => {
   writeCustomLlmSettings(settings || {});
