@@ -117,7 +117,11 @@ export class MacOSToolSuite {
         const from = this.normalizeToScreen(args.from_x, args.from_y);
         const to = this.normalizeToScreen(args.to_x, args.to_y);
         if (this.debugMode) {
-          console.error(`[Tool:drag] Normalized positions: from (${args.from_x}, ${args.from_y}) -> (${from.x}, ${from.y}), to (${args.to_x}, ${args.to_y}) -> (${to.x}, ${to.y})`);
+          console.error(
+            `[Tool:drag] Normalized positions: ` +
+            `from (${args.from_x}, ${args.from_y}) -> (${from.x}, ${from.y}), ` +
+            `to (${args.to_x}, ${args.to_y}) -> (${to.x}, ${to.y})`
+          );
         }
         const result = await this.bridge.call("drag", {
           from_x: from.x,

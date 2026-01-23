@@ -10,6 +10,7 @@ import time
 import pyautogui
 import io
 import os
+import traceback
 
 sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8')
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', line_buffering=True)
@@ -108,7 +109,6 @@ def main():
             sys.stdout.flush()
         except Exception as e:
             if DEBUG_MODE:
-                import traceback
                 print(f"[Executor] Exception occurred: {e}", file=sys.stderr, flush=True)
                 print(f"[Executor] Traceback:\n{traceback.format_exc()}", file=sys.stderr, flush=True)
             print(json.dumps({"status": "error", "message": str(e)}, ensure_ascii=False))
