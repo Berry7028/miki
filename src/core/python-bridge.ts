@@ -47,9 +47,13 @@ export class PythonBridge {
     }
 
     if (executorBinary && fs.existsSync(executorBinary)) {
-      this.pythonProcess = spawn(executorBinary, []);
+      this.pythonProcess = spawn(executorBinary, [], {
+        env: process.env
+      });
     } else {
-      this.pythonProcess = spawn(pythonPath, [executorPath]);
+      this.pythonProcess = spawn(pythonPath, [executorPath], {
+        env: process.env
+      });
     }
 
     this.pythonReader = readline.createInterface({

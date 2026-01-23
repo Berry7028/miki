@@ -91,6 +91,9 @@ export class MacOSToolSuite {
       parameters: schemas.MoveSchema,
       execute: async (args: any, context?: ToolContext) => {
         const pos = this.normalizeToScreen(args.x, args.y);
+        if (this.debugMode) {
+          console.error(`[Tool:move] Normalized position: (${args.x}, ${args.y}) -> (${pos.x}, ${pos.y})`);
+        }
         const result = await this.bridge.call("move", pos);
         const screenshot = await this.takePostActionScreenshot(pos);
         if (context) {
@@ -113,6 +116,9 @@ export class MacOSToolSuite {
       execute: async (args: any, context?: ToolContext) => {
         const from = this.normalizeToScreen(args.from_x, args.from_y);
         const to = this.normalizeToScreen(args.to_x, args.to_y);
+        if (this.debugMode) {
+          console.error(`[Tool:drag] Normalized positions: from (${args.from_x}, ${args.from_y}) -> (${from.x}, ${from.y}), to (${args.to_x}, ${args.to_y}) -> (${to.x}, ${to.y})`);
+        }
         const result = await this.bridge.call("drag", {
           from_x: from.x,
           from_y: from.y,
