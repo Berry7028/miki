@@ -9,10 +9,18 @@ import json
 import time
 import pyautogui
 import io
+import os
+import traceback
 
 sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8')
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', line_buffering=True)
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', line_buffering=True)
+
+# デバッグモードフラグ
+DEBUG_MODE = os.environ.get("MIKI_DEBUG") == "1"
+
+if DEBUG_MODE:
+    print("[Executor] Debug mode enabled", file=sys.stderr, flush=True)
 
 from actions.screenshot import screenshot, get_screen_size
 from actions.mouse_keyboard import (
@@ -52,15 +60,26 @@ ACTION_HANDLERS = {
 
 def dispatch_action(action, params):
     """アクションをディスパッチして実行する"""
+    if DEBUG_MODE:
+        params_preview = str(params)[:200] if params else "{}"
+        print(f"[Executor] Dispatching action: {action}, params: {params_preview}...", file=sys.stderr, flush=True)
+    
     handler = ACTION_HANDLERS.get(action)
     if handler:
-        return handler(**params)
+        result = handler(**params)
+        if DEBUG_MODE:
+            result_preview = str(result)[:200] if result else "{}"
+            print(f"[Executor] Action {action} completed: {result_preview}...", file=sys.stderr, flush=True)
+        return result
     else:
         return {"status": "error", "message": f"Unknown action: {action}"}
 
 
 def main():
     """メインループ: 標準入力からコマンドを読み取り、実行し、結果を返す"""
+    if DEBUG_MODE:
+        print("[Executor] Starting main loop", file=sys.stderr, flush=True)
+    
     while True:
         line = sys.stdin.readline()
         if not line:
@@ -73,16 +92,25 @@ def main():
             params = command_data.get("params", {})
 
             if action == "exit":
+                if DEBUG_MODE:
+                    print("[Executor] Exit command received", file=sys.stderr, flush=True)
                 break
 
             result = dispatch_action(action, params)
 
             end_time = time.time()
-            result["execution_time_ms"] = int((end_time - start_time) * 1000)
+            execution_time = int((end_time - start_time) * 1000)
+            result["execution_time_ms"] = execution_time
+            
+            if DEBUG_MODE:
+                print(f"[Executor] Total execution time: {execution_time}ms", file=sys.stderr, flush=True)
 
             print(json.dumps(result, ensure_ascii=False))
             sys.stdout.flush()
         except Exception as e:
+            if DEBUG_MODE:
+                print(f"[Executor] Exception occurred: {e}", file=sys.stderr, flush=True)
+                print(f"[Executor] Traceback:\n{traceback.format_exc()}", file=sys.stderr, flush=True)
             print(json.dumps({"status": "error", "message": str(e)}, ensure_ascii=False))
             sys.stdout.flush()
 

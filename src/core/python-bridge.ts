@@ -16,13 +16,16 @@ export class PythonBridge {
   private onReady: () => void;
   private defaultTimeout = 30000;
   private maxRetries = 3;
+  private debugMode: boolean;
 
   constructor(
     onError: (message: string) => void,
     onReady: () => void = () => {},
+    debugMode: boolean = false
   ) {
     this.onError = onError;
     this.onReady = onReady;
+    this.debugMode = debugMode;
     this.startPythonProcess();
   }
 
@@ -33,10 +36,24 @@ export class PythonBridge {
     const executorPath =
       process.env.MIKI_EXECUTOR_PATH || path.join(process.cwd(), "src/executor/main.py");
 
+    if (this.debugMode) {
+      console.error("[PythonBridge] Starting Python process...");
+      if (executorBinary && fs.existsSync(executorBinary)) {
+        console.error(`[PythonBridge] Using executor binary: ${executorBinary}`);
+      } else {
+        console.error(`[PythonBridge] Using Python: ${pythonPath}`);
+        console.error(`[PythonBridge] Executor path: ${executorPath}`);
+      }
+    }
+
     if (executorBinary && fs.existsSync(executorBinary)) {
-      this.pythonProcess = spawn(executorBinary, []);
+      this.pythonProcess = spawn(executorBinary, [], {
+        env: process.env
+      });
     } else {
-      this.pythonProcess = spawn(pythonPath, [executorPath]);
+      this.pythonProcess = spawn(pythonPath, [executorPath], {
+        env: process.env
+      });
     }
 
     this.pythonReader = readline.createInterface({
@@ -53,6 +70,9 @@ export class PythonBridge {
       // JSON形式の行のみを処理
       try {
         const parsed = JSON.parse(line);
+        if (this.debugMode) {
+          console.error(`[PythonBridge] Received response: ${JSON.stringify(parsed).substring(0, 200)}...`);
+        }
         const resolver = this.pendingResolvers.shift();
         if (resolver) {
           resolver.resolve(parsed);
@@ -127,9 +147,18 @@ export class PythonBridge {
     const maxRetries = options.retries ?? this.maxRetries;
     let lastError: Error | null = null;
 
+    if (this.debugMode) {
+      const paramsPreview = JSON.stringify(params).substring(0, 200);
+      console.error(`[PythonBridge] Calling action: ${action}, params: ${paramsPreview}...`);
+    }
+
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
-        return await this.executeCall(action, params, timeout);
+        const result = await this.executeCall(action, params, timeout);
+        if (this.debugMode && result.execution_time_ms) {
+          console.error(`[PythonBridge] Action ${action} completed in ${result.execution_time_ms}ms`);
+        }
+        return result;
       } catch (e: any) {
         lastError = e;
         console.error(
@@ -139,6 +168,9 @@ export class PythonBridge {
         // プロセスクラッシュやタイムアウトの場合にリトライを検討
         if (attempt < maxRetries) {
           const delay = Math.pow(2, attempt) * 1000;
+          if (this.debugMode) {
+            console.error(`[PythonBridge] Retrying in ${delay}ms...`);
+          }
           await new Promise((resolve) => setTimeout(resolve, delay));
           // プロセスが死んでいる場合は自動的にhandleProcessCrashで再起動されるはずだが、
           // ここで明示的にチェックが必要な場合もある

@@ -41,7 +41,8 @@ export class MacOSAgentOrchestrator extends EventEmitter {
         this.init().catch(err => {
           this.log("error", `Background initialization error: ${err}`);
         });
-      }
+      },
+      debugMode
     );
   }
 
@@ -50,6 +51,11 @@ export class MacOSAgentOrchestrator extends EventEmitter {
 
     try {
       this.log("info", "Orchestratorを初期化しています...");
+      if (this.debugMode) {
+        console.error("[Orchestrator] Debug mode is enabled");
+        console.error(`[Orchestrator] API Key configured: ${!!this.apiKey}`);
+        console.error(`[Orchestrator] Custom LLM configured: ${!!this.customLlm?.enabled}`);
+      }
       // 画面サイズの取得
       const res = await this.pythonBridge.call("size");
       this.screenSize = { width: res.width || 0, height: res.height || 0 };
@@ -69,7 +75,7 @@ export class MacOSAgentOrchestrator extends EventEmitter {
       this.log("info", `画面サイズ: ${this.screenSize.width}x${this.screenSize.height}`);
 
       // ツールスイートの構築
-      this.toolSuite = new MacOSToolSuite(this.pythonBridge, this.screenSize);
+      this.toolSuite = new MacOSToolSuite(this.pythonBridge, this.screenSize, this.debugMode);
 
       this.rootAgent = MainAgentFactory.create(
         this.toolSuite,
@@ -170,6 +176,9 @@ export class MacOSAgentOrchestrator extends EventEmitter {
       let stepCount = 0;
 
       for await (const event of stream) {
+        if (this.debugMode) {
+          console.error(`[Orchestrator] Event received: ${event.id || "no-id"}`);
+        }
         this.log("info", `イベントを受信しました: ${event.id || "no-id"}`);
         if (this.stopRequested) {
           this.log("info", "停止要求により中断しました。");
@@ -178,8 +187,14 @@ export class MacOSAgentOrchestrator extends EventEmitter {
 
         const functionCalls = getFunctionCalls(event);
         if (functionCalls.length > 0) {
+          if (this.debugMode) {
+            console.error(`[Orchestrator] Processing ${functionCalls.length} function calls`);
+          }
           this.log("info", `${functionCalls.length} 個の関数呼び出しを処理します`);
           for (const call of functionCalls) {
+            if (this.debugMode) {
+              console.error(`[Orchestrator] Function call: ${call.name}, args: ${JSON.stringify(call.args).substring(0, 200)}...`);
+            }
             if (call.name === "think") {
               const args = call.args as any;
               const phaseLabels = {
@@ -212,6 +227,9 @@ export class MacOSAgentOrchestrator extends EventEmitter {
         }
 
         if (isFinalResponse(event)) {
+          if (this.debugMode) {
+            console.error("[Orchestrator] Final response received");
+          }
           this.log("info", "タスク実行が完了しました（最終レスポンスを受信）。");
           if (event.content && event.content.parts && event.content.parts[0] && event.content.parts[0].text) {
             this.log("info", `エージェントの最終回答: ${event.content.parts[0].text}`);
@@ -220,6 +238,9 @@ export class MacOSAgentOrchestrator extends EventEmitter {
         }
 
         stepCount++;
+        if (this.debugMode) {
+          console.error(`[Orchestrator] Step count: ${stepCount}/${PERFORMANCE_CONFIG.MAX_STEPS}`);
+        }
         this.emit("step", stepCount);
         
         if (stepCount >= PERFORMANCE_CONFIG.MAX_STEPS) {
@@ -229,10 +250,16 @@ export class MacOSAgentOrchestrator extends EventEmitter {
       }
 
       this.log("info", "実行ループが終了しました。");
+      if (this.debugMode) {
+        console.error(`[Orchestrator] Run completed with ${stepCount} steps`);
+      }
       this.emit("runCompleted");
     } catch (error) {
       this.log("error", `実行エラー: ${error}`);
       console.error("Execution error detail:", error);
+      if (this.debugMode && error instanceof Error) {
+        console.error("[Orchestrator] Error stack trace:", error.stack);
+      }
       this.emit("error", `実行エラー: ${error}`);
     } finally {
       await this.pythonBridge.setCursorVisibility(true);
