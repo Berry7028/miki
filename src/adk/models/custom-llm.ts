@@ -29,9 +29,13 @@ type OpenAIToolCall = {
   };
 };
 
+type OpenAIContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string; detail?: "low" | "high" | "auto" } };
+
 type OpenAIChatMessage = {
   role: "user" | "assistant" | "tool" | "system";
-  content?: string | null;
+  content?: string | OpenAIContentPart[] | null;
   tool_calls?: OpenAIToolCall[];
   tool_call_id?: string;
 };
@@ -47,6 +51,7 @@ type OpenAITool = {
 
 type AnthropicMessageContent =
   | { type: "text"; text: string }
+  | { type: "image"; source: { type: "base64"; media_type: string; data: string } }
   | { type: "tool_use"; id: string; name: string; input: Record<string, unknown> }
   | { type: "tool_result"; tool_use_id: string; content: string };
 
@@ -211,14 +216,14 @@ export class CustomLlm extends BaseLlm {
 
     for (const content of llmRequest.contents) {
       const parts = content.parts ?? [];
-      const textParts = parts.filter((part) => part.text).map((part) => part.text).join("\n");
       const role = content.role === "model" ? "assistant" : "user";
+      const { contentParts, textContent, hasImage } = this.buildOpenAIContentParts(parts);
 
       const toolCalls = this.extractFunctionCalls(parts);
       if (toolCalls.length > 0) {
         messages.push({
           role: "assistant",
-          content: textParts || null,
+          content: textContent || null,
           tool_calls: toolCalls.map((call) => ({
             id: call.id,
             type: "function",
@@ -244,8 +249,11 @@ export class CustomLlm extends BaseLlm {
         }
       }
 
-      if (textParts) {
-        messages.push({ role, content: textParts });
+      if (contentParts.length > 0) {
+        messages.push({
+          role,
+          content: hasImage ? contentParts : textContent,
+        });
       }
     }
 
@@ -276,34 +284,35 @@ export class CustomLlm extends BaseLlm {
     for (const content of llmRequest.contents) {
       const parts = content.parts ?? [];
       const messageParts: AnthropicMessageContent[] = [];
-      const text = parts.filter((part) => part.text).map((part) => part.text).join("\n");
-      if (text) {
-        messageParts.push({ type: "text", text });
-      }
-
-      const toolCalls = this.extractFunctionCalls(parts);
-      for (const toolCall of toolCalls) {
-        if (!toolCall.id || !toolCall.name) {
-          continue;
+      for (const part of parts) {
+        if (part.text) {
+          messageParts.push({ type: "text", text: part.text });
         }
-        messageParts.push({
-          type: "tool_use",
-          id: toolCall.id,
-          name: toolCall.name,
-          input: toolCall.args ?? {},
-        });
-      }
-
-      const toolResponses = this.extractFunctionResponses(parts);
-      for (const toolResponse of toolResponses) {
-        if (!toolResponse.id) {
-          continue;
+        if (part.inlineData?.data && part.inlineData?.mimeType) {
+          messageParts.push({
+            type: "image",
+            source: {
+              type: "base64",
+              media_type: part.inlineData.mimeType,
+              data: part.inlineData.data,
+            },
+          });
         }
-        messageParts.push({
-          type: "tool_result",
-          tool_use_id: toolResponse.id,
-          content: JSON.stringify(toolResponse.response ?? {}),
-        });
+        if (part.functionCall?.id && part.functionCall?.name) {
+          messageParts.push({
+            type: "tool_use",
+            id: part.functionCall.id,
+            name: part.functionCall.name,
+            input: part.functionCall.args ?? {},
+          });
+        }
+        if (part.functionResponse?.id) {
+          messageParts.push({
+            type: "tool_result",
+            tool_use_id: part.functionResponse.id,
+            content: JSON.stringify(part.functionResponse.response ?? {}),
+          });
+        }
       }
 
       if (messageParts.length > 0) {
@@ -383,5 +392,29 @@ export class CustomLlm extends BaseLlm {
       }
     }
     return declarations;
+  }
+
+  private buildOpenAIContentParts(parts: Part[]) {
+    const contentParts: OpenAIContentPart[] = [];
+    const textParts: string[] = [];
+    let hasImage = false;
+
+    for (const part of parts) {
+      if (part.text) {
+        contentParts.push({ type: "text", text: part.text });
+        textParts.push(part.text);
+      }
+      if (part.inlineData?.data && part.inlineData?.mimeType) {
+        hasImage = true;
+        contentParts.push({
+          type: "image_url",
+          image_url: {
+            url: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`,
+          },
+        });
+      }
+    }
+
+    return { contentParts, textContent: textParts.join("\n"), hasImage };
   }
 }
