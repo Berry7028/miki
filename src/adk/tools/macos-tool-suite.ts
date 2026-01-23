@@ -6,10 +6,12 @@ import * as schemas from "./schemas";
 export class MacOSToolSuite {
   private bridge: PythonBridge;
   private screenSize: { width: number; height: number };
+  private debugMode: boolean;
 
-  constructor(bridge: PythonBridge, screenSize: { width: number; height: number }) {
+  constructor(bridge: PythonBridge, screenSize: { width: number; height: number }, debugMode: boolean = false) {
     this.bridge = bridge;
     this.screenSize = screenSize;
+    this.debugMode = debugMode;
   }
 
   public updateScreenSize(width: number, height: number) {
@@ -65,6 +67,9 @@ export class MacOSToolSuite {
       parameters: schemas.ClickSchema,
       execute: async (args: any, context?: ToolContext) => {
         const pos = this.normalizeToScreen(args.x, args.y);
+        if (this.debugMode) {
+          console.error(`[Tool:click] Normalized position: (${args.x}, ${args.y}) -> (${pos.x}, ${pos.y})`);
+        }
         const result = await this.bridge.call("click", pos);
         const screenshot = await this.takePostActionScreenshot(pos);
         if (context) {
