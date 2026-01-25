@@ -68,8 +68,20 @@ export const theme = createTheme({
   components: {
     MuiCssBaseline: {
       styleOverrides: {
+        html: {
+          colorScheme: "dark",
+        },
         body: {
           backgroundColor: "#212833",
+          colorScheme: "dark",
+        },
+        "button, a, input, select, textarea": {
+          WebkitTapHighlightColor: "transparent",
+          touchAction: "manipulation",
+        },
+        select: {
+          backgroundColor: "#1e2228",
+          color: "#f0f0f0",
         },
       },
     },
