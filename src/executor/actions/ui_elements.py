@@ -1,4 +1,5 @@
 """UI要素の取得と操作"""
+import sys
 import subprocess
 import json
 import time
@@ -17,7 +18,7 @@ def _type_text(text):
     if copy_result["status"] == "success":
         try:
             time.sleep(0.1)
-            pyautogui.hotkey('command', 'v')
+            pyautogui.hotkey('command' if sys.platform == 'darwin' else 'ctrl', 'v')
             time.sleep(0.2)
             return {"status": "success", "method": copy_result["method"]}
         except Exception as e:

@@ -1,7 +1,16 @@
 """マウスとキーボード操作"""
+import sys
 import pyautogui
 import time
-import AppKit
+
+IS_MACOS = sys.platform == "darwin"
+try:
+    if IS_MACOS:
+        import AppKit
+    else:
+        AppKit = None
+except ImportError:
+    AppKit = None
 
 # パフォーマンスプロファイル設定
 # 将来的に設定から切り替えやすくするため定数化
@@ -42,28 +51,42 @@ def type_text(text):
     if copy_res["status"] != "success":
         return copy_res
 
-    osa_script = '''
-    tell application "System Events"
-        keystroke "v" using {command down}
-    end tell
-    '''
     try:
-        time.sleep(0.05)
-        result = subprocess.run(
-            ["osascript", "-e", osa_script],
-            capture_output=True,
-            text=True
-        )
-        if result.returncode == 0:
-            return {"status": "success", "method": "clipboard_paste"}
-        else:
+        if IS_MACOS:
+            osa_script = '''
+            tell application "System Events"
+                keystroke "v" using {command down}
+            end tell
+            '''
+            time.sleep(0.05)
+            result = subprocess.run(
+                ["osascript", "-e", osa_script],
+                capture_output=True,
+                text=True
+            )
+            if result.returncode == 0:
+                return {"status": "success", "method": "clipboard_paste"}
+
             osa_script_fallback = f'''
             tell application "System Events"
                 keystroke "{text.replace('"', '\\"')}"
             end tell
             '''
-            subprocess.run(["osascript", "-e", osa_script_fallback])
-            return {"status": "success", "method": "osascript_keystroke_fallback"}
+            fallback_result = subprocess.run(
+                ["osascript", "-e", osa_script_fallback],
+                capture_output=True,
+                text=True
+            )
+            if fallback_result.returncode == 0:
+                return {"status": "success", "method": "osascript_keystroke_fallback"}
+            return {
+                "status": "error",
+                "message": fallback_result.stderr.strip() or "osascript fallback failed"
+            }
+        else:
+            time.sleep(0.05)
+            pyautogui.hotkey("ctrl", "v")
+            return {"status": "success", "method": "clipboard_paste"}
     except Exception as e:
         try:
             pyautogui.write(text)
@@ -143,6 +166,17 @@ def set_cursor_visibility(visible):
     """マウスカーソルの表示・非表示を切り替える (AppKitを使用)"""
     global _cursor_hidden
     try:
+        if AppKit is None:
+            platform_label = sys.platform
+            if sys.platform.startswith("win"):
+                platform_label = "Windows"
+            elif sys.platform.startswith("linux"):
+                platform_label = "Linux"
+            return {
+                "status": "not_supported",
+                "visible": visible,
+                "message": f"Cursor visibility control is not supported on this platform ({platform_label})."
+            }
         if visible:
             if _cursor_hidden:
                 AppKit.NSCursor.unhide()

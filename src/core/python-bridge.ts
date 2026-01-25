@@ -4,6 +4,23 @@ import * as readline from "node:readline";
 import * as path from "node:path";
 import type { PythonResponse } from "./types";
 
+export const resolvePythonPath = (
+  cwd: string,
+  platform: NodeJS.Platform = process.platform,
+  preferExisting: boolean = true,
+) => {
+  const windowsPath = path.join(cwd, "venv", "Scripts", "python.exe");
+  const unixPath = path.join(cwd, "venv", "bin", "python");
+  const platformPath = platform === "win32" ? windowsPath : unixPath;
+  if (!preferExisting) {
+    return platformPath;
+  }
+  if (fs.existsSync(platformPath)) {
+    return platformPath;
+  }
+  return platform === "win32" ? "python.exe" : "python3";
+};
+
 export class PythonBridge {
   private pythonProcess!: ChildProcessWithoutNullStreams;
   private pythonReader!: readline.Interface;
@@ -32,7 +49,7 @@ export class PythonBridge {
   private startPythonProcess() {
     const executorBinary = process.env.MIKI_EXECUTOR_BINARY;
     const pythonPath =
-      process.env.MIKI_PYTHON_PATH || path.join(process.cwd(), "venv", "bin", "python");
+      process.env.MIKI_PYTHON_PATH || resolvePythonPath(process.cwd());
     const executorPath =
       process.env.MIKI_EXECUTOR_PATH || path.join(process.cwd(), "src/executor/main.py");
 

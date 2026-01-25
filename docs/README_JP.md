@@ -2,7 +2,7 @@
 
 日本語 | [English](../README.md)
 
-macOS向けの自動操作エージェント（デスクトップアプリ）です。
+macOS/Windows向けの自動操作エージェント（デスクトップアプリ）です。
 Electron で最前面の操作パネルを提供し、Python Executor と連携してOS操作を実行します。
 
 ## クイックスタート（推奨）
@@ -168,7 +168,7 @@ bun run test:coverage
   - `renderer/index.html`: メイン操作パネル
   - `renderer/chat.html`: チャットウィンドウ
 - `src/controller/`: LLM 制御ロジック
-- `src/executor/`: MacOS 操作 (Python)
+- `src/executor/`: macOS/Windows 操作 (Python)
 - `venv/`: Python 仮想環境
 
 ## アーキテクチャ

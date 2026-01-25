@@ -2,7 +2,7 @@
 
 [日本語](./docs/README_JP.md) | English
 
-An automated operation agent for macOS (desktop application).
+An automated operation agent for macOS/Windows (desktop application).
 Provides a foreground control panel with Electron and executes OS operations in collaboration with a Python Executor.
 
 ## Quick Start (Recommended)
@@ -194,7 +194,7 @@ You can send requests directly to AI from the chat window.
   - `renderer/index.html`: Main control panel
   - `renderer/chat.html`: Chat window
 - `src/controller/`: LLM control logic
-- `src/executor/`: MacOS operations (Python)
+- `src/executor/`: macOS/Windows operations (Python)
 - `venv/`: Python virtual environment
 
 ## Architecture
