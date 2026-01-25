@@ -25,11 +25,11 @@ export class MainAgentFactory {
         });
 
     return new LlmAgent({
-      name: "macos_main_agent",
+      name: "main_agent",
       model: model,
-      description: "macOS操作を一貫して実行する自動化エージェントです。ユーザーの依頼を最初から最後まで追跡し、元のゴールを常に意識しながら作業を完遂します。",
+      description: "macOS操作を一貫して実行する自動化エージェントです。ユーザーの依頼を最初から最後まで追跡し、元のゴールを常に意識しながら作業を完遂します。macOSの操作の方法がわからない場合は全ての方法を試します。ただし、破壊的な方法は避けましょう。例: クリックによってデータが消える、または元に戻せないようなボタンの操作は避けてください。",
       instruction: createMainAgentInstruction(defaultBrowser, defaultBrowserId),
-      tools: tools,
+      tools: tools
     });
   }
 }
